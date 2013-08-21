@@ -16,8 +16,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.Inet6Address;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Locale;
 import java.util.TimerTask;
 import java.util.logging.Level;
@@ -67,7 +70,8 @@ public class AiccuVpnService extends VpnService {
                 TicTunnel tunnelSpecification = null;
                 try {
                     tic.connect();
-                    tunnelSpecification = tic.getTunnelSpecification();
+                    List<String> tunnelIds = tic.listTunnels();
+                    tunnelSpecification = selectFirstSuitable(tunnelIds, tic);
                 } finally {
                     tic.close();
                 }
@@ -110,29 +114,64 @@ public class AiccuVpnService extends VpnService {
                         outThread.interrupt();
                     ayiya.close();
                 }
+            } catch (ConnectionFailedException e) {
+                Log.e(TAG, "This confiugration will not work on this device", e);
+                // @todo inform the human user
+                // if this thread fails, the service per se is out of order
+                stopSelf();
             } catch (Throwable t) {
                 Log.e(TAG, "Failed to run tunnel", t);
-                // @todo inform the human user
+                // @todo this might be a temporary problem, some work is required with ConnectionManager yet :-(
                 // if this thread fails, the service per se is out of order
                 stopSelf();
             }
         }
 
+        private TicTunnel selectFirstSuitable(List<String> tunnelIds, Tic tic) throws IOException, ConnectionFailedException {
+            for (String id: tunnelIds) {
+                TicTunnel desc = null;
+                try {
+                    desc = tic.describeTunnel(id);
+                } catch (TunnelNotAcceptedException e) {
+                    continue;
+                }
+                if (desc.isEnabled() && "6in4".equals(desc.getType())){
+                    Log.i(TAG, "Tunnel " + id + " is suitable");
+                    return desc;
+                }
+            }
+            throw new ConnectionFailedException("No suitable tunnels found", null);
+        }
+
+        private void configureBuilderFromTunnelSpecification(Builder builder, TicTunnel tunnelSpecification) {
+            builder.setMtu(tunnelSpecification.getMtu());
+            builder.setSession(tunnelSpecification.getPopName());
+            try {
+                builder.addRoute(Inet6Address.getByName("::"), 0);
+            } catch (UnknownHostException e) {
+                Log.e(TAG, "Could not add IPv6 default route to builder");
+            }
+            builder.addAddress(tunnelSpecification.getIpv4Endpoint(), tunnelSpecification.getPrefixLength());
+            // @todo add the configure intent?
+            Log.i(TAG, "Builder is configured");
+        }
+
         /**
          * Create and run a thread that copies from in to out until interrupted.
-         * @param localIn
-         * @param popOut
-         * @return
+         * @param in The stream to copy from.
+         * @param out The stream to copy to.
+         * @return The thread that does so until interrupted.
          */
         private Thread startStreamCopy(final InputStream in, final OutputStream out) {
             Thread thread = new Thread (new Runnable() {
                 @Override
                 public void run() {
                     try {
+                        Log.i(TAG, "Copy thread started");
                         // Allocate the buffer for a single packet.
                         ByteBuffer packet = ByteBuffer.allocate(32767);
 
-                        // @TODO there *must* e a suitable utility class for that...?
+                        // @TODO there *must* be a suitable utility class for that...?
                         while (true) {
                             packet.clear();
                             int len = in.read (packet.array());
