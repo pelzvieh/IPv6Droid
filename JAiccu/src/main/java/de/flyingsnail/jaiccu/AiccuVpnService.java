@@ -174,7 +174,7 @@ public class AiccuVpnService extends VpnService {
     }
 
     private TicConfiguration loadTicConfiguration() {
-        return new TicConfiguration("AFP9-SIXXS", "lecDDuIi", "tic.sixxs.net");
+        return new TicConfiguration("XYZ0-SIXXS", "geheim", "tic.sixxs.net");
     }
 
     @Override
