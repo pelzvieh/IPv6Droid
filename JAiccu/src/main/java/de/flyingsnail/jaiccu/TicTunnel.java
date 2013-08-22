@@ -77,6 +77,19 @@ public class TicTunnel {
      */
     private int heartbeatInterval;
 
+    public String getTunnelName() {
+        return tunnelName;
+    }
+
+    public void setTunnelName(String tunnelName) {
+        this.tunnelName = tunnelName;
+    }
+
+    /**
+     * The user-given name of the tunnel.
+     */
+    private String tunnelName;
+
     /** The maximum transmission unit in bytes. */
     private int mtu;
 
@@ -210,32 +223,34 @@ public class TicTunnel {
     protected boolean parseKeyValue(String key, String value) {
         // we cannot use Java 7 switch on String, so implementation is no fun at all :-(
         try {
-            if ("TunnelId".equals(key))
+            if ("TunnelId".equalsIgnoreCase(key))
                 setTunnelId(value);
-            else if ("Type".equals(key))
+            else if ("Type".equalsIgnoreCase(key))
                 setType(value);
-            else if ("IPv6 Endpoint".equals(key))
+            else if ("IPv6 Endpoint".equalsIgnoreCase(key))
                 setIpv6Endpoint(value);
-            else if ("IPv6 PoP".equals(key))
+            else if ("IPv6 PoP".equalsIgnoreCase(key))
                 setIpv6Pop(value);
-            else if ("IPv6 PrefixLength".equals(key))
+            else if ("IPv6 PrefixLength".equalsIgnoreCase(key))
                 setPrefixLength(Integer.parseInt(value));
-            else if ("PoP Name".equals(key))
+            else if ("PoP Name".equalsIgnoreCase(key) || "PoP Id".equalsIgnoreCase(key))
                 setPopName(value);
-            else if ("IPv4 Endpoint".equals(key))
+            else if ("IPv4 Endpoint".equalsIgnoreCase(key))
                 setIpv4Endpoint(value);
-            else if ("IPv4 PoP".equals(key))
+            else if ("IPv4 PoP".equalsIgnoreCase(key))
                 setIPv4Pop(value);
-            else if ("UserState".equals(key))
+            else if ("UserState".equalsIgnoreCase(key))
                 setUserState(value);
-            else if ("AdminState".equals(key))
+            else if ("AdminState".equalsIgnoreCase(key))
                 setAdminState(value);
-            else if ("Password".equals(key))
+            else if ("Password".equalsIgnoreCase(key))
                 setPassword(value);
-            else if ("Heartbeat_Interval".equals(key))
+            else if ("Heartbeat_Interval".equalsIgnoreCase(key))
                 setHeartbeatInterval(Integer.parseInt(value));
-            else if ("Tunnel MTU".equals(key))
+            else if ("Tunnel MTU".equalsIgnoreCase(key))
                 setMtu(Integer.parseInt(value));
+            else if ("Tunnel Name".equalsIgnoreCase(key))
+                setTunnelName(value);
             else
                 return false;
 

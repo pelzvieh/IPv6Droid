@@ -252,10 +252,7 @@ public class Tic {
         if (ticTimeSecs < 0)
             ticTimeSecs += 2*((long)Integer.MAX_VALUE);
         Date localTime = new Date();
-        // @todo check if c epoch really starts at 1st January 1970
-        Calendar cEpoch = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
-        cEpoch.set(1970, Calendar.JANUARY, 0);
-        long localTimeSecs = (localTime.getTime() - cEpoch.getTimeInMillis()) / 1000;
+        long localTimeSecs = (localTime.getTime()) / 1000;
         long offset = localTimeSecs - ticTimeSecs;
         if (Math.abs(offset) > MAX_TIME_OFFSET) {
             throw new ConnectionFailedException("Time differs more than allowed, set correct time. Offset: " + offset, null);
@@ -297,15 +294,17 @@ public class Tic {
             // actually, the algorithm is a bit strange...
             MessageDigest md5 = MessageDigest.getInstance("MD5");
             byte[] pwDigest = md5.digest(config.getPassword().getBytes("UTF-8"));
+            String pwDigestString = String.format("%032x", new BigInteger(1, pwDigest));
             // ... as we don't use this as a digest, but the bytes from its hexdump string =8-O
-            pwDigest = String.format("%032x", new BigInteger(pwDigest)).getBytes("UTF-8");
+            pwDigest = pwDigestString.getBytes("UTF-8");
 
             // now let's calculate the response to the challenge
             md5.reset();
             md5.update(challenge.getBytes("UTF-8")); // probably the challenge is already hexdumped by the server
             md5.update(pwDigest);
+            byte[] authDigest = md5.digest();
             // the auth response is just the hex representation of the digest
-            signature = String.format("%032x", new BigInteger(md5.digest()));
+            signature = String.format("%032x", new BigInteger(1, authDigest));
         } catch (NoSuchAlgorithmException e) {
             throw new ConnectionFailedException("MD5 algorithm not available on this device", e);
         } catch (UnsupportedEncodingException e) {

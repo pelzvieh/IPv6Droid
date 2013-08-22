@@ -135,7 +135,7 @@ public class AiccuVpnService extends VpnService {
                 } catch (TunnelNotAcceptedException e) {
                     continue;
                 }
-                if (desc.isEnabled() && "6in4".equals(desc.getType())){
+                if (desc.isEnabled() && "ayiya".equals(desc.getType())){
                     Log.i(TAG, "Tunnel " + id + " is suitable");
                     return desc;
                 }
@@ -151,7 +151,7 @@ public class AiccuVpnService extends VpnService {
             } catch (UnknownHostException e) {
                 Log.e(TAG, "Could not add IPv6 default route to builder");
             }
-            builder.addAddress(tunnelSpecification.getIpv4Endpoint(), tunnelSpecification.getPrefixLength());
+            builder.addAddress(tunnelSpecification.getIpv6Endpoint(), tunnelSpecification.getPrefixLength());
             // @todo add the configure intent?
             Log.i(TAG, "Builder is configured");
         }
@@ -213,7 +213,7 @@ public class AiccuVpnService extends VpnService {
     }
 
     private TicConfiguration loadTicConfiguration() {
-        return new TicConfiguration("XYZ0-SIXXS", "geheim", "tic.sixxs.net");
+        return new TicConfiguration("XYZ0-SIXXS", "1234", "tic.sixxs.net");
     }
 
     @Override
