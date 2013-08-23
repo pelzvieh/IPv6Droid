@@ -50,7 +50,7 @@ public class Tic {
     /**
      * The maximum allowed deviation of TIC and local clocks.
      */
-    private static final long MAX_TIME_OFFSET = 120;
+    public static final long MAX_TIME_OFFSET = 120;
 
     /**
      * Our copy of the eventually user-accessible configuration object for the Tic.
@@ -252,7 +252,7 @@ public class Tic {
         if (ticTimeSecs < 0)
             ticTimeSecs += 2*((long)Integer.MAX_VALUE);
         Date localTime = new Date();
-        long localTimeSecs = (localTime.getTime()) / 1000;
+        long localTimeSecs = (int)(localTime.getTime() / 1000l);
         long offset = localTimeSecs - ticTimeSecs;
         if (Math.abs(offset) > MAX_TIME_OFFSET) {
             throw new ConnectionFailedException("Time differs more than allowed, set correct time. Offset: " + offset, null);

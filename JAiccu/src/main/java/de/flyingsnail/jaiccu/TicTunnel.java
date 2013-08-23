@@ -213,6 +213,24 @@ public class TicTunnel {
         this.mtu = mtu;
     }
 
+    public boolean isValid() {
+        return (mtu != 0) && (password != null) && (ipv4Pop != null) && (ipv6Pop != null);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    }
+
     /**
      * This is for Tic, really - it takes the keywords as given by the Tic protocol to describe
      * a tunnel set the respective properties.

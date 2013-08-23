@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.DatagramSocket;
 import java.net.Inet6Address;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -91,28 +92,36 @@ public class AiccuVpnService extends VpnService {
                 // Perpare the tunnel to PoP
                 Ayiya ayiya = new Ayiya (tunnelSpecification);
 
-                try {
-                    // setup tunnel to PoP
-                    ayiya.connect();
-                    Socket popSocket = ayiya.getSocket();
-                    protect(popSocket);
-                    InputStream popIn = popSocket.getInputStream();
-                    OutputStream popOut = popSocket.getOutputStream();
-                    // start the copying threads
-                    inThread = startStreamCopy (localIn, popOut);
-                    outThread = startStreamCopy (popIn, localOut);
-                    // wait until interrupted
+                while (!Thread.interrupted()) {
                     try {
-                        wait();
-                    } catch (InterruptedException ie) {
-                        Log.i(TAG, "Tunnel thread received interrupt, closing tunnel");
+                        // setup tunnel to PoP
+                        ayiya.connect();
+                        DatagramSocket popSocket = ayiya.getSocket();
+                        protect(popSocket);
+                        InputStream popIn = ayiya.getInputStream();
+                        OutputStream popOut = ayiya.getOutputStream();
+                        // start the copying threads
+                        inThread = startStreamCopy (localIn, popOut);
+                        outThread = startStreamCopy (popIn, localOut);
+                        // wait until interrupted
+                        try {
+                            while (!Thread.interrupted() && inThread.isAlive() && outThread.isAlive()) {
+                                Thread.sleep(tunnelSpecification.getHeartbeatInterval()*1000);
+                                ayiya.beat();
+                            }
+                        } catch (InterruptedException ie) {
+                            Log.i(TAG, "Tunnel thread received interrupt, closing tunnel");
+                        }
+                    } catch (IOException e) {
+                        Log.i (TAG, "Tunnel connection broke down, closing and reconnecting ayiya", e);
+                        Thread.sleep(5000l); // @todo we should check with ConnectivityManager
+                    } finally {
+                        if (inThread != null)
+                            inThread.interrupt();
+                        if (outThread != null)
+                            outThread.interrupt();
+                        ayiya.close();
                     }
-                } finally {
-                    if (inThread != null)
-                        inThread.interrupt();
-                    if (outThread != null)
-                        outThread.interrupt();
-                    ayiya.close();
                 }
             } catch (ConnectionFailedException e) {
                 Log.e(TAG, "This confiugration will not work on this device", e);
@@ -135,7 +144,7 @@ public class AiccuVpnService extends VpnService {
                 } catch (TunnelNotAcceptedException e) {
                     continue;
                 }
-                if (desc.isEnabled() && "ayiya".equals(desc.getType())){
+                if (desc.isValid() && desc.isEnabled() && "ayiya".equals(desc.getType())){
                     Log.i(TAG, "Tunnel " + id + " is suitable");
                     return desc;
                 }
@@ -169,21 +178,20 @@ public class AiccuVpnService extends VpnService {
                     try {
                         Log.i(TAG, "Copy thread started");
                         // Allocate the buffer for a single packet.
-                        ByteBuffer packet = ByteBuffer.allocate(32767);
+                        byte[] packet = new byte[32767];
 
                         // @TODO there *must* be a suitable utility class for that...?
-                        while (true) {
-                            packet.clear();
-                            int len = in.read (packet.array());
+                        while (!Thread.interrupted()) {
+                            int len = in.read (packet);
                             if (len > 0) {
                                 String s = null;
                                 try {
-                                    s = new String (packet.array(), 0, len, "UTF-8");
+                                    s = new String (packet, 0, len, "UTF-8");
                                 } catch (UnsupportedEncodingException e) {
                                     Log.e(TAG, "UTF-8 not supported");
                                 }
                                 Log.d(TAG, "read string: " + s);
-                                out.write(packet.array(), 0, len);
+                                out.write(packet, 0, len);
                             } else {
                                 Thread.sleep(100);
                             }
@@ -208,6 +216,7 @@ public class AiccuVpnService extends VpnService {
                     }
                 }
             });
+            thread.start();
             return thread;
         }
     }
