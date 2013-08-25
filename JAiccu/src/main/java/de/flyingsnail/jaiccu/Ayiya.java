@@ -11,7 +11,9 @@ import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.security.DigestException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -27,8 +29,10 @@ import java.util.Date;
  *
  * See http://www.sixxs.net/tools/ayiya for specification.
  *
- * Copyright 2003-2005 SixXS - http://www.sixxs.net
  * Copyright 2013 Dr. Andreas Feldner
+ *
+ * Based on specifications and the C implementation "aiccu", copyright 2003-2005 SixXS - http://www.sixxs.net
+ *
  * @todo clarify to avoid copyright issues with SixXS
  * See license.
  */
@@ -53,9 +57,11 @@ public class Ayiya {
     // @todo I'm afraid I missed an official source for this kind of constants
     private static final byte IPPROTO_IPv6 = 41;
     private static final byte IPPROTO_NONE = 59;
+
+    /** size of the AYIYA header */
     private static final int AYIYA_OVERHEAD = 44;
 
-    /** The IPv6 address of the PoP, used as identiy in the protocol. */
+    /** The IPv6 address of the PoP, used as identity in the protocol. */
     private final Inet6Address ipv6Pop;
 
     /** the maximum transmission unit in bytes */
@@ -144,7 +150,8 @@ public class Ayiya {
     private static byte[] ayiyaHash (byte[] in) throws NoSuchAlgorithmException, UnsupportedEncodingException {
         // compute the SHA1 hash of the password
         MessageDigest sha1 = MessageDigest.getInstance("SHA1");
-        return sha1.digest(in);
+        sha1.update(in);
+        return sha1.digest();
     }
 
     /**
@@ -196,13 +203,15 @@ public class Ayiya {
      * Create a byte from to 4 bit values.
      */
     private static byte buildByte(int val1, int val2) {
-        byte retval = (byte)((val1 & 0xF) + ((val2 & 0xF) << 4));
+        byte retval = (byte)((val2 & 0xF) + ((val1 & 0xF) << 4));
+             // this should be equiv. to C bitfield behaviour in big-endian machines
         return retval;
     }
 
     private byte[] buildAyiyaStruct(byte[] payload, OpCode opcode, byte nextHeader) throws NoSuchAlgorithmException {
         byte[] retval = new byte[payload.length + AYIYA_OVERHEAD];
         ByteBuffer bb = ByteBuffer.wrap (retval);
+        bb.order(ByteOrder.BIG_ENDIAN);
         MessageDigest sha1 = MessageDigest.getInstance("SHA1");
         // first byte: idlen (=4, 2^4 = length of IPv6 address) and idtype
         bb.put(buildByte(4, Identity.INTEGER.ordinal())).
@@ -242,26 +251,24 @@ public class Ayiya {
 
     /**
      * Read next packet from the tunnel.
-     * @return a byte array representing a read packets <b>payload</b>.
+     * @return a ByteBuffer representing a read packets, with current position set to beginning of the <b>payload</b> and end set to end of payload.
      * @throws IOException in case of network problems (probably temporary in nature)
      * @throws TunnelBrokenException in case that this tunnel is no longer usable and must be restarted
      */
-    public byte[] read() throws IOException, TunnelBrokenException {
+    public ByteBuffer read(ByteBuffer bb) throws IOException, TunnelBrokenException {
         if (socket == null)
             throw new IllegalStateException("read() called on unconnected Ayiya");
         if (!socket.isConnected())
             throw new TunnelBrokenException("Socket to PoP is closed", null);
 
-        // @todo insanely inefficient! Probably allocation strategy is required + refactoring of this methods parameters and returns.
-        byte[] packet = new byte[AYIYA_OVERHEAD + mtu];
-        int bytecount = 0;
-        DatagramPacket dgPacket = new DatagramPacket(packet, packet.length);
+
+        DatagramPacket dgPacket = new DatagramPacket(bb.array(), bb.arrayOffset(), bb.capacity());
 
         boolean validResult = false;
         while (!validResult) {
             // read from socket
             socket.receive(dgPacket);
-            bytecount = dgPacket.getLength();
+            int bytecount = dgPacket.getLength();
             if (bytecount < 0)
                 throw new TunnelBrokenException("Input stream disrupted", null);
             else if (bytecount == 0) {
@@ -271,72 +278,84 @@ public class Ayiya {
                 } catch (InterruptedException e) {
                     throw new TunnelBrokenException ("Received interrupt", e);
                 }
-            }
-
-            // @todo refactor these checks.
-            // check if the size includes at least a full ayiya header
-            if (bytecount < AYIYA_OVERHEAD) {
-                Log.e(TAG, "Received too short package, skipping");
                 continue;
+            } else if (bytecount == bb.capacity()) {
+                Log.e(TAG, "WARNING: maximum size of buffer reached - indication of a MTU problem");
             }
-
-            // check if correct AYIYA packet
-            if (buildByte(4, Identity.INTEGER.ordinal()) != packet[0] ||
-                    buildByte(5, HashAlgorithm.SHA1.ordinal()) != packet[1] ||
-                    AuthType.SHAREDSECRED.ordinal() != (packet[2] & 0xF) ||
-                    ((packet[2] >> 4 != OpCode.FORWARD.ordinal()) &&
-                            (packet[2] >> 4 != OpCode.ECHO_REQUEST.ordinal()) &&
-                            (packet[2] >> 4 != OpCode.ECHO_REQUEST_FORWARD.ordinal())) ||
-                    ((packet[3] != IPPROTO_IPv6) && (packet[3] != IPPROTO_NONE))
-                    ) {
-                Log.e(TAG, "Received packet with invalid ayiya header, skipping");
-                continue;
-            }
-
-            // check if correct sender id
-            Inet6Address sender = (Inet6Address)Inet6Address.getByAddress(Arrays.copyOfRange(packet, 8, 23));
-            if (!sender.equals(ipv6Pop)) {
-                Log.e(TAG, "Received packet from invalid sender id " + sender);
-            }
-
-            // check time
-            ByteBuffer bb = ByteBuffer.wrap(packet, 4, 4);
-            int epochTimeRemote = bb.getInt();
-            int epochTimeLocal = (int) (new Date().getTime() / 1000);
-            if (Math.abs(epochTimeLocal - epochTimeRemote) > Tic.MAX_TIME_OFFSET) {
-                Log.e(TAG, "Received packet from " + (epochTimeLocal-epochTimeRemote) + " in the past");
-                continue;
-            }
-
-            // check signature
-            byte[] theirHash = Arrays.copyOfRange(packet, 24, 43);
-            bb = ByteBuffer.wrap(packet, 24, 43);
-            bb.put (hashedPassword); // note that this changes retval
-            MessageDigest sha1 = null;
-            try {
-                sha1 = MessageDigest.getInstance("SHA1");
-            } catch (NoSuchAlgorithmException e) {
-                throw new TunnelBrokenException("Unable to do sha1 hashes", e);
-            }
-            sha1.update(packet, 0, bytecount);
-            byte[] myHash = sha1.digest();
-            if (!myHash.equals(theirHash)) {
-                Log.e(TAG, "Received packet with failed hash comparison");
-                continue;
-            }
-
-            // check ipv6
-            if (packet[3] == IPPROTO_IPv6 && (packet[AYIYA_OVERHEAD] >> 4) != 6) {
-                Log.e(TAG, "Payload should be an IPv6 packet, but isn't");
-                continue;
-            }
-
-            // this packet appears to be valid!
-            validResult = true;
-
+            bb.limit(bytecount);
+            bb.position(AYIYA_OVERHEAD);
+            validResult = checkValidity(bb.array(), bb.arrayOffset(), bb.limit());
         }
 
-        return Arrays.copyOfRange(packet, AYIYA_OVERHEAD, bytecount - 1);
+        return bb;
+    }
+
+    private boolean checkValidity(byte[] packet, int offset, int bytecount) throws UnknownHostException, TunnelBrokenException {
+        // @todo refactor these checks, they look awful and are co-variant with buildAyiyaStruct.
+        // @todo never tested with offset > 0, if this part is ever going to be a library, you have to.
+        // check if the size includes at least a full ayiya header
+        if (bytecount < AYIYA_OVERHEAD) {
+            Log.e(TAG, "Received too short package, skipping");
+            return false;
+        }
+
+        // check if correct AYIYA packet
+        if (buildByte(4, Identity.INTEGER.ordinal()) != packet[0+offset] ||
+                buildByte(5, HashAlgorithm.SHA1.ordinal()) != packet[1+offset] ||
+                AuthType.SHAREDSECRED.ordinal() != (packet[2+offset] >> 4) ||
+                (((packet[2+offset] & 0xF) != OpCode.FORWARD.ordinal()) &&
+                        ((packet[2+offset] & 0xF) != OpCode.ECHO_REQUEST.ordinal()) &&
+                        ((packet[2+offset] & 0xF) != OpCode.ECHO_REQUEST_FORWARD.ordinal())) ||
+                ((packet[3+offset] != IPPROTO_IPv6) && (packet[3+offset] != IPPROTO_NONE))
+                ) {
+            Log.e(TAG, "Received packet with invalid ayiya header, skipping");
+            return false;
+        }
+
+        // check if correct sender id. Strictly speaking not correct, as the sender could use our
+        // id. This is considered valid here because in assertion mode we're using this method for
+        // our own packets as well.
+        Inet6Address sender = (Inet6Address)Inet6Address.getByAddress(Arrays.copyOfRange(packet, 8+offset, 24+offset));
+        if (!sender.equals(ipv6Pop) && !sender.equals(ipv6Local)) {
+            Log.e(TAG, "Received packet from invalid sender id " + sender);
+            return false;
+        }
+
+        // check time
+        ByteBuffer bb = ByteBuffer.wrap(packet, 4+offset, 4);
+        int epochTimeRemote = bb.getInt();
+        int epochTimeLocal = (int) (new Date().getTime() / 1000);
+        if (Math.abs(epochTimeLocal - epochTimeRemote) > Tic.MAX_TIME_OFFSET) {
+            Log.e(TAG, "Received packet from " + (epochTimeLocal-epochTimeRemote) + " in the past");
+            return false;
+        }
+
+        // check signature
+        byte[] theirHash = Arrays.copyOfRange(packet, 24+offset, 44+offset);
+
+        MessageDigest sha1 = null;
+        try {
+            sha1 = MessageDigest.getInstance("SHA1");
+        } catch (NoSuchAlgorithmException e) {
+            throw new TunnelBrokenException("Unable to do sha1 hashes", e);
+        }
+        sha1.update(packet, 0+offset, 24);
+        sha1.update(hashedPassword);
+        sha1.update(packet, 44+offset, bytecount-44);
+        byte[] myHash = sha1.digest();
+        if (!Arrays.equals(myHash, theirHash)) {
+            Log.e(TAG, "Received packet with failed hash comparison");
+            return false;
+        }
+
+        // check ipv6
+        if (packet[3+offset] == IPPROTO_IPv6 && bytecount >= AYIYA_OVERHEAD && (packet[AYIYA_OVERHEAD+offset] >> 4) != 6) {
+            Log.e(TAG, "Payload should be an IPv6 packet, but isn't");
+            return false;
+        }
+
+        // this packet appears to be valid!
+        return true;
     }
 
     /**
@@ -358,63 +377,57 @@ public class Ayiya {
             Log.wtf(TAG, "SHA1 no longer available???", e);
             throw new TunnelBrokenException("Cannot build ayiya struct", e);
         }
+        assert(checkValidity(ayiyaPacket, 0, ayiyaPacket.length));
         DatagramPacket dgPacket = new DatagramPacket(ayiyaPacket, ayiyaPacket.length, socket.getRemoteSocketAddress());
         socket.send(dgPacket);
     }
 
     private class AyiyaInputStream extends InputStream {
-        private byte[] streamBuffer = new byte[0];
-        private int bufferReadPointer = 0;
+        private ThreadLocal<ByteBuffer> streamBuffer = new ThreadLocal<ByteBuffer>();
 
         private void ensureBuffer() throws IOException {
-            synchronized (streamBuffer) {
-                while (streamBuffer.length == bufferReadPointer) {
-                    try {
-                        streamBuffer = Ayiya.this.read();
-                    } catch (TunnelBrokenException e) {
-                        throw new IOException(e);
-                    }
-                    bufferReadPointer = 0;
+            if (streamBuffer.get() == null) {
+                byte[] actualBuffer = new byte[2*AYIYA_OVERHEAD + mtu];
+                // a new Thread, a new buffer.
+                streamBuffer.set (ByteBuffer.wrap(actualBuffer));
+                // wrap it into a byte buffer which keeps track of position and length ("limit")
+            }
+            while (!streamBuffer.get().hasRemaining()) {
+                try {
+                    Ayiya.this.read(streamBuffer.get());
+                } catch (TunnelBrokenException e) {
+                    throw new IOException(e);
                 }
             }
         }
 
         @Override
         public int read() throws IOException {
-            // complicated, hopefully nobody uses this
-            synchronized (streamBuffer) {
-                ensureBuffer();
-                return streamBuffer[bufferReadPointer++];
-            }
+            ensureBuffer();
+            return streamBuffer.get().get();
         }
 
-        private int read (ByteBuffer bb) throws IOException {
-            synchronized (streamBuffer) {
-                ensureBuffer();
-                int byteCount = Math.max(streamBuffer.length - bufferReadPointer, bb.capacity());
-                bb.put(streamBuffer, bufferReadPointer, byteCount);
-                bufferReadPointer += byteCount;
-                return byteCount;
-            }
-        }
         @Override
         public int read(byte[] buffer) throws IOException {
-            ByteBuffer bb = ByteBuffer.wrap(buffer);
-            return read(bb);
+            ensureBuffer();
+            int byteCount = Math.min(streamBuffer.get().remaining(), buffer.length);
+            streamBuffer.get().get(buffer, 0, byteCount);
+            return byteCount;
         }
 
         @Override
         public int read(byte[] buffer, int offset, int length) throws IOException {
-            ByteBuffer bb = ByteBuffer.wrap(buffer, offset, length);
-            return read(bb);
+            ensureBuffer();
+            int byteCount = Math.min(streamBuffer.get().remaining(), length);
+            streamBuffer.get().get(buffer, offset, byteCount);
+            return byteCount;
         }
 
         @Override
         public void close() throws IOException {
             synchronized (streamBuffer) {
                 super.close();
-                streamBuffer = new byte[0];
-                bufferReadPointer = 0;
+                streamBuffer.remove(); // @todo in principle, there may be more buffers of other Threads. Hm.
             }
         }
     }
@@ -442,7 +455,7 @@ public class Ayiya {
 
         @Override
         public void write(byte[] buffer, int offset, int count) throws IOException {
-            this.write(Arrays.copyOfRange(buffer, offset, offset + count - 1));
+            this.write(Arrays.copyOfRange(buffer, offset, offset + count));
         }
 
         @Override

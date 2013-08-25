@@ -49,15 +49,26 @@ public class AiccuVpnService extends VpnService {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        // Build the configuration object from the extras at the intent.
+        TicConfiguration ticConfiguration = new TicConfiguration (
+                intent.getStringExtra(MainActivity.EXTRA_USER_NAME),
+                intent.getStringExtra(MainActivity.EXTRA_PASSWORD),
+                intent.getStringExtra(MainActivity.EXTRA_TIC_URL));
+
         // Start a new session by creating a new thread.
-        thread = new Thread(new VpnThread(), SESSION_NAME);
+        thread = new Thread(new VpnThread(ticConfiguration), SESSION_NAME);
         thread.start();
 
         return START_STICKY;
     }
 
     private class VpnThread extends Thread {
-        protected VpnThread () {};
+
+        private TicConfiguration ticConfig;
+
+        protected VpnThread (TicConfiguration config) {
+            ticConfig = config;
+        };
 
         private Thread inThread = null;
         private Thread outThread = null;
@@ -66,7 +77,6 @@ public class AiccuVpnService extends VpnService {
         public void run() {
             try {
                 // Read the tunnel specification from Tic
-                TicConfiguration ticConfig = loadTicConfiguration();
                 Tic tic = new Tic (ticConfig);
                 TicTunnel tunnelSpecification = null;
                 try {
@@ -92,7 +102,7 @@ public class AiccuVpnService extends VpnService {
                 // Perpare the tunnel to PoP
                 Ayiya ayiya = new Ayiya (tunnelSpecification);
 
-                while (!Thread.interrupted()) {
+                while (!Thread.currentThread().isInterrupted()) {
                     try {
                         // setup tunnel to PoP
                         ayiya.connect();
@@ -102,23 +112,27 @@ public class AiccuVpnService extends VpnService {
                         OutputStream popOut = ayiya.getOutputStream();
                         // start the copying threads
                         inThread = startStreamCopy (localIn, popOut);
+                        inThread.setName("AYIYA from local to POP");
                         outThread = startStreamCopy (popIn, localOut);
+                        outThread.setName("AYIYA from POP to local");
                         // wait until interrupted
                         try {
-                            while (!Thread.interrupted() && inThread.isAlive() && outThread.isAlive()) {
-                                Thread.sleep(tunnelSpecification.getHeartbeatInterval()*1000);
+                            while (!Thread.currentThread().isInterrupted() && inThread.isAlive() && outThread.isAlive()) {
+                                Thread.sleep(tunnelSpecification.getHeartbeatInterval()*1000/2);
                                 ayiya.beat();
+                                Log.i(TAG, "Sent heartbeat.");
                             }
                         } catch (InterruptedException ie) {
                             Log.i(TAG, "Tunnel thread received interrupt, closing tunnel");
+                            throw ie;
                         }
                     } catch (IOException e) {
                         Log.i (TAG, "Tunnel connection broke down, closing and reconnecting ayiya", e);
                         Thread.sleep(5000l); // @todo we should check with ConnectivityManager
                     } finally {
-                        if (inThread != null)
+                        if (inThread != null && inThread.isAlive())
                             inThread.interrupt();
-                        if (outThread != null)
+                        if (outThread != null && inThread.isAlive())
                             outThread.interrupt();
                         ayiya.close();
                     }
@@ -127,6 +141,8 @@ public class AiccuVpnService extends VpnService {
                 Log.e(TAG, "This confiugration will not work on this device", e);
                 // @todo inform the human user
                 // if this thread fails, the service per se is out of order
+                stopSelf();
+            } catch (InterruptedException e) {
                 stopSelf();
             } catch (Throwable t) {
                 Log.e(TAG, "Failed to run tunnel", t);
@@ -184,14 +200,8 @@ public class AiccuVpnService extends VpnService {
                         while (!Thread.interrupted()) {
                             int len = in.read (packet);
                             if (len > 0) {
-                                String s = null;
-                                try {
-                                    s = new String (packet, 0, len, "UTF-8");
-                                } catch (UnsupportedEncodingException e) {
-                                    Log.e(TAG, "UTF-8 not supported");
-                                }
-                                Log.d(TAG, "read string: " + s);
                                 out.write(packet, 0, len);
+                                Log.d(TAG, Thread.currentThread().getName() + " copied package of size: " + len);
                             } else {
                                 Thread.sleep(100);
                             }
@@ -221,13 +231,13 @@ public class AiccuVpnService extends VpnService {
         }
     }
 
-    private TicConfiguration loadTicConfiguration() {
+/*    private TicConfiguration loadTicConfiguration() {
         return new TicConfiguration("XYZ0-SIXXS", "1234", "tic.sixxs.net");
     }
-
+*/
     @Override
     public void onDestroy() {
-        if (thread != null) {
+        if (thread != null && !thread.isInterrupted()) {
             thread.interrupt();
         }
     }
