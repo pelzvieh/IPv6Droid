@@ -132,7 +132,7 @@ public class AiccuVpnService extends VpnService {
                     } finally {
                         if (inThread != null && inThread.isAlive())
                             inThread.interrupt();
-                        if (outThread != null && inThread.isAlive())
+                        if (outThread != null && outThread.isAlive())
                             outThread.interrupt();
                         ayiya.close();
                     }
@@ -197,7 +197,7 @@ public class AiccuVpnService extends VpnService {
                         byte[] packet = new byte[32767];
 
                         // @TODO there *must* be a suitable utility class for that...?
-                        while (!Thread.interrupted()) {
+                        while (!Thread.currentThread().isInterrupted()) {
                             int len = in.read (packet);
                             if (len > 0) {
                                 out.write(packet, 0, len);

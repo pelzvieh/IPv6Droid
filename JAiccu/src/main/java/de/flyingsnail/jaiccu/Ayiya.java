@@ -59,13 +59,16 @@ public class Ayiya {
     private static final byte IPPROTO_NONE = 59;
 
     /** size of the AYIYA header */
-    private static final int AYIYA_OVERHEAD = 44;
+    public static final int AYIYA_OVERHEAD = 44;
 
     /** The IPv6 address of the PoP, used as identity in the protocol. */
     private final Inet6Address ipv6Pop;
 
     /** the maximum transmission unit in bytes */
     private final int mtu;
+
+    /** the maximum packet size */
+    private int maxPacketSize = 0;
 
     /** The IPv4 address of the PoP - the only address we can send packets to. */
     private Inet4Address ipv4Pop;
@@ -181,6 +184,14 @@ public class Ayiya {
     }
 
     /**
+     * Get the maximum transmission unit (MTU) associated with this Ayiya instance.
+     * @return the MTU in bytes
+     */
+    public int getMtu() {
+        return mtu;
+    }
+
+    /**
      * Send a heartbeat to the PoP
      */
     public void beat() throws IOException, TunnelBrokenException {
@@ -269,6 +280,8 @@ public class Ayiya {
             // read from socket
             socket.receive(dgPacket);
             int bytecount = dgPacket.getLength();
+            if (bytecount > maxPacketSize)
+                maxPacketSize = bytecount;
             if (bytecount < 0)
                 throw new TunnelBrokenException("Input stream disrupted", null);
             else if (bytecount == 0) {
@@ -391,6 +404,7 @@ public class Ayiya {
                 // a new Thread, a new buffer.
                 streamBuffer.set (ByteBuffer.wrap(actualBuffer));
                 // wrap it into a byte buffer which keeps track of position and length ("limit")
+                streamBuffer.get().limit(0); // initially no bytes inside
             }
             while (!streamBuffer.get().hasRemaining()) {
                 try {
@@ -409,10 +423,7 @@ public class Ayiya {
 
         @Override
         public int read(byte[] buffer) throws IOException {
-            ensureBuffer();
-            int byteCount = Math.min(streamBuffer.get().remaining(), buffer.length);
-            streamBuffer.get().get(buffer, 0, byteCount);
-            return byteCount;
+            return read(buffer, 0, buffer.length);
         }
 
         @Override
@@ -420,6 +431,8 @@ public class Ayiya {
             ensureBuffer();
             int byteCount = Math.min(streamBuffer.get().remaining(), length);
             streamBuffer.get().get(buffer, offset, byteCount);
+            if (streamBuffer.get().hasRemaining())
+                Log.e(TAG, "Warning: InputStream.read supplied with a buffer too small to read a full Datagram");
             return byteCount;
         }
 
