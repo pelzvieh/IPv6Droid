@@ -14,8 +14,9 @@
             android:text="@string/Start"
             android:id="@+id/button"
             android:onClick="startVPN"
-            android:layout_alignParentTop="true"
-            android:enabled="true"/>
+            android:layout_alignParentTop="false"
+            android:enabled="true"
+            android:layout_below="@+id/progressBar"/>
 
     <TextView
             android:layout_width="wrap_content"
@@ -72,7 +73,30 @@
             android:text="Password"
             android:id="@+id/textView"
             android:layout_alignLeft="@+id/textView2"
-            android:layout_alignBaseline="@+id/password"/>
+            android:layout_alignBaseline="@+id/password"
+            style="?android:attr/progressBarStyleLarge"/>
+
+    <ProgressBar
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/progressBar"
+            android:layout_alignParentTop="false"
+            android:layout_centerHorizontal="true"
+            android:max="100"
+            android:layout_below="@+id/statusText"
+            android:indeterminate="true"
+            style="@android:style/Widget.ProgressBar.Horizontal"
+            android:visibility="invisible"/>
+
+    <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceSmall"
+            android:id="@+id/statusText"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true"
+            android:text="Bitte starten"
+            android:visibility="invisible"/>
 
 </RelativeLayout>
 <!-- From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/JAiccu/src/main/res/layout/activity_main.xml -->

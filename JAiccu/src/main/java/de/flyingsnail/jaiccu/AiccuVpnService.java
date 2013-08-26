@@ -2,12 +2,17 @@ package de.flyingsnail.jaiccu;
 
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.net.VpnService;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
 import android.os.ParcelFileDescriptor;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.FileInputStream;
@@ -36,16 +41,28 @@ public class AiccuVpnService extends VpnService {
     private static final String TAG = AiccuVpnService.class.getName();
     private static final String SESSION_NAME = AiccuVpnService.class.getSimpleName();
 
+    /**
+     * The Action name for a status broadcast intent.
+     */
+    public static final String BC_STATUS = AiccuVpnService.class.getName() + ".STATUS";
+
+    /**
+     * The extended data name for the status in a status broadcast intent.
+     */
+    public static final String EDATA_STATUS = AiccuVpnService.class.getName() + ".STATUS";
+    public static final String EDATA_PROGRESS = AiccuVpnService.class.getName() + ".PROGRESS";
+
     /*private String serverAddress;
     private String serverPort;
     private byte[] sharedSecret;*/
     private PendingIntent configureIntent;
 
-    private Handler handler;
     private Thread thread;
 
     private String parameters;
     private ParcelFileDescriptor vpnFD;
+    private TextView statusText;
+    private ProgressBar progress;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -80,9 +97,11 @@ public class AiccuVpnService extends VpnService {
                 Tic tic = new Tic (ticConfig);
                 TicTunnel tunnelSpecification = null;
                 try {
+                    reportStatus(0, "Query TIC");
                     tic.connect();
                     List<String> tunnelIds = tic.listTunnels();
                     tunnelSpecification = selectFirstSuitable(tunnelIds, tic);
+                    reportStatus(25, "Selected Tunnel");
                 } finally {
                     tic.close();
                 }
@@ -91,21 +110,25 @@ public class AiccuVpnService extends VpnService {
                 Builder builder = new Builder();
                 configureBuilderFromTunnelSpecification(builder, tunnelSpecification);
 
-                vpnFD = builder.establish();
-
-                // Packets to be sent are queued in this input stream.
-                FileInputStream localIn = new FileInputStream(vpnFD.getFileDescriptor());
-
-                // Packets received need to be written to this output stream.
-                FileOutputStream localOut = new FileOutputStream(vpnFD.getFileDescriptor());
-
                 // Perpare the tunnel to PoP
                 Ayiya ayiya = new Ayiya (tunnelSpecification);
 
                 while (!Thread.currentThread().isInterrupted()) {
                     try {
+                        // setup local tun and routing
+                        vpnFD = builder.establish();
+                        reportStatus(50, "Configured local network");
+
+                        // Packets to be sent are queued in this input stream.
+                        FileInputStream localIn = new FileInputStream(vpnFD.getFileDescriptor());
+
+                        // Packets received need to be written to this output stream.
+                        FileOutputStream localOut = new FileOutputStream(vpnFD.getFileDescriptor());
+
                         // setup tunnel to PoP
                         ayiya.connect();
+                        reportStatus(75, "Pinged POP");
+
                         DatagramSocket popSocket = ayiya.getSocket();
                         protect(popSocket);
                         InputStream popIn = ayiya.getInputStream();
@@ -118,8 +141,15 @@ public class AiccuVpnService extends VpnService {
                         // wait until interrupted
                         try {
                             while (!Thread.currentThread().isInterrupted() && inThread.isAlive() && outThread.isAlive()) {
-                                Thread.sleep(tunnelSpecification.getHeartbeatInterval()*1000/2);
-                                ayiya.beat();
+                                reportStatus(100, "Transmitting");
+                                // wait for half the heartbeat interval or until inThread dies.
+                                // Note: the inThread is reading fromt the network socket to the POP
+                                // in case of network changes, this socket breaks immediately, so
+                                // inThread crashes on external network changes even if no transfer
+                                // is active.
+                                inThread.join(tunnelSpecification.getHeartbeatInterval()*1000/2);
+                                if (inThread.isAlive())
+                                    ayiya.beat();
                                 Log.i(TAG, "Sent heartbeat.");
                             }
                         } catch (InterruptedException ie) {
@@ -128,6 +158,7 @@ public class AiccuVpnService extends VpnService {
                         }
                     } catch (IOException e) {
                         Log.i (TAG, "Tunnel connection broke down, closing and reconnecting ayiya", e);
+                        reportStatus(50, "Disturbed");
                         Thread.sleep(5000l); // @todo we should check with ConnectivityManager
                     } finally {
                         if (inThread != null && inThread.isAlive())
@@ -137,19 +168,20 @@ public class AiccuVpnService extends VpnService {
                         ayiya.close();
                     }
                 }
+                reportStatus(0, "Tearing down");
             } catch (ConnectionFailedException e) {
                 Log.e(TAG, "This confiugration will not work on this device", e);
                 // @todo inform the human user
                 // if this thread fails, the service per se is out of order
-                stopSelf();
             } catch (InterruptedException e) {
-                stopSelf();
+                // controlled behaviour, no logging or treatment required
             } catch (Throwable t) {
                 Log.e(TAG, "Failed to run tunnel", t);
                 // @todo this might be a temporary problem, some work is required with ConnectionManager yet :-(
                 // if this thread fails, the service per se is out of order
-                stopSelf();
             }
+            stopSelf();
+            reportStatus(0, "Down");
         }
 
         private TicTunnel selectFirstSuitable(List<String> tunnelIds, Tic tic) throws IOException, ConnectionFailedException {
@@ -229,6 +261,15 @@ public class AiccuVpnService extends VpnService {
             thread.start();
             return thread;
         }
+    }
+
+
+    private void reportStatus (int progressPerCent, String status) {
+        Intent statusBroadcast = new Intent(BC_STATUS)
+                .putExtra(EDATA_STATUS, status)
+                .putExtra(EDATA_PROGRESS, progressPerCent);
+        // Broadcast locally
+        LocalBroadcastManager.getInstance(this).sendBroadcast(statusBroadcast);
     }
 
 /*    private TicConfiguration loadTicConfiguration() {

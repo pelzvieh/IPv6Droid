@@ -25,7 +25,7 @@ import java.util.Date;
  *
  * AYIYA - Anything In Anything
  *
- * This realises the tunnel setup protocol with the PoP in the SixXS network.
+ * This realises the tunnel protocol with the PoP in the SixXS network.
  *
  * See http://www.sixxs.net/tools/ayiya for specification.
  *
