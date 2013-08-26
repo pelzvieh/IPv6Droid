@@ -14,37 +14,64 @@ public final class R {
         /**  From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/JAiccu/src/main/res/values/dimens.xml 
  From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/JAiccu/src/main/res/values-sw720dp-land/dimens.xml 
          */
-        public static final int activity_horizontal_margin=0x7f040000;
-        public static final int activity_vertical_margin=0x7f040001;
+        public static final int activity_horizontal_margin=0x7f050000;
+        public static final int activity_vertical_margin=0x7f050001;
     }
     public static final class drawable {
-        public static final int ic_launcher=0x7f020000;
+        public static final int accept=0x7f020000;
+        public static final int cancel=0x7f020001;
+        public static final int exclamation=0x7f020002;
+        public static final int hourglass=0x7f020003;
+        public static final int ic_action_connect=0x7f020004;
+        public static final int ic_action_disconnect=0x7f020005;
+        public static final int ic_launcher=0x7f020006;
+        public static final int transmit=0x7f020007;
     }
     public static final class id {
-        public static final int action_settings=0x7f080009;
-        public static final int button=0x7f080000;
-        public static final int password=0x7f080004;
-        public static final int progressBar=0x7f080001;
-        public static final int statusText=0x7f080008;
-        public static final int textView=0x7f080007;
-        public static final int textView2=0x7f080002;
-        public static final int textView4=0x7f080006;
-        public static final int ticURL=0x7f080005;
-        public static final int userName=0x7f080003;
+        public static final int action_connect=0x7f090003;
+        public static final int action_disconnect=0x7f090004;
+        public static final int action_settings=0x7f090005;
+        public static final int progressBar=0x7f090000;
+        public static final int statusImage=0x7f090002;
+        public static final int statusText=0x7f090001;
     }
     public static final class layout {
         public static final int activity_main=0x7f030000;
     }
     public static final class menu {
-        public static final int main=0x7f070000;
+        public static final int main=0x7f080000;
     }
     public static final class string {
         /**  From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/JAiccu/src/main/res/values/strings.xml 
          */
-        public static final int Start=0x7f050000;
-        public static final int action_settings=0x7f050001;
-        public static final int app_name=0x7f050002;
-        public static final int hello_world=0x7f050003;
+        public static final int Start=0x7f060000;
+        public static final int action_connect=0x7f060001;
+        public static final int action_disconnect=0x7f060002;
+        public static final int action_settings=0x7f060003;
+        public static final int app_name=0x7f060004;
+        public static final int boolean_set=0x7f060005;
+        public static final int boolean_unset=0x7f060006;
+        public static final int hello_world=0x7f060007;
+        public static final int password_set=0x7f060008;
+        public static final int password_unset=0x7f060009;
+        /**  From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/JAiccu/src/main/res/values/strings_activity_settings.xml 
+         */
+        public static final int pref_default_host=0x7f06000a;
+        public static final int pref_default_routes_specific=0x7f06000b;
+        public static final int pref_description_username=0x7f06000c;
+        public static final int pref_header_login=0x7f06000d;
+        public static final int pref_header_routes=0x7f06000e;
+        public static final int pref_title_host=0x7f06000f;
+        public static final int pref_title_password=0x7f060010;
+        /**  From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/JAiccu/src/main/res/values/strings.xml 
+         */
+        public static final int pref_title_routes=0x7f060011;
+        /**  From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/JAiccu/src/main/res/values/strings_activity_settings.xml 
+         */
+        public static final int pref_title_routes_default=0x7f060012;
+        public static final int pref_title_routes_specific=0x7f060013;
+        public static final int pref_title_username=0x7f060014;
+        public static final int title_activity_settings=0x7f060015;
     }
     public static final class style {
         /**  From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/JAiccu/src/main/res/values/styles.xml 
@@ -58,9 +85,17 @@ public final class R {
  From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/JAiccu/src/main/res/values-v14/styles.xml 
  API 14 theme customizations can go here. 
          */
-        public static final int AppBaseTheme=0x7f060000;
+        public static final int AppBaseTheme=0x7f070000;
         /**  All customizations that are NOT specific to a particular API-level can go here. 
          */
-        public static final int AppTheme=0x7f060001;
+        public static final int AppTheme=0x7f070001;
+        /**  From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/JAiccu/src/main/res/values-large/styles.xml 
+         */
+        public static final int LoginFormContainer=0x7f070002;
+    }
+    public static final class xml {
+        public static final int pref_headers=0x7f040000;
+        public static final int pref_login=0x7f040001;
+        public static final int pref_routes=0x7f040002;
     }
 }

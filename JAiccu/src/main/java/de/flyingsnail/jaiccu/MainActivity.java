@@ -2,18 +2,20 @@
 
 package de.flyingsnail.jaiccu;
 
+import android.app.Activity;
 import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.net.VpnService;
 import android.os.Bundle;
-import android.app.Activity;
+import android.preference.PreferenceManager;
 import android.support.v4.content.LocalBroadcastManager;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
-import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
@@ -23,26 +25,25 @@ import android.widget.TextView;
 public class MainActivity extends Activity {
 
     private static final int REQUEST_START_VPN = 1;
-    public static final String EXTRA_PREFIX = MainActivity.class.getPackage().getName()+".";
-    public static final String EXTRA_USER_NAME = EXTRA_PREFIX + "UserName";
-    public static final String EXTRA_PASSWORD = EXTRA_PREFIX + "Password";
-    public static final String EXTRA_TIC_URL = EXTRA_PREFIX + "TIC_URL";
-
-    private EditText userName;
-    private EditText password;
-    private EditText ticURL;
-    private TextView status;
+    private static final int REQUEST_SETTINGS = 2;
+    private TextView activity;
     private ProgressBar progress;
+    private ImageView status;
+    private SharedPreferences myPreferences;
+
+    /**
+     * The Action name for a status broadcast intent.
+     */
+    public static final String BC_STOP = MainActivity.class.getName() + ".STOP";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        myPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         setContentView(R.layout.activity_main);
-        userName = (EditText)findViewById(R.id.userName);
-        password = (EditText)findViewById(R.id.password);
-        ticURL = (EditText)findViewById(R.id.ticURL);
-        status = (TextView)findViewById(R.id.statusText);
+        activity = (TextView)findViewById(R.id.statusText);
         progress = (ProgressBar)findViewById(R.id.progressBar);
+        status = (ImageView)findViewById(R.id.statusImage);
         // setup the intent filter for status broadcasts
         // The filter's action is BROADCAST_ACTION
         IntentFilter statusIntentFilter = new IntentFilter(AiccuVpnService.BC_STATUS);
@@ -52,7 +53,12 @@ public class MainActivity extends Activity {
         LocalBroadcastManager.getInstance(this).registerReceiver(statusReceiver,
                 statusIntentFilter);
 
-
+        // check login configuration and start Settings if not yet set.
+        if (myPreferences.getString("tic_username", "").isEmpty() ||
+                myPreferences.getString("tic_password", "").isEmpty() ||
+                myPreferences.getString("tic_host", "").isEmpty()) {
+            openSettings();
+        }
     }
 
     @Override
@@ -69,7 +75,7 @@ public class MainActivity extends Activity {
     public void startVPN (View view) {
         // Start system-managed intent for VPN
         Intent systemVpnIntent = VpnService.prepare(getApplicationContext());
-        status.setVisibility(View.VISIBLE);
+        activity.setVisibility(View.VISIBLE);
         progress.setVisibility(View.VISIBLE);
         progress.setIndeterminate(true);
 
@@ -80,21 +86,54 @@ public class MainActivity extends Activity {
         }
     }
 
+    /**
+     * Start the system-managed setup of VPN
+     */
+    public void openSettings () {
+        // Start system-managed intent for VPN
+        Intent settingsIntent = new Intent(this, SettingsActivity.class);
+        startActivityForResult(settingsIntent, REQUEST_SETTINGS);
+    }
+
+    /**
+     * Stop the VPN service/thread.
+     */
+    public void stopVPN () {
+        Intent statusBroadcast = new Intent(BC_STOP);
+        // Broadcast locally
+        LocalBroadcastManager.getInstance(this).sendBroadcast(statusBroadcast);
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_START_VPN && resultCode == RESULT_OK) {
-            /* @TODO should we query parameters in main activity and pass here
-               as demonstrated in TopVpnClient, or should we query them in the
-               configuration intent suggested by the VpnService API?
-               Probably we should get here as far as setup username and password, and query
-               available tunnels from the tic server and let the user select one.
-             */
-            Intent intent = new Intent(this, AiccuVpnService.class);
-            intent.putExtra(EXTRA_USER_NAME, userName.getText().toString()).
-                   putExtra(EXTRA_PASSWORD, password.getText().toString()).
-                   putExtra(EXTRA_TIC_URL, ticURL.getText().toString());
-            startService(intent);
+        switch (requestCode) {
+            case REQUEST_START_VPN:
+                if (resultCode == RESULT_OK) {
+                    Intent intent = new Intent(this, AiccuVpnService.class);
+                    startService(intent);
+                }
+                break;
+        }
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.action_connect:
+                startVPN(item.getActionView());
+                return true;
+
+            case R.id.action_disconnect:
+                stopVPN();
+                return true;
+
+            case R.id.action_settings:
+                openSettings();
+                return true;
+
+            default:
+                return false;
         }
     }
 
@@ -104,15 +143,33 @@ public class MainActivity extends Activity {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            String status = intent.getStringExtra(AiccuVpnService.EDATA_STATUS);
+            AiccuVpnService.Status status = AiccuVpnService.Status.valueOf(intent.getStringExtra(AiccuVpnService.EDATA_STATUS));
+            int imageRes = R.drawable.exclamation;
+            switch (status) {
+                case Connected:
+                    imageRes = R.drawable.transmit;
+                    break;
+                case Idle:
+                    imageRes = R.drawable.cancel;
+                    break;
+                case Connecting:
+                    imageRes = R.drawable.hourglass;
+                    break;
+                case Disturbed:
+                    imageRes = R.drawable.exclamation;
+                    break;
+            }
             if (status != null)
-                MainActivity.this.status.setText(status);
+                MainActivity.this.status.setImageResource(imageRes);
             int progress = intent.getIntExtra(AiccuVpnService.EDATA_PROGRESS, -1);
             if (progress >= 0) {
                 MainActivity.this.progress.setIndeterminate(false);
                 MainActivity.this.progress.setProgress(progress);
             } else
                 MainActivity.this.progress.setIndeterminate(true);
+            String activity = intent.getStringExtra(AiccuVpnService.EDATA_ACTIVITY);
+            if (activity != null)
+                MainActivity.this.activity.setText(activity);
         }
     }
 }

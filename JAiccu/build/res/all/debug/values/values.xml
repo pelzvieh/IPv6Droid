@@ -6,9 +6,30 @@
     <dimen name="activity_vertical_margin">16dp</dimen>
     <!-- From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/JAiccu/src/main/res/values/strings.xml -->
     <string name="Start">Starten</string>
+    <string name="action_connect">Connect</string>
+    <string name="action_disconnect">Disconnect</string>
     <string name="action_settings">Settings</string>
     <string name="app_name">JAiccu</string>
+    <string name="boolean_set">enabled</string>
+    <string name="boolean_unset">disabled</string>
     <string name="hello_world">Hello world!</string>
+    <string name="password_set">&lt;set></string>
+    <string name="password_unset">&lt;unset></string>
+    <!-- From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/JAiccu/src/main/res/values/strings_activity_settings.xml -->
+    <string name="pref_default_host">tic.sixxs.net</string>
+    <string name="pref_default_routes_specific"></string>
+    <string name="pref_description_username">The username sent to you after registering with SixXS</string>
+    <string name="pref_header_login">Login</string>
+    <string name="pref_header_routes">Route settings</string>
+    <string name="pref_title_host">TIC host</string>
+    <string name="pref_title_password">Password</string>
+    <!-- From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/JAiccu/src/main/res/values/strings.xml -->
+    <string name="pref_title_routes">Route settings</string>
+    <!-- From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/JAiccu/src/main/res/values/strings_activity_settings.xml -->
+    <string name="pref_title_routes_default">Set IPv6 default route</string>
+    <string name="pref_title_routes_specific">IPv6 subnet to route through the tunnel</string>
+    <string name="pref_title_username">Username</string>
+    <string name="title_activity_settings">Settings</string>
     <!-- From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/JAiccu/src/main/res/values/styles.xml -->
     <style name="AppBaseTheme" parent="android:Theme.Light">
         <!--
@@ -20,6 +41,12 @@
 
     <style name="AppTheme" parent="AppBaseTheme">
         <!-- All customizations that are NOT specific to a particular API-level can go here. -->
+    </style>
+
+    <style name="LoginFormContainer">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:padding">16dp</item>
     </style>
 
 </resources>

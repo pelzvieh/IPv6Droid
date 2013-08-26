@@ -1,36 +1,29 @@
 package de.flyingsnail.jaiccu;
 
 import android.app.PendingIntent;
-import android.app.Service;
-import android.content.ComponentName;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.net.VpnService;
-import android.os.Handler;
-import android.os.IBinder;
-import android.os.Message;
 import android.os.ParcelFileDescriptor;
+import android.preference.PreferenceManager;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.DatagramSocket;
 import java.net.Inet6Address;
-import java.net.Socket;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.Locale;
-import java.util.TimerTask;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.StringTokenizer;
 
 /**
  * Created by pelzi on 15.08.13.
@@ -46,12 +39,6 @@ public class AiccuVpnService extends VpnService {
      */
     public static final String BC_STATUS = AiccuVpnService.class.getName() + ".STATUS";
 
-    /**
-     * The extended data name for the status in a status broadcast intent.
-     */
-    public static final String EDATA_STATUS = AiccuVpnService.class.getName() + ".STATUS";
-    public static final String EDATA_PROGRESS = AiccuVpnService.class.getName() + ".PROGRESS";
-
     /*private String serverAddress;
     private String serverPort;
     private byte[] sharedSecret;*/
@@ -63,14 +50,36 @@ public class AiccuVpnService extends VpnService {
     private ParcelFileDescriptor vpnFD;
     private TextView statusText;
     private ProgressBar progress;
+    private SharedPreferences myPreferences;
+
+    /**
+     * Possible status as broadcasted by reportStatus.
+     */
+    public enum Status {
+        Idle, Connecting, Connected, Disturbed
+    }
+    /**
+     * The extended data name for the status in a status broadcast intent.
+     */
+    public static final String EDATA_STATUS = AiccuVpnService.class.getName() + ".STATUS";
+    public static final String EDATA_ACTIVITY = AiccuVpnService.class.getName() + ".ACTIVITY";
+    public static final String EDATA_PROGRESS = AiccuVpnService.class.getName() + ".PROGRESS";
+
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        myPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         // Build the configuration object from the extras at the intent.
-        TicConfiguration ticConfiguration = new TicConfiguration (
-                intent.getStringExtra(MainActivity.EXTRA_USER_NAME),
-                intent.getStringExtra(MainActivity.EXTRA_PASSWORD),
-                intent.getStringExtra(MainActivity.EXTRA_TIC_URL));
+        TicConfiguration ticConfiguration = loadTicConfiguration();
+
+        // setup the intent filter for status broadcasts
+        // The filter's action is BROADCAST_ACTION
+        IntentFilter statusIntentFilter = new IntentFilter(MainActivity.BC_STOP);
+        CommandReceiver commandReceiver = new CommandReceiver();
+
+        // Registers the CommandReceiver and its intent filter
+        LocalBroadcastManager.getInstance(this).registerReceiver(commandReceiver,
+                statusIntentFilter);
 
         // Start a new session by creating a new thread.
         thread = new Thread(new VpnThread(ticConfiguration), SESSION_NAME);
@@ -79,6 +88,10 @@ public class AiccuVpnService extends VpnService {
         return START_STICKY;
     }
 
+    /**
+     * This class does the actual work, i.e. logs in to TIC, reads available tunnels and starts
+     * a copy thread for each direction.
+     */
     private class VpnThread extends Thread {
 
         private TicConfiguration ticConfig;
@@ -97,11 +110,11 @@ public class AiccuVpnService extends VpnService {
                 Tic tic = new Tic (ticConfig);
                 TicTunnel tunnelSpecification = null;
                 try {
-                    reportStatus(0, "Query TIC");
+                    reportStatus(0, Status.Connecting, "Query TIC");
                     tic.connect();
                     List<String> tunnelIds = tic.listTunnels();
                     tunnelSpecification = selectFirstSuitable(tunnelIds, tic);
-                    reportStatus(25, "Selected Tunnel");
+                    reportStatus(25, Status.Connecting, "Selected Tunnel");
                 } finally {
                     tic.close();
                 }
@@ -117,7 +130,7 @@ public class AiccuVpnService extends VpnService {
                     try {
                         // setup local tun and routing
                         vpnFD = builder.establish();
-                        reportStatus(50, "Configured local network");
+                        reportStatus(50, Status.Connecting, "Configured local network");
 
                         // Packets to be sent are queued in this input stream.
                         FileInputStream localIn = new FileInputStream(vpnFD.getFileDescriptor());
@@ -127,7 +140,7 @@ public class AiccuVpnService extends VpnService {
 
                         // setup tunnel to PoP
                         ayiya.connect();
-                        reportStatus(75, "Pinged POP");
+                        reportStatus(75, Status.Connecting, "Pinged POP");
 
                         DatagramSocket popSocket = ayiya.getSocket();
                         protect(popSocket);
@@ -141,7 +154,7 @@ public class AiccuVpnService extends VpnService {
                         // wait until interrupted
                         try {
                             while (!Thread.currentThread().isInterrupted() && inThread.isAlive() && outThread.isAlive()) {
-                                reportStatus(100, "Transmitting");
+                                reportStatus(100, Status.Connected, "Transmitting");
                                 // wait for half the heartbeat interval or until inThread dies.
                                 // Note: the inThread is reading fromt the network socket to the POP
                                 // in case of network changes, this socket breaks immediately, so
@@ -158,7 +171,7 @@ public class AiccuVpnService extends VpnService {
                         }
                     } catch (IOException e) {
                         Log.i (TAG, "Tunnel connection broke down, closing and reconnecting ayiya", e);
-                        reportStatus(50, "Disturbed");
+                        reportStatus(50, Status.Disturbed, "Disturbed");
                         Thread.sleep(5000l); // @todo we should check with ConnectivityManager
                     } finally {
                         if (inThread != null && inThread.isAlive())
@@ -166,9 +179,14 @@ public class AiccuVpnService extends VpnService {
                         if (outThread != null && outThread.isAlive())
                             outThread.interrupt();
                         ayiya.close();
+                        try {
+                            vpnFD.close();
+                        } catch (Exception e) {
+                            Log.e(TAG, "Cannot close local socket", e);
+                        }
                     }
                 }
-                reportStatus(0, "Tearing down");
+                reportStatus(0, Status.Disturbed, "Tearing down");
             } catch (ConnectionFailedException e) {
                 Log.e(TAG, "This confiugration will not work on this device", e);
                 // @todo inform the human user
@@ -181,7 +199,7 @@ public class AiccuVpnService extends VpnService {
                 // if this thread fails, the service per se is out of order
             }
             stopSelf();
-            reportStatus(0, "Down");
+            reportStatus(0, Status.Idle, "Down");
         }
 
         private TicTunnel selectFirstSuitable(List<String> tunnelIds, Tic tic) throws IOException, ConnectionFailedException {
@@ -204,9 +222,20 @@ public class AiccuVpnService extends VpnService {
             builder.setMtu(tunnelSpecification.getMtu());
             builder.setSession(tunnelSpecification.getPopName());
             try {
-                builder.addRoute(Inet6Address.getByName("::"), 0);
+                if (myPreferences.getBoolean("routes_default", true))
+                    builder.addRoute(Inet6Address.getByName("::"), 0);
+                else {
+                    String routeDefinition = myPreferences.getString("routes_specific", "::/0");
+                    StringTokenizer tok = new StringTokenizer(routeDefinition, "/");
+                    Inet6Address address = (Inet6Address) Inet6Address.getByName(tok.nextToken());
+                    int prefixLen = 64;
+                    if (tok.hasMoreTokens())
+                        prefixLen = Integer.parseInt(tok.nextToken());
+                    builder.addRoute(address, prefixLen);
+                }
             } catch (UnknownHostException e) {
-                Log.e(TAG, "Could not add IPv6 default route to builder");
+                Log.e(TAG, "Could not add requested IPv6 route to builder", e);
+                // @todo notification to user required
             }
             builder.addAddress(tunnelSpecification.getIpv6Endpoint(), tunnelSpecification.getPrefixLength());
             // @todo add the configure intent?
@@ -264,18 +293,36 @@ public class AiccuVpnService extends VpnService {
     }
 
 
-    private void reportStatus (int progressPerCent, String status) {
+    /** Inner class to handle status updates */
+    private class CommandReceiver extends BroadcastReceiver {
+        private CommandReceiver() {}
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (action.equals(MainActivity.BC_STOP)) {
+                Log.i(TAG, "Received explicit stop brodcast, will stop VPN Tread");
+                AiccuVpnService.this.thread.interrupt();
+            }
+        }
+    }
+
+
+    private void reportStatus (int progressPerCent, Status status, String activity) {
         Intent statusBroadcast = new Intent(BC_STATUS)
-                .putExtra(EDATA_STATUS, status)
+                .putExtra(EDATA_STATUS, status.toString())
+                .putExtra(EDATA_ACTIVITY, activity)
                 .putExtra(EDATA_PROGRESS, progressPerCent);
         // Broadcast locally
         LocalBroadcastManager.getInstance(this).sendBroadcast(statusBroadcast);
     }
 
-/*    private TicConfiguration loadTicConfiguration() {
-        return new TicConfiguration("XYZ0-SIXXS", "1234", "tic.sixxs.net");
+    private TicConfiguration loadTicConfiguration() {
+        return new TicConfiguration(myPreferences.getString("tic_username", ""),
+                myPreferences.getString("tic_password", ""),
+                myPreferences.getString("tic_host", "tic.sixxs.net"));
     }
-*/
+
     @Override
     public void onDestroy() {
         if (thread != null && !thread.isInterrupted()) {

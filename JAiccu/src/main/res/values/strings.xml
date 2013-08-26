@@ -4,5 +4,12 @@
     <string name="app_name">JAiccu</string>
     <string name="action_settings">Settings</string>
     <string name="hello_world">Hello world!</string><string name="Start">Starten</string>
+    <string name="pref_title_routes">Route settings</string>
+    <string name="action_connect">Connect</string>
 
+    <string name="password_set">&lt;set&gt;</string>
+    <string name="password_unset">&lt;unset&gt;</string>
+    <string name="boolean_set">enabled</string>
+    <string name="boolean_unset">disabled</string>
+    <string name="action_disconnect">Disconnect</string>
 </resources>
