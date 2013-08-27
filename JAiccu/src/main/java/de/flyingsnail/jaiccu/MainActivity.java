@@ -144,19 +144,19 @@ public class MainActivity extends Activity {
         @Override
         public void onReceive(Context context, Intent intent) {
             AiccuVpnService.Status status = AiccuVpnService.Status.valueOf(intent.getStringExtra(AiccuVpnService.EDATA_STATUS));
-            int imageRes = R.drawable.exclamation;
+            int imageRes = R.drawable.off;
             switch (status) {
                 case Connected:
-                    imageRes = R.drawable.transmit;
+                    imageRes = R.drawable.transmitting;
                     break;
                 case Idle:
-                    imageRes = R.drawable.cancel;
+                    imageRes = R.drawable.off;
                     break;
                 case Connecting:
-                    imageRes = R.drawable.hourglass;
+                    imageRes = R.drawable.pending;
                     break;
                 case Disturbed:
-                    imageRes = R.drawable.exclamation;
+                    imageRes = R.drawable.disturbed;
                     break;
             }
             if (status != null)
