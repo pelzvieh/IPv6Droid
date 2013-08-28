@@ -35,20 +35,27 @@ public class MainActivity extends Activity {
      * The Action name for a status broadcast intent.
      */
     public static final String BC_STOP = MainActivity.class.getName() + ".STOP";
+    private StatusReceiver statusReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        myPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         setContentView(R.layout.activity_main);
+
+        myPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         activity = (TextView)findViewById(R.id.statusText);
         progress = (ProgressBar)findViewById(R.id.progressBar);
         status = (ImageView)findViewById(R.id.statusImage);
+
         // setup the intent filter for status broadcasts
         // The filter's action is BROADCAST_ACTION
-        IntentFilter statusIntentFilter = new IntentFilter(AiccuVpnService.BC_STATUS);
+        IntentFilter statusIntentFilter = new IntentFilter(VpnThread.BC_STATUS);
 
-        StatusReceiver statusReceiver = new StatusReceiver();
+        if (statusReceiver == null || savedInstanceState != null)
+            statusReceiver = new StatusReceiver(savedInstanceState);
+        else
+            statusReceiver.updateUi();
+
         // Registers the StatusReceiver and its intent filter
         LocalBroadcastManager.getInstance(this).registerReceiver(statusReceiver,
                 statusIntentFilter);
@@ -75,15 +82,23 @@ public class MainActivity extends Activity {
     public void startVPN (View view) {
         // Start system-managed intent for VPN
         Intent systemVpnIntent = VpnService.prepare(getApplicationContext());
-        activity.setVisibility(View.VISIBLE);
-        progress.setVisibility(View.VISIBLE);
-        progress.setIndeterminate(true);
-
         if (systemVpnIntent != null) {
             startActivityForResult(systemVpnIntent, REQUEST_START_VPN);
         } else {
             onActivityResult (REQUEST_START_VPN, RESULT_OK, null);
         }
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        statusReceiver = new StatusReceiver(savedInstanceState);
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        statusReceiver.saveState(outState);
     }
 
     /**
@@ -110,6 +125,9 @@ public class MainActivity extends Activity {
         switch (requestCode) {
             case REQUEST_START_VPN:
                 if (resultCode == RESULT_OK) {
+                    activity.setVisibility(View.VISIBLE);
+                    progress.setVisibility(View.VISIBLE);
+
                     Intent intent = new Intent(this, AiccuVpnService.class);
                     startService(intent);
                 }
@@ -139,11 +157,32 @@ public class MainActivity extends Activity {
 
     /** Inner class to handle status updates */
     private class StatusReceiver extends BroadcastReceiver {
-        private StatusReceiver() {}
+        private int progress;
+        private String activity;
+        private VpnThread.Status status;
+        private TicTunnel tunnel;
 
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            AiccuVpnService.Status status = AiccuVpnService.Status.valueOf(intent.getStringExtra(AiccuVpnService.EDATA_STATUS));
+        private StatusReceiver(Bundle savedState) {
+            if (savedState != null && savedState.containsKey(VpnThread.EDATA_STATUS)) {
+                status = VpnThread.Status.valueOf(savedState.getString(VpnThread.EDATA_STATUS));
+                progress = savedState.getInt(VpnThread.EDATA_PROGRESS);
+                activity = savedState.getString(VpnThread.EDATA_ACTIVITY);
+                tunnel = (TicTunnel)savedState.getSerializable(VpnThread.EDATA_ACTIVE_TUNNEL);
+                updateUi();
+            }
+        }
+
+        private void saveState(Bundle state) {
+            if (status != null)
+                state.putString(VpnThread.EDATA_STATUS, status.toString());
+            state.putInt(VpnThread.EDATA_PROGRESS, progress);
+            if (activity != null)
+                state.putString(VpnThread.EDATA_ACTIVITY, activity);
+            if (tunnel != null)
+                state.putSerializable(VpnThread.EDATA_ACTIVE_TUNNEL, tunnel);
+        }
+
+        private void updateUi () {
             int imageRes = R.drawable.off;
             switch (status) {
                 case Connected:
@@ -161,15 +200,23 @@ public class MainActivity extends Activity {
             }
             if (status != null)
                 MainActivity.this.status.setImageResource(imageRes);
-            int progress = intent.getIntExtra(AiccuVpnService.EDATA_PROGRESS, -1);
             if (progress >= 0) {
                 MainActivity.this.progress.setIndeterminate(false);
                 MainActivity.this.progress.setProgress(progress);
             } else
                 MainActivity.this.progress.setIndeterminate(true);
-            String activity = intent.getStringExtra(AiccuVpnService.EDATA_ACTIVITY);
             if (activity != null)
                 MainActivity.this.activity.setText(activity);
+            // @todo Tunnel anzeigen
+        }
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            status = VpnThread.Status.valueOf(intent.getStringExtra(VpnThread.EDATA_STATUS));
+            progress = intent.getIntExtra(VpnThread.EDATA_PROGRESS, -1);
+            activity = intent.getStringExtra(VpnThread.EDATA_ACTIVITY);
+            tunnel = (TicTunnel)intent.getSerializableExtra(VpnThread.EDATA_ACTIVE_TUNNEL);
+            updateUi();
         }
     }
 }

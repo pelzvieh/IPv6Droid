@@ -1,7 +1,5 @@
 package de.flyingsnail.jaiccu;
 
-import android.util.Log;
-
 /**
  * Created by pelzi on 19.08.13.
  */
@@ -14,7 +12,9 @@ public class TicConfiguration implements Cloneable {
     private String server;
 
     /** Constructor initializing all fields */
-    public TicConfiguration(String username, String password, String server) {
+    public TicConfiguration(String username,
+                            String password,
+                            String server ) {
         this.username = username;
         this.password = password;
         this.server = server;

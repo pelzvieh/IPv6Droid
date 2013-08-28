@@ -4,6 +4,14 @@
     <!-- From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/JAiccu/src/main/res/values/dimens.xml -->
     <dimen name="activity_horizontal_margin">16dp</dimen>
     <dimen name="activity_vertical_margin">16dp</dimen>
+    <!-- From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/JAiccu/src/main/res/values/strings_vpn_service.xml -->
+    <item name="vpnservice_already_running" type="id">An IPv6 tunnel is already running</item>
+    <item name="vpnservice_invalid_configuration" type="id">This configuration will not work on this
+        device</item>
+    <item name="vpnservice_tunnel_down" type="id">Tunnel/IPv6 closed</item>
+    <item name="vpnservice_tunnel_up" type="id">Tunnel is up - enjoy IPv6</item>
+    <item name="vpnservice_unexpected_problem" type="id">VPN setup experienced an unexpected
+        problem. You might want to try later.</item>
     <!-- From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/JAiccu/src/main/res/values/strings.xml -->
     <string name="Start">Starten</string>
     <string name="action_connect">Connect</string>

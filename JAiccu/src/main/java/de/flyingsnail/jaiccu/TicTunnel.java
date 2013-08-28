@@ -2,6 +2,7 @@ package de.flyingsnail.jaiccu;
 
 import android.util.Log;
 
+import java.io.Serializable;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.UnknownHostException;
@@ -11,7 +12,7 @@ import java.net.UnknownHostException;
  * Created by pelzi on 17.08.13.
  * (c) Dr. Andreas Feldner, see license.
  */
-public class TicTunnel {
+public class TicTunnel implements Serializable {
     /** The tag to identify logger. */
     private static final String TAG = TicTunnel.class.getSimpleName();
 
@@ -215,20 +216,6 @@ public class TicTunnel {
 
     public boolean isValid() {
         return (mtu != 0) && (password != null) && (ipv4Pop != null) && (ipv6Pop != null);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     }
 
     /**
