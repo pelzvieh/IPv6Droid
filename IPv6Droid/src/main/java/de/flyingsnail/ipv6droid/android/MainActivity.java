@@ -33,12 +33,15 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.ayiya.TicConfiguration;
 import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 
 /**
@@ -52,6 +55,7 @@ public class MainActivity extends Activity {
     private ProgressBar progress;
     private ImageView status;
     private Button redundantStartButton;
+    private ListView tunnelList;
     private SharedPreferences myPreferences;
 
     /**
@@ -70,6 +74,7 @@ public class MainActivity extends Activity {
         progress = (ProgressBar)findViewById(R.id.progressBar);
         status = (ImageView)findViewById(R.id.statusImage);
         redundantStartButton = (Button)findViewById(R.id.redundant_start_button);
+        tunnelList = (ListView)findViewById(R.id.tunnelList);
 
         // setup the intent filter for status broadcasts
         // The filter's action is BROADCAST_ACTION
@@ -149,9 +154,6 @@ public class MainActivity extends Activity {
         switch (requestCode) {
             case REQUEST_START_VPN:
                 if (resultCode == RESULT_OK) {
-                    activity.setVisibility(View.VISIBLE);
-                    progress.setVisibility(View.VISIBLE);
-
                     Intent intent = new Intent(this, AyiyaVpnService.class);
                     startService(intent);
                 }
@@ -206,6 +208,12 @@ public class MainActivity extends Activity {
                 state.putSerializable(VpnThread.EDATA_ACTIVE_TUNNEL, tunnel);
         }
 
+        private class TunnelListAdapter extends ArrayAdapter<TicConfiguration> {
+            public TunnelListAdapter(Context context, int textViewResourceId, TicConfiguration[] objects) {
+                super(context, textViewResourceId, objects);
+            }
+        }
+
         private void updateUi () {
             int imageRes = R.drawable.off;
             switch (status) {
@@ -229,6 +237,7 @@ public class MainActivity extends Activity {
                 MainActivity.this.progress.setProgress(progress);
             } else
                 MainActivity.this.progress.setIndeterminate(true);
+
             if (status == VpnThread.Status.Idle) {
                 redundantStartButton.setVisibility(View.VISIBLE);
                 MainActivity.this.progress.setVisibility(View.INVISIBLE);
@@ -239,9 +248,22 @@ public class MainActivity extends Activity {
                 MainActivity.this.activity.setVisibility(View.VISIBLE);
             }
 
+            // show activity text
             if (activity != null)
                 MainActivity.this.activity.setText(activity);
-            // @todo Tunnel anzeigen
+
+            // show tunnel information
+            // @todo implementation is too cheap - no internationalization, etc. Necessary to generate custom Adapter.
+            // @todo extend to an actual list as soon as we support that.
+            if (tunnel != null) {
+                tunnelList.setVisibility(View.VISIBLE);
+                tunnelList.setAdapter(new ArrayAdapter<TicTunnel>(MainActivity.this,
+                        R.layout.tunnellist_template, R.id.listEntry,
+                        new TicTunnel[]{tunnel})
+                );
+            } else {
+                tunnelList.setVisibility(View.INVISIBLE);
+            }
         }
 
         @Override

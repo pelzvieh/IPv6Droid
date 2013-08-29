@@ -1,4 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Copyright (c) 2013 Dr. Andreas Feldner.
+  ~
+  ~     This program is free software; you can redistribute it and/or modify
+  ~     it under the terms of the GNU General Public License as published by
+  ~     the Free Software Foundation; either version 2 of the License, or
+  ~     (at your option) any later version.
+  ~
+  ~     This program is distributed in the hope that it will be useful,
+  ~     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~     GNU General Public License for more details.
+  ~
+  ~     You should have received a copy of the GNU General Public License along
+  ~     with this program; if not, write to the Free Software Foundation, Inc.,
+  ~     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  ~
+  ~ Contact information and current version at http://www.flying-snail.de/IPv6Droid
+  -->
+
 <resources>
 
     <!-- From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/IPv6Droid/src/main/res/values/dimens.xml -->
@@ -21,12 +41,12 @@
     <string name="boolean_set">enabled</string>
     <string name="boolean_unset">disabled</string>
     <string name="hello_world">Hello world!</string>
+    <string name="main_activity_please_start">Please start</string>
     <string name="password_set">&lt;set></string>
     <string name="password_unset">&lt;unset></string>
     <!-- From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/IPv6Droid/src/main/res/values/strings_activity_settings.xml -->
-    <string name="pref_default_host">tic.sixxs.net</string>
+    <string name="pref_default_host"></string>
     <string name="pref_default_routes_specific"></string>
-    <string name="pref_description_username">The username sent to you after registering with SixXS</string>
     <string name="pref_header_login">Login</string>
     <string name="pref_header_routes">Route settings</string>
     <string name="pref_title_host">TIC host</string>
@@ -35,7 +55,7 @@
     <string name="pref_title_routes">Route settings</string>
     <!-- From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/IPv6Droid/src/main/res/values/strings_activity_settings.xml -->
     <string name="pref_title_routes_default">Set IPv6 default route</string>
-    <string name="pref_title_routes_specific">IPv6 subnet to route through the tunnel</string>
+    <string name="pref_title_routes_specific">Specific IPv6 subnet to route</string>
     <string name="pref_title_username">Username</string>
     <string name="title_activity_settings">Settings</string>
     <!-- From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/IPv6Droid/src/main/res/values/styles.xml -->

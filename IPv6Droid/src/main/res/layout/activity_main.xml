@@ -1,3 +1,23 @@
+<!--
+  ~ Copyright (c) 2013 Dr. Andreas Feldner.
+  ~
+  ~     This program is free software; you can redistribute it and/or modify
+  ~     it under the terms of the GNU General Public License as published by
+  ~     the Free Software Foundation; either version 2 of the License, or
+  ~     (at your option) any later version.
+  ~
+  ~     This program is distributed in the hope that it will be useful,
+  ~     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~     GNU General Public License for more details.
+  ~
+  ~     You should have received a copy of the GNU General Public License along
+  ~     with this program; if not, write to the Free Software Foundation, Inc.,
+  ~     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  ~
+  ~ Contact information and current version at http://www.flying-snail.de/IPv6Droid
+  -->
+
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -28,7 +48,7 @@
             android:layout_alignParentTop="true"
             android:layout_centerHorizontal="true"
             android:text="@string/main_activity_please_start"
-            android:visibility="visible"/>
+            android:visibility="invisible"/>
 
     <LinearLayout
             android:layout_width="fill_parent"
@@ -38,7 +58,8 @@
             android:layout_alignParentEnd="false"
             android:orientation="horizontal"
             android:gravity="center_vertical|center_horizontal"
-            android:layout_marginTop="25dp">
+            android:layout_marginTop="25dp"
+        android:id="@+id/linearLayout">
 
         <ImageView
                 android:layout_width="wrap_content"
@@ -76,6 +97,19 @@
         android:text="@string/main_activity_please_start"
         android:id="@+id/redundant_start_button"
         android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true" />
+        android:layout_centerHorizontal="true"
+        android:onClick="startVPN" />
+
+    <ListView
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/tunnelList"
+        android:layout_below="@+id/linearLayout"
+        android:layout_centerHorizontal="true"
+        android:focusableInTouchMode="true"
+        android:choiceMode="singleChoice"
+        tools:listitem="@android:layout/simple_list_item_2"
+        android:background="@android:color/darker_gray"
+        android:layout_marginTop="20dp" />
 
 </RelativeLayout>

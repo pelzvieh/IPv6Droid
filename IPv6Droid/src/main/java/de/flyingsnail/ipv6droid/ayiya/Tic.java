@@ -58,10 +58,11 @@ public class Tic {
 
     /**
      * A String representing this client's name.
+     * @todo link to R.strings.app_name
      */
-    public static final String TIC_CLIENT_NAME = "iPV6DROID";
+    public static final String TIC_CLIENT_NAME = "IPv6Droid";
 
-    /** A String representing this client's version */
+    /** A String representing this client's version. @todo link to R.strings.app_version */
     private static final String TIC_CLIENT_VERSION = "0.01";
 
     /**

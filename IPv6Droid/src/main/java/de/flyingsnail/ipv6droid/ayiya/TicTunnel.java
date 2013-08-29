@@ -285,4 +285,10 @@ public class TicTunnel implements Serializable {
         }
 
     }
+
+    @Override
+    public String toString() {
+        return tunnelName + " (" + tunnelId + "), " + type
+                + "\n Your endpoint " + ipv6Endpoint;
+    }
 }
