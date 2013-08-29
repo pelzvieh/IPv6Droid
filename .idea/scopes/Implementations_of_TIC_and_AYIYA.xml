@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="Implementations of TIC and AYIYA" pattern="src[IPv6Droid]:de.flyingsnail.ipv6droid.ayiya..*" />
+</component>

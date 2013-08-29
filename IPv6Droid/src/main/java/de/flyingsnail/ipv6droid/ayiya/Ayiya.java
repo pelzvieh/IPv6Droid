@@ -1,3 +1,23 @@
+/*
+ * Copyright (c) 2013 Dr. Andreas Feldner.
+ *
+ *     This program is free software; you can redistribute it and/or modify
+ *     it under the terms of the GNU Lesser General Public License as published by
+ *     the Free Software Foundation; either version 2 of the License, or
+ *     (at your option) any later version.
+ *
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU General Public License for more details.
+ *
+ *     You should have received a copy of the GNU Lesser General Public License along
+ *     with this program; if not, write to the Free Software Foundation, Inc.,
+ *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Contact information and current version at http://www.flying-snail.de/IPv6Droid
+ */
+
 package de.flyingsnail.ipv6droid.ayiya;
 
 import android.util.Log;
@@ -19,20 +39,14 @@ import java.util.Arrays;
 import java.util.Date;
 
 /**
- * Created by pelzi on 17.08.13.
- *
  * AYIYA - Anything In Anything
  *
  * This realises the tunnel protocol with the PoP in the SixXS network.
  *
  * See http://www.sixxs.net/tools/ayiya for specification.
  *
- * Copyright 2013 Dr. Andreas Feldner
+ * Based on specifications pulished by SixXS - http://www.sixxs.net
  *
- * Based on specifications and the C implementation "aiccu", copyright 2003-2005 SixXS - http://www.sixxs.net
- *
- * @todo clarify to avoid copyright issues with SixXS
- * See license.
  */
 public class Ayiya {
     /**

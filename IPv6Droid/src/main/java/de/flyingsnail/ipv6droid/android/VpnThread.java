@@ -1,3 +1,23 @@
+/*
+ * Copyright (c) 2013 Dr. Andreas Feldner.
+ *
+ *     This program is free software; you can redistribute it and/or modify
+ *     it under the terms of the GNU General Public License as published by
+ *     the Free Software Foundation; either version 2 of the License, or
+ *     (at your option) any later version.
+ *
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU General Public License for more details.
+ *
+ *     You should have received a copy of the GNU General Public License along
+ *     with this program; if not, write to the Free Software Foundation, Inc.,
+ *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Contact information and current version at http://www.flying-snail.de/IPv6Droid
+ */
+
 package de.flyingsnail.ipv6droid.android;
 
 import android.content.Context;
@@ -36,15 +56,15 @@ class VpnThread extends Thread {
     /**
      * The Action name for a status broadcast intent.
      */
-    public static final String BC_STATUS = AiccuVpnService.class.getName() + ".STATUS";
+    public static final String BC_STATUS = AyiyaVpnService.class.getName() + ".STATUS";
 
     /**
      * The extended data name for the status in a status broadcast intent.
      */
-    public static final String EDATA_STATUS = AiccuVpnService.class.getName() + ".STATUS";
-    public static final String EDATA_ACTIVITY = AiccuVpnService.class.getName() + ".ACTIVITY";
-    public static final String EDATA_PROGRESS = AiccuVpnService.class.getName() + ".PROGRESS";
-    public static final String EDATA_ACTIVE_TUNNEL = AiccuVpnService.class.getName() + ".ACTIVE_TUNNEL";
+    public static final String EDATA_STATUS = AyiyaVpnService.class.getName() + ".STATUS";
+    public static final String EDATA_ACTIVITY = AyiyaVpnService.class.getName() + ".ACTIVITY";
+    public static final String EDATA_PROGRESS = AyiyaVpnService.class.getName() + ".PROGRESS";
+    public static final String EDATA_ACTIVE_TUNNEL = AyiyaVpnService.class.getName() + ".ACTIVE_TUNNEL";
 
     /**
      * The tag for logging.
@@ -54,7 +74,7 @@ class VpnThread extends Thread {
     /**
      * The service that created this thread.
      */
-    private AiccuVpnService aiccuVpnService;
+    private AyiyaVpnService ayiyaVpnService;
     /**
      * The configuration for the tic protocol.
      */
@@ -82,17 +102,17 @@ class VpnThread extends Thread {
     private Thread outThread = null;
     /**
      * The constructor setting all required fields.
-     * @param aiccuVpnService the Service that created this thread
+     * @param ayiyaVpnService the Service that created this thread
      * @param config the tic configuration
      * @param routingConfiguration the routing configuration
      * @param sessionName the name of this thread
      */
-    VpnThread (AiccuVpnService aiccuVpnService,
+    VpnThread (AyiyaVpnService ayiyaVpnService,
                TicConfiguration config,
                RoutingConfiguration routingConfiguration,
                String sessionName) {
         setName(sessionName);
-        this.aiccuVpnService = aiccuVpnService;
+        this.ayiyaVpnService = ayiyaVpnService;
         this.ticConfig = (TicConfiguration)config.clone();
         this.routingConfiguration = (RoutingConfiguration)routingConfiguration.clone();
     };
@@ -101,7 +121,7 @@ class VpnThread extends Thread {
     @Override
     public void run() {
         try {
-            handler = new Handler(aiccuVpnService.getApplicationContext().getMainLooper());
+            handler = new Handler(ayiyaVpnService.getApplicationContext().getMainLooper());
 
             // Read the tunnel specification from Tic
             Tic tic = new Tic (ticConfig);
@@ -117,7 +137,7 @@ class VpnThread extends Thread {
             }
 
             // build vpn device on local machine
-            VpnService.Builder builder = aiccuVpnService.createBuilder();
+            VpnService.Builder builder = ayiyaVpnService.createBuilder();
             configureBuilderFromTunnelSpecification(builder, tunnelSpecification);
 
             // Perpare the tunnel to PoP
@@ -141,7 +161,7 @@ class VpnThread extends Thread {
 
 
                     DatagramSocket popSocket = ayiya.getSocket();
-                    aiccuVpnService.protect(popSocket);
+                    ayiyaVpnService.protect(popSocket);
                     InputStream popIn = ayiya.getInputStream();
                     OutputStream popOut = ayiya.getOutputStream();
                     // start the copying threads
@@ -150,7 +170,7 @@ class VpnThread extends Thread {
                     outThread = startStreamCopy (popIn, localOut);
                     outThread.setName("AYIYA from POP to local");
 
-                    postToast(aiccuVpnService.getApplicationContext(), R.id.vpnservice_tunnel_up, Toast.LENGTH_SHORT);
+                    postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_tunnel_up, Toast.LENGTH_SHORT);
 
                     // wait until interrupted
                     try {
@@ -185,23 +205,23 @@ class VpnThread extends Thread {
                     } catch (Exception e) {
                         Log.e(TAG, "Cannot close local socket", e);
                     }
-                    postToast(aiccuVpnService.getApplicationContext(), R.id.vpnservice_tunnel_down, Toast.LENGTH_SHORT);
+                    postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_tunnel_down, Toast.LENGTH_SHORT);
                 }
             }
             reportStatus(0, Status.Idle, "Tearing down", tunnelSpecification);
         } catch (ConnectionFailedException e) {
             Log.e(TAG, "This configuration will not work on this device", e);
             // @todo inform the human user
-            postToast(aiccuVpnService.getApplicationContext(), R.id.vpnservice_invalid_configuration, Toast.LENGTH_LONG);
+            postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_invalid_configuration, Toast.LENGTH_LONG);
         } catch (InterruptedException e) {
             // controlled behaviour, no logging or treatment required
         } catch (Throwable t) {
             Log.e(TAG, "Failed to run tunnel", t);
             // if this thread fails, the service per se is out of order
-            postToast(aiccuVpnService.getApplicationContext(), R.id.vpnservice_unexpected_problem, Toast.LENGTH_LONG);
+            postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_unexpected_problem, Toast.LENGTH_LONG);
         }
         // if this thread fails, the service per se is out of order
-        aiccuVpnService.stopSelf();
+        ayiyaVpnService.stopSelf();
         reportStatus(0, Status.Idle, "Down", null);
     }
 
@@ -330,7 +350,7 @@ class VpnThread extends Thread {
         if (activeTunnel != null)
                 statusBroadcast.putExtra(EDATA_ACTIVE_TUNNEL, activeTunnel);
         // Broadcast locally
-        LocalBroadcastManager.getInstance(aiccuVpnService).sendBroadcast(statusBroadcast);
+        LocalBroadcastManager.getInstance(ayiyaVpnService).sendBroadcast(statusBroadcast);
     }
 
     /**

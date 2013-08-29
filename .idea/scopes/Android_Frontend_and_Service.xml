@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="Android Frontend and Service" pattern="src[IPv6Droid]:de.flyingsnail.ipv6droid.android.*||src[IPv6Droid]:de.flyingsnail.ipv6droid.android..*||src[IPv6Droid]:drawable-hdpi..*||src[IPv6Droid]:drawable-mdpi..*||src[IPv6Droid]:drawable-xhdpi..*||src[IPv6Droid]:drawable-xxhdpi..*||src[IPv6Droid]:layout..*||src[IPv6Droid]:menu..*||src[IPv6Droid]:values..*||src[IPv6Droid]:values-large..*||src[IPv6Droid]:values-sw600dp..*||src[IPv6Droid]:values-sw720dp-land..*||src[IPv6Droid]:values-v11..*||src[IPv6Droid]:values-v14..*||src[IPv6Droid]:xml..*" />
+</component>

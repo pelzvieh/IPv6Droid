@@ -1,4 +1,22 @@
-// (c) 2013 Dr. Andreas Feldner. See Ipv6Droid license.
+/*
+ * Copyright (c) 2013 Dr. Andreas Feldner.
+ *
+ *     This program is free software; you can redistribute it and/or modify
+ *     it under the terms of the GNU General Public License as published by
+ *     the Free Software Foundation; either version 2 of the License, or
+ *     (at your option) any later version.
+ *
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU General Public License for more details.
+ *
+ *     You should have received a copy of the GNU General Public License along
+ *     with this program; if not, write to the Free Software Foundation, Inc.,
+ *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Contact information and current version at http://www.flying-snail.de/IPv6Droid
+ */
 
 package de.flyingsnail.ipv6droid.android;
 
@@ -15,6 +33,7 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -32,6 +51,7 @@ public class MainActivity extends Activity {
     private TextView activity;
     private ProgressBar progress;
     private ImageView status;
+    private Button redundantStartButton;
     private SharedPreferences myPreferences;
 
     /**
@@ -49,6 +69,7 @@ public class MainActivity extends Activity {
         activity = (TextView)findViewById(R.id.statusText);
         progress = (ProgressBar)findViewById(R.id.progressBar);
         status = (ImageView)findViewById(R.id.statusImage);
+        redundantStartButton = (Button)findViewById(R.id.redundant_start_button);
 
         // setup the intent filter for status broadcasts
         // The filter's action is BROADCAST_ACTION
@@ -131,7 +152,7 @@ public class MainActivity extends Activity {
                     activity.setVisibility(View.VISIBLE);
                     progress.setVisibility(View.VISIBLE);
 
-                    Intent intent = new Intent(this, AiccuVpnService.class);
+                    Intent intent = new Intent(this, AyiyaVpnService.class);
                     startService(intent);
                 }
                 break;
@@ -203,11 +224,21 @@ public class MainActivity extends Activity {
             }
             if (status != null)
                 MainActivity.this.status.setImageResource(imageRes);
-            if (progress >= 0) {
+            if (progress > 0) {
                 MainActivity.this.progress.setIndeterminate(false);
                 MainActivity.this.progress.setProgress(progress);
             } else
                 MainActivity.this.progress.setIndeterminate(true);
+            if (status == VpnThread.Status.Idle) {
+                redundantStartButton.setVisibility(View.VISIBLE);
+                MainActivity.this.progress.setVisibility(View.INVISIBLE);
+                MainActivity.this.activity.setVisibility(View.INVISIBLE);
+            } else {
+                redundantStartButton.setVisibility(View.INVISIBLE);
+                MainActivity.this.progress.setVisibility(View.VISIBLE);
+                MainActivity.this.activity.setVisibility(View.VISIBLE);
+            }
+
             if (activity != null)
                 MainActivity.this.activity.setText(activity);
             // @todo Tunnel anzeigen

@@ -1,3 +1,23 @@
+/*
+ * Copyright (c) 2013 Dr. Andreas Feldner.
+ *
+ *     This program is free software; you can redistribute it and/or modify
+ *     it under the terms of the GNU General Public License as published by
+ *     the Free Software Foundation; either version 2 of the License, or
+ *     (at your option) any later version.
+ *
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU General Public License for more details.
+ *
+ *     You should have received a copy of the GNU General Public License along
+ *     with this program; if not, write to the Free Software Foundation, Inc.,
+ *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Contact information and current version at http://www.flying-snail.de/IPv6Droid
+ */
+
 package de.flyingsnail.ipv6droid.android;
 
 import android.app.PendingIntent;
@@ -16,13 +36,13 @@ import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.ayiya.TicConfiguration;
 
 /**
+ * The Android service controlling the VpnThread.
  * Created by pelzi on 15.08.13.
- * (c) Dr. Andreas Feldner, see license file.
  */
-public class AiccuVpnService extends VpnService {
+public class AyiyaVpnService extends VpnService {
 
-    private static final String TAG = AiccuVpnService.class.getName();
-    private static final String SESSION_NAME = AiccuVpnService.class.getSimpleName();
+    private static final String TAG = AyiyaVpnService.class.getName();
+    private static final String SESSION_NAME = AyiyaVpnService.class.getSimpleName();
 
     private PendingIntent configureIntent;
 
@@ -61,7 +81,7 @@ public class AiccuVpnService extends VpnService {
 
 
     /**
-     * Create a new instance of AiccuVpnService.Builder. This method exists solely for VpnThread.
+     * Create a new instance of AyiyaVpnService.Builder. This method exists solely for VpnThread.
      * @return a new instance.
      */
     protected Builder createBuilder() {
