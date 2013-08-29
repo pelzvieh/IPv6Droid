@@ -1,0 +1,19 @@
+<resources>
+        <string name="title_activity_settings">Settings</string>
+
+    <!-- Strings related to Settings -->
+
+    <!-- Login settings -->
+    <string name="pref_header_login">Login</string>
+    <string name="pref_title_username">Username</string>
+    <string name="pref_title_password">Password</string>
+    <string name="pref_title_host">TIC host</string>
+    <string name="pref_default_host"></string>
+
+    <!-- Routes settings -->
+    <string name="pref_header_routes">Route settings</string>
+    <string name="pref_title_routes_default">Set IPv6 default route</string>
+    <string name="pref_title_routes_specific">Specific IPv6 subnet to route</string>
+    <string name="pref_default_routes_specific"></string>
+
+</resources>
