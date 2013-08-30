@@ -43,9 +43,8 @@ import java.util.Date;
  *
  * This realises the tunnel protocol with the PoP in the SixXS network.
  *
- * See http://www.sixxs.net/tools/ayiya for specification.
- *
- * Based on specifications pulished by SixXS - http://www.sixxs.net
+ * Based on specifications published by SixXS, see
+ * http://www.sixxs.net/tools/ayiya
  *
  */
 public class Ayiya {
@@ -97,7 +96,9 @@ public class Ayiya {
     /** The socket to the PoP */
     private DatagramSocket socket = null;
 
-    // @TODO Prüfen, worfür diese genutzt werden. Enum oder Hashmap??
+    /**
+     * The representation of our identity. This code supports INTEGER only.
+     */
     enum Identity
     {
         NONE,  /* None */
@@ -105,6 +106,9 @@ public class Ayiya {
         STRING	/* ASCII String */
     };
 
+    /**
+     * The algorithm to calculate the hashes of datagrams. This code supports SHA1 only.
+     */
     enum HashAlgorithm
     {
         NONE,	/* No hash */
@@ -113,6 +117,9 @@ public class Ayiya {
         UMAC	/* UMAC Signature (UMAC: Message Authentication Code using Universal Hashing / draft-krovetz-umac-04.txt */
     };
 
+    /**
+     * The authentication type for datagrams. This code supports SHAREDSECRET only.
+     */
     enum AuthType
     {
         NONE,	/* No authentication */
@@ -120,6 +127,10 @@ public class Ayiya {
         PGP	/* Public/Private Key */
     };
 
+    /**
+     * The code of AYIYA operation. This code supports NOOP and FORWARD only.
+     * @todo check if the other opcodes have to be implemented
+     */
     enum OpCode
     {
         NOOP,	/* No Operation */

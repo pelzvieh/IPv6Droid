@@ -106,7 +106,7 @@ public class AyiyaVpnService extends VpnService {
     private TicConfiguration loadTicConfiguration(SharedPreferences myPreferences) {
         return new TicConfiguration(myPreferences.getString("tic_username", ""),
                 myPreferences.getString("tic_password", ""),
-                myPreferences.getString("tic_host", "tic.sixxs.net"));
+                myPreferences.getString("tic_host", ""));
     }
 
     private RoutingConfiguration loadRoutingConfiguration(SharedPreferences myPreferences) {

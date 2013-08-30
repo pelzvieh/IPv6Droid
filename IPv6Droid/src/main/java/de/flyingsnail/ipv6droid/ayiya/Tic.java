@@ -38,7 +38,7 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 /**
- * This represents the Tunnel Information Control Protocol as described by Sixxs.
+ * This represents the Tunnel Information Control Protocol as published by Sixxs (http://www.sixxs.net/tools/tic).
  * It supports (when finished) STARTTLS, MD5 Authentication, but none of the other variants.
  * Created by pelzi on 19.08.13.
  */
