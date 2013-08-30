@@ -21,7 +21,7 @@
 
 <resources>
 
-    <string name="app_name">Ipv6Droid</string>
+    <string name="app_name">IPv6Droid</string>
     <string name="action_settings">Settings</string>
     <string name="hello_world">Hello world!</string><string name="Start">Starten</string>
     <string name="pref_title_routes">Route settings</string>
