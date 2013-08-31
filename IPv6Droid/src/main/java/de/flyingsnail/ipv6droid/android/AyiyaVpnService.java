@@ -34,6 +34,7 @@ import android.widget.Toast;
 
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.ayiya.TicConfiguration;
+import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 
 /**
  * The Android service controlling the VpnThread.
@@ -43,6 +44,8 @@ public class AyiyaVpnService extends VpnService {
 
     private static final String TAG = AyiyaVpnService.class.getName();
     private static final String SESSION_NAME = AyiyaVpnService.class.getSimpleName();
+
+    public static final String EXTRA_CACHED_TUNNEL = AyiyaVpnService.class.getName() + ".CACHED_TUNNEL";
 
     private PendingIntent configureIntent;
 
@@ -67,7 +70,8 @@ public class AyiyaVpnService extends VpnService {
             Log.d(TAG,"registered CommandReceiver");
 
             // Start a new session by creating a new thread.
-            thread = new VpnThread(this, ticConfiguration, routingConfiguration, SESSION_NAME);
+            TicTunnel cachedTunnel = (TicTunnel)intent.getSerializableExtra(EXTRA_CACHED_TUNNEL);
+            thread = new VpnThread(this, cachedTunnel, ticConfiguration, routingConfiguration, SESSION_NAME);
             thread.start();
             Log.i(TAG, "VpnThread started");
         } else {

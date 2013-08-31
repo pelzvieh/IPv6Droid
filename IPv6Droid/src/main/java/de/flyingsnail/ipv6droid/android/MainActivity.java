@@ -30,6 +30,7 @@ import android.net.VpnService;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -40,6 +41,13 @@ import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.math.BigInteger;
+
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.ayiya.TicConfiguration;
 import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
@@ -49,6 +57,7 @@ import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
  */
 public class MainActivity extends Activity {
 
+    private static final String TAG = MainActivity.class.getName();
     private static final int REQUEST_START_VPN = 1;
     private static final int REQUEST_SETTINGS = 2;
     private TextView activity;
@@ -125,6 +134,13 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    protected void onPause() {
+        super.onPause();
+        TicTunnel tunnel = statusReceiver.getTunnel();
+        putTicTunnelToPrefs(tunnel);
+    }
+
+    @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         statusReceiver.saveState(outState);
@@ -155,11 +171,51 @@ public class MainActivity extends Activity {
             case REQUEST_START_VPN:
                 if (resultCode == RESULT_OK) {
                     Intent intent = new Intent(this, AyiyaVpnService.class);
+                    TicTunnel tunnel = getTicTunnelFromPrefs();
+
+                    intent.putExtra(AyiyaVpnService.EXTRA_CACHED_TUNNEL, tunnel);
                     startService(intent);
                 }
                 break;
         }
     }
+
+    private TicTunnel getTicTunnelFromPrefs() {
+        // read out cached tunnel
+        SharedPreferences myLocalPrefs = getPreferences(MODE_PRIVATE);
+        String tunnelString = myLocalPrefs.getString("last_tunnel", null);
+        TicTunnel tunnel = statusReceiver.getTunnel();
+        if (tunnelString != null) {
+            try {
+                BigInteger serializedTunnel = new BigInteger(tunnelString);
+                ByteArrayInputStream is = new ByteArrayInputStream(serializedTunnel.toByteArray());
+                ObjectInputStream os = new ObjectInputStream(is);
+                tunnel = (TicTunnel)os.readObject();
+            } catch (Exception e) {
+                Log.e(TAG, "Could not retrieve saved state of TicTunnel", e);
+            }
+        }
+        return tunnel;
+    }
+
+    private void putTicTunnelToPrefs(TicTunnel tunnel) {
+        if (tunnel == null) {
+            return;
+        }
+        SharedPreferences myPrefs = getPreferences(MODE_PRIVATE);
+        ByteArrayOutputStream bs = new ByteArrayOutputStream();
+        try {
+            ObjectOutputStream os = new ObjectOutputStream(bs);
+            os.writeObject(tunnel);
+            os.close();
+            BigInteger serialized = new BigInteger(bs.toByteArray());
+            myPrefs.edit().putString("last_tunnel", String.format("%d", serialized)).commit();
+        } catch (IOException e) {
+            Log.e(TAG, "Could not write last working tunnel to preferences");
+        }
+    }
+
+
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -187,6 +243,12 @@ public class MainActivity extends Activity {
         private String activity;
         private VpnThread.Status status;
         private TicTunnel tunnel;
+        private boolean tunnelProven = false;
+        private TicTunnel lastWorkingTunnel = null;
+
+        public TicTunnel getTunnel() {
+            return tunnel;
+        }
 
         private StatusReceiver(Bundle savedState) {
             if (savedState != null && savedState.containsKey(VpnThread.EDATA_STATUS)) {
@@ -204,7 +266,7 @@ public class MainActivity extends Activity {
             state.putInt(VpnThread.EDATA_PROGRESS, progress);
             if (activity != null)
                 state.putString(VpnThread.EDATA_ACTIVITY, activity);
-            if (tunnel != null)
+            if (lastWorkingTunnel != null)
                 state.putSerializable(VpnThread.EDATA_ACTIVE_TUNNEL, tunnel);
         }
 
@@ -272,6 +334,9 @@ public class MainActivity extends Activity {
             progress = intent.getIntExtra(VpnThread.EDATA_PROGRESS, -1);
             activity = intent.getStringExtra(VpnThread.EDATA_ACTIVITY);
             tunnel = (TicTunnel)intent.getSerializableExtra(VpnThread.EDATA_ACTIVE_TUNNEL);
+            tunnelProven = intent.getBooleanExtra(VpnThread.EDATA_TUNNEL_PROVEN, false);
+            if (tunnelProven)
+                lastWorkingTunnel = tunnel;
             updateUi();
         }
     }

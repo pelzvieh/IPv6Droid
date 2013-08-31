@@ -1,0 +1,3 @@
+The play and the stop icon in the action bar (here used as ic_action_connect.png and ic_action_disconnect.png) are provided by Google in their package "Android_Design_Icon_20120711". This is the original copyright notice of that package:
+
+You may use the materials in this file without restriction to develop your apps and to use in your apps.

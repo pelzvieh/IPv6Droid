@@ -37,7 +37,7 @@
     <string name="action_connect">Connect</string>
     <string name="action_disconnect">Disconnect</string>
     <string name="action_settings">Settings</string>
-    <string name="app_name">Ipv6Droid</string>
+    <string name="app_name">IPv6Droid</string>
     <string name="boolean_set">enabled</string>
     <string name="boolean_unset">disabled</string>
     <string name="hello_world">Hello world!</string>

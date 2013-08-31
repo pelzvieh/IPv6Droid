@@ -96,6 +96,17 @@ public class Ayiya {
     /** The socket to the PoP */
     private DatagramSocket socket = null;
 
+    /** keep track if a valid packet has been received yet. This is the final proof that the tunnel
+     * is working.
+     */
+    private boolean validPacketReceived = false;
+
+    /**
+     * Count the number of invalid packets received.
+     */
+    private int invalidPacketCounter = 0;
+
+
     /**
      * The representation of our identity. This code supports INTEGER only.
      */
@@ -202,10 +213,29 @@ public class Ayiya {
         Log.i(TAG, "Ayiya tunnel to POP IP " + ipv4Pop + "created.");
     }
 
+    /**
+     * Tell if this protocol instance is technically alive.
+     * @return true if the instance should be working.
+     */
     public boolean isAlive() {
         return (socket != null && socket.isConnected());
     }
 
+    /**
+     * Tell if a valid response has already been received by this instance.
+     * @return true if any valid response was already received.
+     */
+    public boolean isValidPacketReceived() {
+        return validPacketReceived;
+    }
+
+    /**
+     * Return the number of invalid packages received yet.
+     * @return an int representing the number.
+     */
+    public int getInvalidPacketCounter() {
+        return invalidPacketCounter;
+    }
     /**
      * Get the maximum transmission unit (MTU) associated with this Ayiya instance.
      * @return the MTU in bytes
@@ -233,6 +263,12 @@ public class Ayiya {
         socket.send(dgPacket);
     }
 
+    /**
+     * Send an echo request to the PoP
+     */
+    private boolean echo(Inet6Address address) throws IOException, TunnelBrokenException {
+        return address.isReachable(1000);
+    }
     /**
      * Create a byte from to 4 bit values.
      */
@@ -320,10 +356,30 @@ public class Ayiya {
             }
             bb.limit(bytecount);
             bb.position(AYIYA_OVERHEAD);
-            validResult = checkValidity(bb.array(), bb.arrayOffset(), bb.limit());
+            if (checkValidity(bb.array(), bb.arrayOffset(), bb.limit())) {
+                OpCode opCode = getSupportedOpCode(bb.array(), bb.arrayOffset(), bb.limit());
+                validPacketReceived = validPacketReceived || (opCode != null);
+                     // note: this flag must never be reset to false!
+                validResult =
+                        (opCode == OpCode.FORWARD) || (opCode == OpCode.ECHO_REQUEST_FORWARD);
+                if (opCode == OpCode.ECHO_RESPONSE) {
+                    Log.i(TAG, "Received valid echo response");
+                }
+            } else {
+                invalidPacketCounter++;
+            }
         }
 
         return bb;
+    }
+
+    private OpCode getSupportedOpCode (byte[] packet, int offset, int bytecount) {
+        try {
+            int opCodeOrdinal = packet[2+offset] &0xF;
+            return OpCode.values()[opCodeOrdinal];
+        } catch (IndexOutOfBoundsException e) {
+            return null;
+        }
     }
 
     private boolean checkValidity(byte[] packet, int offset, int bytecount) throws UnknownHostException, TunnelBrokenException {
@@ -339,9 +395,7 @@ public class Ayiya {
         if (buildByte(4, Identity.INTEGER.ordinal()) != packet[0+offset] ||
                 buildByte(5, HashAlgorithm.SHA1.ordinal()) != packet[1+offset] ||
                 AuthType.SHAREDSECRED.ordinal() != (packet[2+offset] >> 4) ||
-                (((packet[2+offset] & 0xF) != OpCode.FORWARD.ordinal()) &&
-                        ((packet[2+offset] & 0xF) != OpCode.ECHO_REQUEST.ordinal()) &&
-                        ((packet[2+offset] & 0xF) != OpCode.ECHO_REQUEST_FORWARD.ordinal())) ||
+                (getSupportedOpCode(packet, offset, bytecount) == null) ||
                 ((packet[3+offset] != IPPROTO_IPv6) && (packet[3+offset] != IPPROTO_NONE))
                 ) {
             Log.e(TAG, "Received packet with invalid ayiya header, skipping");
