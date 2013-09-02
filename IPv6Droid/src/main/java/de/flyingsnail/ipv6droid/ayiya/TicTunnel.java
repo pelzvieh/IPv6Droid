@@ -287,6 +287,16 @@ public class TicTunnel implements Serializable {
     }
 
     @Override
+    public boolean equals(Object o) {
+        return (o != null) && (o instanceof TicTunnel) && (((TicTunnel) o).getTunnelId().equals(this.tunnelId));
+    }
+
+    @Override
+    public int hashCode() {
+        return (tunnelId == null) ? 0 : tunnelId.hashCode();
+    }
+
+    @Override
     public String toString() {
         return tunnelName + " (" + tunnelId + "), " + type
                 + "\n Your endpoint " + ipv6Endpoint;

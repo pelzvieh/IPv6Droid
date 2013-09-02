@@ -199,6 +199,8 @@ class VpnThread extends Thread {
                             inThread.join(tunnelSpecification.getHeartbeatInterval()*1000/2);
                             if (inThread.isAlive())
                                 ayiya.beat();
+                            // @todo here, some validation of tunnel should happen. No packet received yet -> revalidation of tunnel config with TIC!
+                            // ...but make sure this later happens only once (no TIC hammering...)
                             Log.i(TAG, "Sent heartbeat.");
                         }
                     } catch (InterruptedException ie) {
