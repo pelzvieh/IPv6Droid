@@ -106,6 +106,17 @@ public class Ayiya {
      */
     private int invalidPacketCounter = 0;
 
+    private Date lastPacketReceivedTime = new Date();
+
+    /**
+     * Yield the time when the last packet was <b>received</b>. This gives an indication if the
+     * tunnel is still alive.
+     * @return a Date denoting the time of last packet received.
+     */
+    public Date getLastPacketReceivedTime() {
+        return lastPacketReceivedTime;
+    }
+
 
     /**
      * The representation of our identity. This code supports INTEGER only.
@@ -226,6 +237,9 @@ public class Ayiya {
      * @return true if any valid response was already received.
      */
     public boolean isValidPacketReceived() {
+        // special situation: a packet was received, but is not yet read out - not the sender's
+        // fault, really! Here, we ignore this situation, i.e. a tunnel might be classified
+        // as troublemaker even if just the receiver thread died.
         return validPacketReceived;
     }
 
@@ -339,6 +353,8 @@ public class Ayiya {
             // read from socket
             socket.receive(dgPacket);
             int bytecount = dgPacket.getLength();
+
+            // first check some pathological results for stability reasons
             if (bytecount > maxPacketSize)
                 maxPacketSize = bytecount;
             if (bytecount < 0)
@@ -354,6 +370,11 @@ public class Ayiya {
             } else if (bytecount == bb.capacity()) {
                 Log.e(TAG, "WARNING: maximum size of buffer reached - indication of a MTU problem");
             }
+
+            // update timestamp of last packet received
+            lastPacketReceivedTime = new Date();
+
+            // prepare and fill the ByteBuffer
             bb.limit(bytecount);
             bb.position(AYIYA_OVERHEAD);
             if (checkValidity(bb.array(), bb.arrayOffset(), bb.limit())) {

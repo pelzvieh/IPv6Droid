@@ -87,10 +87,11 @@ public class AyiyaVpnService extends VpnService {
             }
 
             // setup the intent filter for status broadcasts and register receiver
-            IntentFilter statusIntentFilter = new IntentFilter(MainActivity.BC_STOP);
+            IntentFilter intentFilter = new IntentFilter(MainActivity.BC_STOP);
+            intentFilter.addAction(MainActivity.BC_STATUS_UPDATE);
             CommandReceiver commandReceiver = new CommandReceiver();
             LocalBroadcastManager.getInstance(this).registerReceiver(commandReceiver,
-                    statusIntentFilter);
+                    intentFilter);
             Log.d(TAG,"registered CommandReceiver");
 
             // Start a new session by creating a new thread.
@@ -116,7 +117,7 @@ public class AyiyaVpnService extends VpnService {
         return new Builder();
     }
 
-    /** Inner class to handle status updates */
+    /** Inner class to handle stop requests */
     private class CommandReceiver extends BroadcastReceiver {
         private CommandReceiver() {}
 
@@ -126,10 +127,12 @@ public class AyiyaVpnService extends VpnService {
             if (action.equals(MainActivity.BC_STOP)) {
                 Log.i(TAG, "Received explicit stop brodcast, will stop VPN Tread");
                 thread.interrupt();
+            } else if (action.equals(MainActivity.BC_STATUS_UPDATE)) {
+                Log.i(TAG, "Someone requested a status report, will have one send");
+                thread.reportStatus();
             }
         }
     }
-
 
     private TicConfiguration loadTicConfiguration(SharedPreferences myPreferences) {
         return new TicConfiguration(myPreferences.getString("tic_username", ""),

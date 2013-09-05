@@ -26,6 +26,7 @@ import java.io.Serializable;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.UnknownHostException;
+import java.util.Date;
 
 /**
  * This represents the tunnel description as delivered by the tic protocol.
@@ -112,6 +113,9 @@ public class TicTunnel implements Serializable {
 
     /** The maximum transmission unit in bytes. */
     private int mtu;
+
+    /** The timestamp of this tunnel's creation */
+    private Date creationDate = new Date();
 
     /**
      * Constructor. All attributes apart from id created null.
@@ -237,6 +241,12 @@ public class TicTunnel implements Serializable {
         return (mtu != 0) && (password != null) && (ipv4Pop != null) && (ipv6Pop != null);
     }
 
+    public Date getCreationDate() {
+        return creationDate;
+    }
+
+
+
     /**
      * This is for Tic, really - it takes the keywords as given by the Tic protocol to describe
      * a tunnel set the respective properties.
@@ -286,9 +296,40 @@ public class TicTunnel implements Serializable {
 
     }
 
+    /**
+     * Return if the two instances are from business logic the same. They are, if they have the same
+     * ID.
+     * @param o the object to compare this to
+     * @return a boolean indicating equality
+     */
     @Override
     public boolean equals(Object o) {
         return (o != null) && (o instanceof TicTunnel) && (((TicTunnel) o).getTunnelId().equals(this.tunnelId));
+    }
+
+    /**
+     * Return if this TicTunnel has all the same settings as another TicTunnel. In contrast to equals(),
+     * this would return false on a different version of the same tunnel.
+     * @param o the object to compare this to
+     * @return a boolean indicating equality of all attributes
+     */
+    public boolean equalsDeep(Object o) {
+        return equals (o)
+                && getHeartbeatInterval() == ((TicTunnel)o).getHeartbeatInterval()
+                && getTunnelName().equals(((TicTunnel)o).getTunnelName())
+                && getIPv4Pop().equals(((TicTunnel)o).getIPv4Pop())
+                && getType().equals(((TicTunnel)o).getType())
+                && getIpv6Endpoint().equals(((TicTunnel)o).getIpv6Endpoint())
+                && getIpv6Pop().equals(((TicTunnel)o).getIpv6Pop())
+                && getPrefixLength() == ((TicTunnel)o).getPrefixLength()
+                && getPopName().equals(((TicTunnel)o).getPopName())
+                && getIpv4Endpoint().equals(((TicTunnel)o).getIpv4Endpoint())
+                && getUserState().equals(((TicTunnel)o).getUserState())
+                && getAdminState().equals(((TicTunnel)o).getAdminState())
+                && getPassword().equals(((TicTunnel)o).getPassword())
+                && getHeartbeatInterval() == ((TicTunnel)o).getHeartbeatInterval()
+                && getMtu() == ((TicTunnel)o).getMtu()
+        ;
     }
 
     @Override

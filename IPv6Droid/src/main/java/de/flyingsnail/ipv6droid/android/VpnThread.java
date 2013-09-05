@@ -37,6 +37,8 @@ import java.io.OutputStream;
 import java.net.DatagramSocket;
 import java.net.Inet6Address;
 import java.net.UnknownHostException;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.StringTokenizer;
 
@@ -63,16 +65,17 @@ class VpnThread extends Thread {
     /**
      * The extended data name for the status in a status broadcast intent.
      */
-    public static final String EDATA_STATUS = AyiyaVpnService.class.getName() + ".STATUS";
-    public static final String EDATA_ACTIVITY = AyiyaVpnService.class.getName() + ".ACTIVITY";
-    public static final String EDATA_PROGRESS = AyiyaVpnService.class.getName() + ".PROGRESS";
-    public static final String EDATA_ACTIVE_TUNNEL = AyiyaVpnService.class.getName() + ".ACTIVE_TUNNEL";
-    public static final String EDATA_TUNNEL_PROVEN = AyiyaVpnService.class.getName() + ".TUNNEL_PROVEN";
+    public static final String EDATA_STATUS_REPORT = AyiyaVpnService.class.getName() + ".STATUS_REPORT";
 
     /**
      * The tag for logging.
      */
     private static final String TAG = VpnThread.class.getName();
+
+    /**
+     * Time that we must wait before contacting TIC again. This applies to cached tunnels even!
+     */
+    private static final int TIC_RECHECK_BLOCKED_MILLISECONDS = 5 * 60 * 1000; // 5 minutes
 
     /**
      * The service that created this thread.
@@ -117,6 +120,12 @@ class VpnThread extends Thread {
     private SSLContext sslContext;
 
     /**
+     * An instance of StatusReport that continously gets updated during the lifecycle of this
+     * VpnThread.
+     */
+    private VpnStatusReport vpnStatus;
+
+    /**
      * The constructor setting all required fields.
      * @param ayiyaVpnService the Service that created this thread
      * @param cachedTunnel
@@ -132,6 +141,7 @@ class VpnThread extends Thread {
               String sessionName,
               SSLContext sslContext) {
         setName(sessionName);
+        this.vpnStatus = new VpnStatusReport();
         this.ayiyaVpnService = ayiyaVpnService;
         this.ticConfig = (TicConfiguration)config.clone();
         this.routingConfiguration = (RoutingConfiguration)routingConfiguration.clone();
@@ -146,20 +156,14 @@ class VpnThread extends Thread {
             handler = new Handler(ayiyaVpnService.getApplicationContext().getMainLooper());
 
             if (tunnelSpecification == null) {
-                // Read the tunnel specification from Tic
-                Tic tic = new Tic (ticConfig);
-                try {
-                    reportStatus(0, Status.Connecting, "Query TIC", tunnelSpecification, false);
-                    tic.connect(sslContext);
-                    List<String> tunnelIds = tic.listTunnels();
-                    tunnelSpecification = selectFirstSuitable(tunnelIds, tic);
-                    reportStatus(25, Status.Connecting, "Selected Tunnel", tunnelSpecification, false);
-                } finally {
-                    tic.close();
-                }
+                readTunnelFromTIC();
             } else {
                 Log.i(TAG, "Using cached TicTunnel instead of contacting TIC");
             }
+            vpnStatus.setActiveTunnel(tunnelSpecification);
+            vpnStatus.setProgressPerCent(25);
+            reportStatus();
+
             // build vpn device on local machine
             VpnService.Builder builder = ayiyaVpnService.createBuilder();
             configureBuilderFromTunnelSpecification(builder, tunnelSpecification);
@@ -171,7 +175,8 @@ class VpnThread extends Thread {
                 try {
                     // setup local tun and routing
                     vpnFD = builder.establish();
-                    reportStatus(50, Status.Connecting, "Configured local network", tunnelSpecification, false);
+                    vpnStatus.setActivity("Configured local network");
+                    vpnStatus.setProgressPerCent(50);
 
                     // Packets to be sent are queued in this input stream.
                     FileInputStream localIn = new FileInputStream(vpnFD.getFileDescriptor());
@@ -181,43 +186,71 @@ class VpnThread extends Thread {
 
                     // setup tunnel to PoP
                     ayiya.connect();
-                    reportStatus(75, Status.Connecting, "Pinged POP", tunnelSpecification, ayiya.isValidPacketReceived());
+                    vpnStatus.setProgressPerCent(75);
+                    vpnStatus.setActivity("Pinging PoP");
+                    reportStatus();
 
-
+                    // Initialize the input and output streams from the ayiya socket
                     DatagramSocket popSocket = ayiya.getSocket();
                     ayiyaVpnService.protect(popSocket);
                     InputStream popIn = ayiya.getInputStream();
                     OutputStream popOut = ayiya.getOutputStream();
+
                     // start the copying threads
                     inThread = startStreamCopy (localIn, popOut);
                     inThread.setName("AYIYA from local to POP");
                     outThread = startStreamCopy (popIn, localOut);
                     outThread.setName("AYIYA from POP to local");
 
+                    // now do a ping on IPv6 level. This should involve receiving one packet
                     if (tunnelSpecification.getIpv6Pop().isReachable(10000)) {
                         postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_tunnel_up, Toast.LENGTH_SHORT);
+                        /* by laws of logic, a successful ping on IPv6 *must* already have set the flag
+                           validPacketReceived in the Ayiya instance.
+                         */
                     } else {
                         Log.e(TAG, "Warning: couldn't ping pop via ipv6!");
                     };
 
+                    vpnStatus.setActivity("Transmitting");
+
                     // wait until interrupted
                     try {
                         while (!Thread.currentThread().isInterrupted() && inThread.isAlive() && outThread.isAlive()) {
-                            reportStatus(100,
-                                    Status.Connected,
-                                    "Transmitting",
-                                    tunnelSpecification,
-                                    ayiya.isValidPacketReceived());
+                            if (ayiya.isValidPacketReceived()) {
+                                // major status update, just once per session
+                                vpnStatus.setTunnelProvedWorking(true);
+                                vpnStatus.setStatus(VpnStatusReport.Status.Connected);
+                                vpnStatus.setProgressPerCent(100);
+                            }
+
+                            reportStatus();
+
                             // wait for half the heartbeat interval or until inThread dies.
-                            // Note: the inThread is reading fromt the network socket to the POP
+                            // Note: the inThread is reading from the network socket to the POP
                             // in case of network changes, this socket breaks immediately, so
                             // inThread crashes on external network changes even if no transfer
                             // is active.
                             inThread.join(tunnelSpecification.getHeartbeatInterval()*1000/2);
                             if (inThread.isAlive())
                                 ayiya.beat();
-                            // @todo here, some validation of tunnel should happen. No packet received yet -> revalidation of tunnel config with TIC!
-                            // ...but make sure this later happens only once (no TIC hammering...)
+
+                            // See if we're receiving packets
+                            if (!ayiya.isValidPacketReceived() ||
+                                    checkExpiry (ayiya.getLastPacketReceivedTime(), tunnelSpecification.getHeartbeatInterval())) {
+                                Log.i(TAG, "Our tunnel is having trouble - we didn't receive packets since "
+                                        + ayiya.getLastPacketReceivedTime()
+                                );
+                                if (new Date().getTime() - tunnelSpecification.getCreationDate().getTime()
+                                        > TIC_RECHECK_BLOCKED_MILLISECONDS) {
+                                    if (readTunnelFromTIC()) {
+                                        // TIC had new data - signal an IO problem to rebuild tunnel
+                                        throw new IOException("Packet receiving had timeout and TIC information changed");
+                                    } else {
+                                        throw new ConnectionFailedException("This TIC tunnel doesn't receive data", null);
+                                    }
+                                }
+                            }
                             Log.i(TAG, "Sent heartbeat.");
                         }
                     } catch (InterruptedException ie) {
@@ -226,7 +259,10 @@ class VpnThread extends Thread {
                     }
                 } catch (IOException e) {
                     Log.i (TAG, "Tunnel connection broke down, closing and reconnecting ayiya", e);
-                    reportStatus(50, Status.Disturbed, "Disturbed", tunnelSpecification, ayiya.isValidPacketReceived());
+                    vpnStatus.setProgressPerCent(50);
+                    vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
+                    vpnStatus.setActivity("Reconnecting");
+                    reportStatus();
                     Thread.sleep(5000l); // @todo we should check with ConnectivityManager
                 } finally {
                     if (inThread != null && inThread.isAlive())
@@ -242,7 +278,11 @@ class VpnThread extends Thread {
                     postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_tunnel_down, Toast.LENGTH_SHORT);
                 }
             }
-            reportStatus(0, Status.Idle, "Tearing down", tunnelSpecification, ayiya.isValidPacketReceived());
+            // important status change
+            vpnStatus.setProgressPerCent(0);
+            vpnStatus.setStatus(VpnStatusReport.Status.Idle);
+            vpnStatus.setActivity("Tearing down");
+            reportStatus();
         } catch (ConnectionFailedException e) {
             Log.e(TAG, "This configuration will not work on this device", e);
             // @todo inform the human user
@@ -256,7 +296,44 @@ class VpnThread extends Thread {
         }
         // if this thread fails, the service per se is out of order
         ayiyaVpnService.stopSelf();
-        reportStatus(0, Status.Idle, "Down", null, false);
+        vpnStatus = new VpnStatusReport(); // back at zero
+        reportStatus();
+    }
+
+    /**
+     * Read tunnel information via the TIC protocol. Return true if anything changed on the current
+     * tunnel.
+     * @return true if something changed
+     * @throws ConnectionFailedException if some permanent problem exists with TIC and the current config
+     * @throws IOException if some (hopefully transient) technical problem came up.
+     */
+    private boolean readTunnelFromTIC() throws ConnectionFailedException, IOException {
+        boolean tunnelChanged = false;
+
+        // Initialize new Tic object
+        Tic tic = new Tic (ticConfig);
+        try {
+            // some status reporting...
+            vpnStatus.setActivity("Query TIC");
+            vpnStatus.setStatus(VpnStatusReport.Status.Connecting);
+            reportStatus();
+
+            tic.connect(sslContext);
+            List<String> tunnelIds = tic.listTunnels();
+            TicTunnel newTunnelSpecification = selectFirstSuitable(tunnelIds, tic);
+            tunnelChanged = !newTunnelSpecification.equals(tunnelSpecification);
+            tunnelSpecification = newTunnelSpecification;
+            vpnStatus.setActivity("Selected tunnel");
+        } finally {
+            tic.close();
+        }
+        return tunnelChanged;
+    }
+
+    private static boolean checkExpiry (Date lastReceived, int heartbeatInterval) {
+        Calendar oldestExpectedPacket = Calendar.getInstance();
+        oldestExpectedPacket.add(Calendar.SECOND, -heartbeatInterval);
+        return lastReceived.before(oldestExpectedPacket.getTime());
     }
 
     /**
@@ -373,26 +450,17 @@ class VpnThread extends Thread {
             }
         });
     }
-    private void reportStatus (int progressPerCent,
-                               Status status,
+
+
+    void reportStatus(/*int progressPerCent,
+                               VpnStatusReport.Status status,
                                String activity,
                                TicTunnel activeTunnel,
-                               boolean tunnelProvedWorking) {
+                               boolean tunnelProvedWorking*/) {
         Intent statusBroadcast = new Intent(BC_STATUS)
-                .putExtra(EDATA_STATUS, status.toString())
-                .putExtra(EDATA_ACTIVITY, activity)
-                .putExtra(EDATA_PROGRESS, progressPerCent)
-                .putExtra(EDATA_TUNNEL_PROVEN, tunnelProvedWorking);
-        if (activeTunnel != null)
-                statusBroadcast.putExtra(EDATA_ACTIVE_TUNNEL, activeTunnel);
+                .putExtra(EDATA_STATUS_REPORT, vpnStatus);
         // Broadcast locally
         LocalBroadcastManager.getInstance(ayiyaVpnService).sendBroadcast(statusBroadcast);
     }
 
-    /**
-     * Possible status as broadcasted by reportStatus.
-     */
-    public enum Status {
-        Idle, Connecting, Connected, Disturbed
-    }
 }
