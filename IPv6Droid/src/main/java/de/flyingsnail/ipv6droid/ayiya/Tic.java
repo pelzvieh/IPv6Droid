@@ -61,18 +61,14 @@ public class Tic {
     public static final String TIC_VERSION = "draft-00";
 
     /**
-     * A String representing this client's name.
-     * @todo link to R.strings.app_name
-     */
-    public static final String TIC_CLIENT_NAME = "IPv6Droid";
-
-    /** A String representing this client's version. @todo link to R.strings.app_version */
-    private static final String TIC_CLIENT_VERSION = "0.01";
-
-    /**
      * The maximum allowed deviation of TIC and local clocks.
      */
     public static final long MAX_TIME_OFFSET = 120;
+
+    /**
+     * the bundled information where we're running in.
+     */
+    private final ContextInfo contextInfo;
 
     /**
      * Our copy of the eventually user-accessible configuration object for the Tic.
@@ -86,9 +82,56 @@ public class Tic {
     /** The line writer */
     private BufferedWriter out = null;
 
+    /**
+     * A class collecting all OS and build specific properties, to be injected here, because this
+     * class should not have dependencies on android specifics.
+     */
+    public static class ContextInfo {
+        /**
+         * A String representing this client's name.
+         */
+        private final String clientName;
+
+        /** A String representing this client's version. */
+        private final String clientVersion;
+
+        /** A String giving the name of the operating system. */
+        private final String os;
+
+        /** A String giving the version of the operating system. */
+        private final String osVersion;
+
+        /**
+         * Constructor.
+         */
+        public ContextInfo(String clientName, String clientVersion, String os, String osVersion) {
+            this.clientName = clientName;
+            this.clientVersion = clientVersion;
+            this.os = os;
+            this.osVersion = osVersion;
+        }
+
+        public String getClientName() {
+            return clientName;
+        }
+
+        public String getClientVersion() {
+            return clientVersion;
+        }
+
+        public String getOs() {
+            return os;
+        }
+
+        public String getOsVersion() {
+            return osVersion;
+        }
+    }
+
     /** Constructor with configuration */
-    public Tic(TicConfiguration ticConfig) {
+    public Tic(TicConfiguration ticConfig, ContextInfo contextInfo) {
         config = (TicConfiguration)ticConfig.clone();
+        this.contextInfo = contextInfo;
     }
 
     /**
@@ -270,10 +313,8 @@ public class Tic {
      */
     private void protocolStepClientIdentification() throws ConnectionFailedException, IOException {
         // write client ident
-        // @todo read out actual system version
-        // @todo link client version to android build versioning system
-        requestResponse("client TIC/" + TIC_VERSION + " " + TIC_CLIENT_NAME + "/" +
-                TIC_CLIENT_VERSION + " Android/4.00");
+        requestResponse("client TIC/" + TIC_VERSION + " " + contextInfo.getClientName() + "/" +
+                contextInfo.getClientVersion() + " " + contextInfo.getOs() + "/" + contextInfo.getOsVersion());
         Log.i(TAG, "TIC accepted the client identification");
     }
 
@@ -294,7 +335,7 @@ public class Tic {
     /**
      * Send STARTTLS command. On success message from server, replace active socket and reader/writer
      * by SSLSocket wrapped around the TCP socket.
-     * @param sslContext
+     * @param sslContext the SSLContext to use for the SSLSocket.
      */
     private void protocolStepStartTLS(SSLContext sslContext) throws IOException, ConnectionFailedException {
         String answer;
@@ -308,11 +349,10 @@ public class Tic {
         Log.i(TAG, "Switching to SSL encrypted connection");
 
         SSLSocketFactory socketFactory = sslContext.getSocketFactory();
-        SSLSocket sslSocket = (SSLSocket)socketFactory.createSocket(socket,
+        socket = (SSLSocket)socketFactory.createSocket(socket,
                 config.getServer(),
                 TIC_PORT,
                 true);
-        socket = sslSocket;
         initLineReaderAndWriter();
     }
 

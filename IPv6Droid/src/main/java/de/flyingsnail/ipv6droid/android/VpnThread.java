@@ -23,7 +23,9 @@ package de.flyingsnail.ipv6droid.android;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.VpnService;
+import android.os.Build;
 import android.os.Handler;
 import android.os.ParcelFileDescriptor;
 import android.support.v4.content.LocalBroadcastManager;
@@ -129,11 +131,11 @@ class VpnThread extends Thread {
     /**
      * The constructor setting all required fields.
      * @param ayiyaVpnService the Service that created this thread
-     * @param cachedTunnel
+     * @param cachedTunnel the previously working tunnel spec, or null if none
      * @param config the tic configuration
      * @param routingConfiguration the routing configuration
      * @param sessionName the name of this thread
-     * @param sslContext
+     * @param sslContext the SSLContext to use for TLS
      */
     VpnThread(AyiyaVpnService ayiyaVpnService,
               TicTunnel cachedTunnel,
@@ -309,9 +311,20 @@ class VpnThread extends Thread {
      */
     private boolean readTunnelFromTIC() throws ConnectionFailedException, IOException {
         boolean tunnelChanged = false;
+        // gather some client information for the nosy TIC
+        Tic.ContextInfo contextInfo;
+        try {
+            contextInfo = new Tic.ContextInfo(
+                    ayiyaVpnService.getPackageName(),
+                    ayiyaVpnService.getPackageManager().getPackageInfo(ayiyaVpnService.getPackageName(), 0).versionName,
+                    "Android",
+                    Build.VERSION.RELEASE);
+        } catch (PackageManager.NameNotFoundException e) {
+            throw new ConnectionFailedException("Unable to read version name", e);
+        }
 
         // Initialize new Tic object
-        Tic tic = new Tic (ticConfig);
+        Tic tic = new Tic(ticConfig, contextInfo);
         try {
             // some status reporting...
             vpnStatus.setActivity(R.id.vpnservice_activity_query_tic);
@@ -346,7 +359,7 @@ class VpnThread extends Thread {
      */
     private TicTunnel selectFirstSuitable(List<String> tunnelIds, Tic tic) throws IOException, ConnectionFailedException {
         for (String id: tunnelIds) {
-            TicTunnel desc = null;
+            TicTunnel desc;
             try {
                 desc = tic.describeTunnel(id);
             } catch (TunnelNotAcceptedException e) {

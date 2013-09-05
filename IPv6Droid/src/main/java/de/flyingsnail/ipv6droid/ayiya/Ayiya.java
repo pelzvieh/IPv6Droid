@@ -48,10 +48,6 @@ import java.util.Date;
  *
  */
 public class Ayiya {
-    /**
-     *  Anything In Anything - AYIYA (uses UDP in our case)
-     */
-    public static final int PORT = 5072;
 
     /**
      * AYIYA version (which document this should conform to)
@@ -63,14 +59,14 @@ public class Ayiya {
     private static final String TAG = Ayiya.class.getName();
 
     /** The port number for AYIYA */
-    public static final int AYIYA_PORT = 5072;
+    public static final int PORT = 5072;
 
     // @todo I'm afraid I missed an official source for this kind of constants
     private static final byte IPPROTO_IPv6 = 41;
     private static final byte IPPROTO_NONE = 59;
 
     /** size of the AYIYA header */
-    public static final int AYIYA_OVERHEAD = 44;
+    public static final int OVERHEAD = 44;
 
     /** The IPv6 address of the PoP, used as identity in the protocol. */
     private final Inet6Address ipv6Pop;
@@ -86,9 +82,6 @@ public class Ayiya {
 
     /** Our IPv6 address, in other words, the IPv6 endpoint of the tunnel. */
     private Inet6Address ipv6Local;
-
-    /** The tunnel password as clear text */
-    private String password;
 
     /** The sha1 hash of the tunnel password */
     private byte[] hashedPassword;
@@ -178,11 +171,10 @@ public class Ayiya {
         ipv6Local = tunnel.getIpv6Endpoint();
         ipv6Pop = tunnel.getIpv6Pop();
         mtu = tunnel.getMtu();
-        // @todo check actual requirements later: if we don't have to remember clear text pw, remove the field and calculate hash here.
-        // otherwise, calculate hash whereever it is needed from remembered clear text pw.
-        password = tunnel.getPassword();
+
+        // we only need the hash of the password
         try {
-            hashedPassword = ayiyaHash (password);
+            hashedPassword = ayiyaHash (tunnel.getPassword());
         } catch (NoSuchAlgorithmException e) {
             throw new ConnectionFailedException("Cannot hash password", e);
         } catch (UnsupportedEncodingException e) {
@@ -212,7 +204,7 @@ public class Ayiya {
 
         // UDP connection
         socket = new DatagramSocket();
-        socket.connect(ipv4Pop, AYIYA_PORT);
+        socket.connect(ipv4Pop, PORT);
 
         // beat it!
         try {
@@ -222,14 +214,6 @@ public class Ayiya {
         }
 
         Log.i(TAG, "Ayiya tunnel to POP IP " + ipv4Pop + "created.");
-    }
-
-    /**
-     * Tell if this protocol instance is technically alive.
-     * @return true if the instance should be working.
-     */
-    public boolean isAlive() {
-        return (socket != null && socket.isConnected());
     }
 
     /**
@@ -278,22 +262,15 @@ public class Ayiya {
     }
 
     /**
-     * Send an echo request to the PoP
-     */
-    private boolean echo(Inet6Address address) throws IOException, TunnelBrokenException {
-        return address.isReachable(1000);
-    }
-    /**
      * Create a byte from to 4 bit values.
      */
     private static byte buildByte(int val1, int val2) {
-        byte retval = (byte)((val2 & 0xF) + ((val1 & 0xF) << 4));
+        return (byte)((val2 & 0xF) + ((val1 & 0xF) << 4));
              // this should be equiv. to C bitfield behaviour in big-endian machines
-        return retval;
     }
 
     private byte[] buildAyiyaStruct(byte[] payload, OpCode opcode, byte nextHeader) throws NoSuchAlgorithmException {
-        byte[] retval = new byte[payload.length + AYIYA_OVERHEAD];
+        byte[] retval = new byte[payload.length + OVERHEAD];
         ByteBuffer bb = ByteBuffer.wrap (retval);
         bb.order(ByteOrder.BIG_ENDIAN);
         MessageDigest sha1 = MessageDigest.getInstance("SHA1");
@@ -376,7 +353,7 @@ public class Ayiya {
 
             // prepare and fill the ByteBuffer
             bb.limit(bytecount);
-            bb.position(AYIYA_OVERHEAD);
+            bb.position(OVERHEAD);
             if (checkValidity(bb.array(), bb.arrayOffset(), bb.limit())) {
                 OpCode opCode = getSupportedOpCode(bb.array(), bb.arrayOffset(), bb.limit());
                 validPacketReceived = validPacketReceived || (opCode != null);
@@ -407,7 +384,7 @@ public class Ayiya {
         // @todo refactor these checks, they look awful and are co-variant with buildAyiyaStruct.
         // @todo never tested with offset > 0, if this part is ever going to be a library, you have to.
         // check if the size includes at least a full ayiya header
-        if (bytecount < AYIYA_OVERHEAD) {
+        if (bytecount < OVERHEAD) {
             Log.e(TAG, "Received too short package, skipping");
             return false;
         }
@@ -444,7 +421,7 @@ public class Ayiya {
         // check signature
         byte[] theirHash = Arrays.copyOfRange(packet, 24+offset, 44+offset);
 
-        MessageDigest sha1 = null;
+        MessageDigest sha1;
         try {
             sha1 = MessageDigest.getInstance("SHA1");
         } catch (NoSuchAlgorithmException e) {
@@ -460,7 +437,7 @@ public class Ayiya {
         }
 
         // check ipv6
-        if (packet[3+offset] == IPPROTO_IPv6 && bytecount >= AYIYA_OVERHEAD && (packet[AYIYA_OVERHEAD+offset] >> 4) != 6) {
+        if (packet[3+offset] == IPPROTO_IPv6 && bytecount >= OVERHEAD && (packet[OVERHEAD +offset] >> 4) != 6) {
             Log.e(TAG, "Payload should be an IPv6 packet, but isn't");
             return false;
         }
@@ -498,7 +475,7 @@ public class Ayiya {
 
         private void ensureBuffer() throws IOException {
             if (streamBuffer.get() == null) {
-                byte[] actualBuffer = new byte[2*AYIYA_OVERHEAD + mtu];
+                byte[] actualBuffer = new byte[2* OVERHEAD + mtu];
                 // a new Thread, a new buffer.
                 streamBuffer.set (ByteBuffer.wrap(actualBuffer));
                 // wrap it into a byte buffer which keeps track of position and length ("limit")
@@ -536,10 +513,8 @@ public class Ayiya {
 
         @Override
         public void close() throws IOException {
-            synchronized (streamBuffer) {
-                super.close();
-                streamBuffer.remove(); // @todo in principle, there may be more buffers of other Threads. Hm.
-            }
+            super.close();
+            streamBuffer.remove(); // @todo in principle, there may be more buffers of other Threads. Hm.
         }
     }
 

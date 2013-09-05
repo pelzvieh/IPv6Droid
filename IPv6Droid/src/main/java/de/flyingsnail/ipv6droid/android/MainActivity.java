@@ -60,7 +60,7 @@ public class MainActivity extends Activity {
     private static final String TAG = MainActivity.class.getName();
     private static final int REQUEST_START_VPN = 1;
     private static final int REQUEST_SETTINGS = 2;
-    private static final String PREFS_LAST_TUNNEL = "last_tunnel";
+    private static final String FILE_LAST_TUNNEL = "last_tunnel";
     private TextView activity;
     private ProgressBar progress;
     private ImageView status;
@@ -227,7 +227,7 @@ public class MainActivity extends Activity {
         TicTunnel tunnel = statusReceiver.getTunnel();
         try {
             // open private file
-            InputStream is = openFileInput(PREFS_LAST_TUNNEL);
+            InputStream is = openFileInput(FILE_LAST_TUNNEL);
             ObjectInputStream os = new ObjectInputStream(is);
             List<TicTunnel> tunnels = (List<TicTunnel>)os.readObject();
             int selected = os.readInt();
@@ -242,7 +242,7 @@ public class MainActivity extends Activity {
     /** Write to a private file. Format is: ArrayList&lt;TicTunnel&gt; tunnels; int selected */
     private void writePersistedTunnel(TicTunnel tunnel) {
         try {
-            OutputStream fs = openFileOutput(PREFS_LAST_TUNNEL, MODE_PRIVATE);
+            OutputStream fs = openFileOutput(FILE_LAST_TUNNEL, MODE_PRIVATE);
             ObjectOutputStream os = new ObjectOutputStream(fs);
             List<TicTunnel> tunnelList = new ArrayList<TicTunnel>(1);
             tunnelList.add(tunnel);
