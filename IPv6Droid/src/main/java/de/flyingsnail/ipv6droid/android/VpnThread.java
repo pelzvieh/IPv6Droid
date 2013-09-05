@@ -40,6 +40,8 @@ import java.net.UnknownHostException;
 import java.util.List;
 import java.util.StringTokenizer;
 
+import javax.net.ssl.SSLContext;
+
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.ayiya.Ayiya;
 import de.flyingsnail.ipv6droid.ayiya.ConnectionFailedException;
@@ -97,11 +99,22 @@ class VpnThread extends Thread {
      * The thread that copies from PoP to local.
      */
     private Thread inThread = null;
+
     /**
      * The thread that copies from local to PoP.
      */
     private Thread outThread = null;
+
+    /**
+     * The cached TicTunnel containing the previosly working configuration.
+     */
     private TicTunnel tunnelSpecification;
+
+    /**
+     * The specific SSLContext, required as SixXS choose a cert provider not shipped with
+     * Android trust stores.
+     */
+    private SSLContext sslContext;
 
     /**
      * The constructor setting all required fields.
@@ -110,16 +123,20 @@ class VpnThread extends Thread {
      * @param config the tic configuration
      * @param routingConfiguration the routing configuration
      * @param sessionName the name of this thread
+     * @param sslContext
      */
     VpnThread(AyiyaVpnService ayiyaVpnService,
-              TicTunnel cachedTunnel, TicConfiguration config,
+              TicTunnel cachedTunnel,
+              TicConfiguration config,
               RoutingConfiguration routingConfiguration,
-              String sessionName) {
+              String sessionName,
+              SSLContext sslContext) {
         setName(sessionName);
         this.ayiyaVpnService = ayiyaVpnService;
         this.ticConfig = (TicConfiguration)config.clone();
         this.routingConfiguration = (RoutingConfiguration)routingConfiguration.clone();
         this.tunnelSpecification = cachedTunnel;
+        this.sslContext = sslContext;
     };
 
 
@@ -133,7 +150,7 @@ class VpnThread extends Thread {
                 Tic tic = new Tic (ticConfig);
                 try {
                     reportStatus(0, Status.Connecting, "Query TIC", tunnelSpecification, false);
-                    tic.connect();
+                    tic.connect(sslContext);
                     List<String> tunnelIds = tic.listTunnels();
                     tunnelSpecification = selectFirstSuitable(tunnelIds, tic);
                     reportStatus(25, Status.Connecting, "Selected Tunnel", tunnelSpecification, false);

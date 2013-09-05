@@ -37,6 +37,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.StringTokenizer;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+
 /**
  * This represents the Tunnel Information Control Protocol as published by Sixxs (http://www.sixxs.net/tools/tic).
  * It supports (when finished) STARTTLS, MD5 Authentication, but none of the other variants.
@@ -92,8 +96,9 @@ public class Tic {
      * Once connected, close must be called when done.
      * @throws ConnectionFailedException in case of a permanent functional problem with this configuration on this device.
      * @throws IOException in case of a (presumably) temporary technical problem, e.g. a connection breakdown.
+     * @param sslContext the SSLContext to use or null to disable SSL
      */
-    public synchronized void connect() throws ConnectionFailedException, IOException {
+    public synchronized void connect(SSLContext sslContext) throws ConnectionFailedException, IOException {
         try {
             if (socket != null) {
                 throw new IllegalStateException("This Tic is already connected.");
@@ -101,15 +106,14 @@ public class Tic {
             // unencrypted TCP connection
             socket = new Socket(config.getServer(), TIC_PORT);
 
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            initLineReaderAndWriter();
 
             // handle protocol until login
             protocolStepWelcome ();
             protocolStepClientIdentification ();
             protocolStepTimeComparison ();
-            // @todo here TLS should start
-            // protocolStepStartTLS();
+            if (sslContext != null)
+                protocolStepStartTLS(sslContext);
             protocolStepSendUsername();
             String challenge = protocolStepRequestChallenge();
             protocolStepSendAuthentication (challenge);
@@ -122,6 +126,15 @@ public class Tic {
             throw new IOException ("Error reading/writing to TIC", e);
         }
 
+    }
+
+    /**
+     * Initialize the fields in and out as buffered reader/writer on the current socket.
+     * @throws IOException
+     */
+    private void initLineReaderAndWriter() throws IOException {
+        in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        out = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
     }
 
     /**
@@ -279,6 +292,31 @@ public class Tic {
     }
 
     /**
+     * Send STARTTLS command. On success message from server, replace active socket and reader/writer
+     * by SSLSocket wrapped around the TCP socket.
+     * @param sslContext
+     */
+    private void protocolStepStartTLS(SSLContext sslContext) throws IOException, ConnectionFailedException {
+        String answer;
+        try {
+            answer = requestResponse("STARTTLS");
+        } catch (ConnectionFailedException e) {
+            // @todo is this really a good idea? Are all TIC servers around guaranteed to offer TLS?
+            Log.i(TAG, "Server did not accept TLS encryption, going on with plain socket");
+            return;
+        }
+        Log.i(TAG, "Switching to SSL encrypted connection");
+
+        SSLSocketFactory socketFactory = sslContext.getSocketFactory();
+        SSLSocket sslSocket = (SSLSocket)socketFactory.createSocket(socket,
+                config.getServer(),
+                TIC_PORT,
+                true);
+        socket = sslSocket;
+        initLineReaderAndWriter();
+    }
+
+    /**
      * Send username and check for 2xx response
      * @throws IOException
      * @throws ConnectionFailedException
@@ -333,5 +371,4 @@ public class Tic {
         requestResponse("authenticate md5 " + signature);
         Log.i (TAG, "TIC accepted authentication with MD5");
     }
-
 }
