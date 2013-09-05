@@ -20,6 +20,7 @@
 
 package de.flyingsnail.ipv6droid.android;
 
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.net.VpnService;
@@ -175,7 +176,7 @@ class VpnThread extends Thread {
                 try {
                     // setup local tun and routing
                     vpnFD = builder.establish();
-                    vpnStatus.setActivity("Configured local network");
+                    vpnStatus.setActivity(R.id.vpnservice_activity_localnet);
                     vpnStatus.setProgressPerCent(50);
 
                     // Packets to be sent are queued in this input stream.
@@ -187,7 +188,7 @@ class VpnThread extends Thread {
                     // setup tunnel to PoP
                     ayiya.connect();
                     vpnStatus.setProgressPerCent(75);
-                    vpnStatus.setActivity("Pinging PoP");
+                    vpnStatus.setActivity(R.id.vpnservice_activity_ping_pop);
                     reportStatus();
 
                     // Initialize the input and output streams from the ayiya socket
@@ -212,7 +213,7 @@ class VpnThread extends Thread {
                         Log.e(TAG, "Warning: couldn't ping pop via ipv6!");
                     };
 
-                    vpnStatus.setActivity("Transmitting");
+                    vpnStatus.setActivity(R.id.vpnservice_activity_online);
 
                     // wait until interrupted
                     try {
@@ -261,7 +262,7 @@ class VpnThread extends Thread {
                     Log.i (TAG, "Tunnel connection broke down, closing and reconnecting ayiya", e);
                     vpnStatus.setProgressPerCent(50);
                     vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
-                    vpnStatus.setActivity("Reconnecting");
+                    vpnStatus.setActivity(R.id.vpnservice_activity_reconnect);
                     reportStatus();
                     Thread.sleep(5000l); // @todo we should check with ConnectivityManager
                 } finally {
@@ -281,11 +282,10 @@ class VpnThread extends Thread {
             // important status change
             vpnStatus.setProgressPerCent(0);
             vpnStatus.setStatus(VpnStatusReport.Status.Idle);
-            vpnStatus.setActivity("Tearing down");
+            vpnStatus.setActivity(R.id.vpnservice_activity_closing);
             reportStatus();
         } catch (ConnectionFailedException e) {
             Log.e(TAG, "This configuration will not work on this device", e);
-            // @todo inform the human user
             postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_invalid_configuration, Toast.LENGTH_LONG);
         } catch (InterruptedException e) {
             // controlled behaviour, no logging or treatment required
@@ -314,7 +314,7 @@ class VpnThread extends Thread {
         Tic tic = new Tic (ticConfig);
         try {
             // some status reporting...
-            vpnStatus.setActivity("Query TIC");
+            vpnStatus.setActivity(R.id.vpnservice_activity_query_tic);
             vpnStatus.setStatus(VpnStatusReport.Status.Connecting);
             reportStatus();
 
@@ -323,7 +323,7 @@ class VpnThread extends Thread {
             TicTunnel newTunnelSpecification = selectFirstSuitable(tunnelIds, tic);
             tunnelChanged = !newTunnelSpecification.equals(tunnelSpecification);
             tunnelSpecification = newTunnelSpecification;
-            vpnStatus.setActivity("Selected tunnel");
+            vpnStatus.setActivity(R.id.vpnservice_activity_selected_tunnel);
         } finally {
             tic.close();
         }
@@ -343,7 +343,6 @@ class VpnThread extends Thread {
      * @return a TicTunnel specifying the tunnel to build up
      * @throws IOException in case of a communication problem
      * @throws ConnectionFailedException in case of a logical problem with the setup
-     * @todo Extend to first try the last used/a configured tunnel.
      */
     private TicTunnel selectFirstSuitable(List<String> tunnelIds, Tic tic) throws IOException, ConnectionFailedException {
         for (String id: tunnelIds) {
@@ -384,10 +383,12 @@ class VpnThread extends Thread {
             }
         } catch (UnknownHostException e) {
             Log.e(TAG, "Could not add requested IPv6 route to builder", e);
-            // @todo notification to user required
+            postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_route_not_added, Toast.LENGTH_SHORT);
         }
         builder.addAddress(tunnelSpecification.getIpv6Endpoint(), tunnelSpecification.getPrefixLength());
-        // @todo add the configure intent?
+        Intent configureIntent = new Intent("android.intent.action.MAIN");
+        configureIntent.setClass(ayiyaVpnService.getApplicationContext(), MainActivity.class);
+        builder.setConfigureIntent(PendingIntent.getActivity(ayiyaVpnService.getApplicationContext(), 0, configureIntent, 0));
         Log.i(TAG, "Builder is configured");
     }
 

@@ -50,25 +50,34 @@ public final class R {
         public static final int transmitting=0x7f020009;
     }
     public static final class id {
-        public static final int action_connect=0x7f07000e;
-        public static final int action_disconnect=0x7f07000f;
-        public static final int action_settings=0x7f070010;
-        public static final int androidRobot=0x7f070008;
-        public static final int earthView=0x7f070009;
-        public static final int linearLayout=0x7f070007;
-        public static final int listEntry=0x7f07000d;
-        public static final int progressBar=0x7f070005;
-        public static final int redundant_start_button=0x7f07000b;
-        public static final int statusImage=0x7f07000a;
-        public static final int statusText=0x7f070006;
-        public static final int tunnelList=0x7f07000c;
+        public static final int action_connect=0x7f070017;
+        public static final int action_disconnect=0x7f070018;
+        public static final int action_settings=0x7f070019;
+        public static final int androidRobot=0x7f070011;
+        public static final int earthView=0x7f070012;
+        public static final int linearLayout=0x7f070010;
+        public static final int listEntry=0x7f070016;
+        public static final int progressBar=0x7f07000e;
+        public static final int redundant_start_button=0x7f070014;
+        public static final int statusImage=0x7f070013;
+        public static final int statusText=0x7f07000f;
+        public static final int tunnelList=0x7f070015;
         /**  From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/IPv6Droid/src/main/res/values/strings_vpn_service.xml 
          */
-        public static final int vpnservice_already_running=0x7f070000;
-        public static final int vpnservice_invalid_configuration=0x7f070001;
-        public static final int vpnservice_tunnel_down=0x7f070002;
-        public static final int vpnservice_tunnel_up=0x7f070003;
-        public static final int vpnservice_unexpected_problem=0x7f070004;
+        public static final int vpnservice_activity_closing=0x7f070000;
+        public static final int vpnservice_activity_localnet=0x7f070001;
+        public static final int vpnservice_activity_online=0x7f070002;
+        public static final int vpnservice_activity_ping_pop=0x7f070003;
+        public static final int vpnservice_activity_query_tic=0x7f070004;
+        public static final int vpnservice_activity_reconnect=0x7f070005;
+        public static final int vpnservice_activity_selected_tunnel=0x7f070006;
+        public static final int vpnservice_activity_wait=0x7f070007;
+        public static final int vpnservice_already_running=0x7f070008;
+        public static final int vpnservice_invalid_configuration=0x7f070009;
+        public static final int vpnservice_route_not_added=0x7f07000a;
+        public static final int vpnservice_tunnel_down=0x7f07000b;
+        public static final int vpnservice_tunnel_up=0x7f07000c;
+        public static final int vpnservice_unexpected_problem=0x7f07000d;
     }
     public static final class layout {
         public static final int activity_main=0x7f030000;

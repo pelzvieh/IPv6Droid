@@ -293,7 +293,7 @@ public class MainActivity extends Activity {
             return statusReport.isTunnelProvedWorking();
         }
 
-        /* move this to a new class
+        /* @todo move this to a new class
         public void setTunnel(TicTunnel tunnel) {
             this.tunnel = tunnel;
             if (tunnel == null)
@@ -360,8 +360,8 @@ public class MainActivity extends Activity {
             }
 
             // show activity text
-            if (statusReport.getActivity() != null)
-                MainActivity.this.activity.setText(statusReport.getActivity());
+            if (statusReport.getActivity() != 0)
+                MainActivity.this.activity.setText(getResources().getString(statusReport.getActivity()));
 
             // show tunnel information
             // @todo implementation is too cheap - no internationalization, etc. Necessary to generate custom Adapter.

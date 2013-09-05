@@ -22,6 +22,7 @@ package de.flyingsnail.ipv6droid.android;
 
 import java.io.Serializable;
 
+import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 
 /**
@@ -30,17 +31,17 @@ import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 class VpnStatusReport implements Serializable {
     private int progressPerCent;
     private Status status;
-    private String activity;
+    private int activity;
     private TicTunnel activeTunnel;
     private boolean tunnelProvedWorking;
 
     /**
-     * Constructur setting defaults.
+     * Constructor setting defaults.
      */
     public VpnStatusReport() {
         progressPerCent = 0;
         status = Status.Idle;
-        activity = "Please start"; // @todo turn to String resources
+        activity = R.id.vpnservice_activity_wait;
         activeTunnel = null;
         tunnelProvedWorking = false;
     }
@@ -53,7 +54,7 @@ class VpnStatusReport implements Serializable {
         this.status = status;
     }
 
-    public void setActivity(String activity) {
+    public void setActivity(int activity) {
         this.activity = activity;
     }
 
@@ -76,7 +77,7 @@ class VpnStatusReport implements Serializable {
         if (tunnelProvedWorking != that.tunnelProvedWorking) return false;
         if (activeTunnel != null ? !activeTunnel.equals(that.activeTunnel) : that.activeTunnel != null)
             return false;
-        if (!activity.equals(that.activity)) return false;
+        if (activity != that.activity) return false;
         if (status != that.status) return false;
 
         return true;
@@ -86,7 +87,7 @@ class VpnStatusReport implements Serializable {
     public int hashCode() {
         int result = progressPerCent;
         result = 31 * result + status.hashCode();
-        result = 31 * result + activity.hashCode();
+        result = 31 * result + activity;
         result = 31 * result + (activeTunnel != null ? activeTunnel.hashCode() : 0);
         result = 31 * result + (tunnelProvedWorking ? 1 : 0);
         return result;
@@ -109,7 +110,7 @@ class VpnStatusReport implements Serializable {
         return status;
     }
 
-    public String getActivity() {
+    public int getActivity() {
         return activity;
     }
 
