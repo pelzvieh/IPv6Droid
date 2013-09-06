@@ -53,6 +53,7 @@ import de.flyingsnail.ipv6droid.ayiya.ConnectionFailedException;
 import de.flyingsnail.ipv6droid.ayiya.Tic;
 import de.flyingsnail.ipv6droid.ayiya.TicConfiguration;
 import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
+import de.flyingsnail.ipv6droid.ayiya.TunnelBrokenException;
 import de.flyingsnail.ipv6droid.ayiya.TunnelNotAcceptedException;
 
 /**
@@ -170,117 +171,8 @@ class VpnThread extends Thread {
             // build vpn device on local machine
             VpnService.Builder builder = ayiyaVpnService.createBuilder();
             configureBuilderFromTunnelSpecification(builder, tunnelSpecification);
+            refreshTunnelLoop(builder);
 
-            // Perpare the tunnel to PoP
-            Ayiya ayiya = new Ayiya (tunnelSpecification);
-
-            while (!Thread.currentThread().isInterrupted()) {
-                try {
-                    // setup local tun and routing
-                    vpnFD = builder.establish();
-                    vpnStatus.setActivity(R.id.vpnservice_activity_localnet);
-                    vpnStatus.setProgressPerCent(50);
-
-                    // Packets to be sent are queued in this input stream.
-                    FileInputStream localIn = new FileInputStream(vpnFD.getFileDescriptor());
-
-                    // Packets received need to be written to this output stream.
-                    FileOutputStream localOut = new FileOutputStream(vpnFD.getFileDescriptor());
-
-                    // setup tunnel to PoP
-                    ayiya.connect();
-                    vpnStatus.setProgressPerCent(75);
-                    vpnStatus.setActivity(R.id.vpnservice_activity_ping_pop);
-                    reportStatus();
-
-                    // Initialize the input and output streams from the ayiya socket
-                    DatagramSocket popSocket = ayiya.getSocket();
-                    ayiyaVpnService.protect(popSocket);
-                    InputStream popIn = ayiya.getInputStream();
-                    OutputStream popOut = ayiya.getOutputStream();
-
-                    // start the copying threads
-                    inThread = startStreamCopy (localIn, popOut);
-                    inThread.setName("AYIYA from local to POP");
-                    outThread = startStreamCopy (popIn, localOut);
-                    outThread.setName("AYIYA from POP to local");
-
-                    // now do a ping on IPv6 level. This should involve receiving one packet
-                    if (tunnelSpecification.getIpv6Pop().isReachable(10000)) {
-                        postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_tunnel_up, Toast.LENGTH_SHORT);
-                        /* by laws of logic, a successful ping on IPv6 *must* already have set the flag
-                           validPacketReceived in the Ayiya instance.
-                         */
-                    } else {
-                        Log.e(TAG, "Warning: couldn't ping pop via ipv6!");
-                    };
-
-                    vpnStatus.setActivity(R.id.vpnservice_activity_online);
-
-                    // wait until interrupted
-                    try {
-                        while (!Thread.currentThread().isInterrupted() && inThread.isAlive() && outThread.isAlive()) {
-                            if (ayiya.isValidPacketReceived()) {
-                                // major status update, just once per session
-                                vpnStatus.setTunnelProvedWorking(true);
-                                vpnStatus.setStatus(VpnStatusReport.Status.Connected);
-                                vpnStatus.setProgressPerCent(100);
-                            }
-
-                            reportStatus();
-
-                            // wait for half the heartbeat interval or until inThread dies.
-                            // Note: the inThread is reading from the network socket to the POP
-                            // in case of network changes, this socket breaks immediately, so
-                            // inThread crashes on external network changes even if no transfer
-                            // is active.
-                            inThread.join(tunnelSpecification.getHeartbeatInterval()*1000/2);
-                            if (inThread.isAlive())
-                                ayiya.beat();
-
-                            // See if we're receiving packets
-                            if (!ayiya.isValidPacketReceived() ||
-                                    checkExpiry (ayiya.getLastPacketReceivedTime(), tunnelSpecification.getHeartbeatInterval())) {
-                                Log.i(TAG, "Our tunnel is having trouble - we didn't receive packets since "
-                                        + ayiya.getLastPacketReceivedTime()
-                                );
-                                if (new Date().getTime() - tunnelSpecification.getCreationDate().getTime()
-                                        > TIC_RECHECK_BLOCKED_MILLISECONDS) {
-                                    if (readTunnelFromTIC()) {
-                                        // TIC had new data - signal an IO problem to rebuild tunnel
-                                        throw new IOException("Packet receiving had timeout and TIC information changed");
-                                    } else {
-                                        throw new ConnectionFailedException("This TIC tunnel doesn't receive data", null);
-                                    }
-                                }
-                            }
-                            Log.i(TAG, "Sent heartbeat.");
-                        }
-                    } catch (InterruptedException ie) {
-                        Log.i(TAG, "Tunnel thread received interrupt, closing tunnel");
-                        throw ie;
-                    }
-                } catch (IOException e) {
-                    Log.i (TAG, "Tunnel connection broke down, closing and reconnecting ayiya", e);
-                    vpnStatus.setProgressPerCent(50);
-                    vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
-                    vpnStatus.setActivity(R.id.vpnservice_activity_reconnect);
-                    reportStatus();
-                    Thread.sleep(5000l); // @todo we should check with ConnectivityManager
-                } finally {
-                    if (inThread != null && inThread.isAlive())
-                        inThread.interrupt();
-                    if (outThread != null && outThread.isAlive())
-                        outThread.interrupt();
-                    ayiya.close();
-                    try {
-                        vpnFD.close();
-                    } catch (Exception e) {
-                        Log.e(TAG, "Cannot close local socket", e);
-                    }
-                    postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_tunnel_down, Toast.LENGTH_SHORT);
-                }
-            }
             // important status change
             vpnStatus.setProgressPerCent(0);
             vpnStatus.setStatus(VpnStatusReport.Status.Idle);
@@ -289,8 +181,6 @@ class VpnThread extends Thread {
         } catch (ConnectionFailedException e) {
             Log.e(TAG, "This configuration will not work on this device", e);
             postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_invalid_configuration, Toast.LENGTH_LONG);
-        } catch (InterruptedException e) {
-            // controlled behaviour, no logging or treatment required
         } catch (Throwable t) {
             Log.e(TAG, "Failed to run tunnel", t);
             // if this thread fails, the service per se is out of order
@@ -300,6 +190,164 @@ class VpnThread extends Thread {
         ayiyaVpnService.stopSelf();
         vpnStatus = new VpnStatusReport(); // back at zero
         reportStatus();
+    }
+
+    /**
+     * Run the tunnel as long as it should be running. This method ends via one of its declared
+     * exceptions, or in case that this thread is interrupted.
+     * @param builder
+     * @throws ConnectionFailedException in case that the current configuration seems permanently defective.
+
+     */
+    private void refreshTunnelLoop(VpnService.Builder builder) throws ConnectionFailedException {
+        // Perpare the tunnel to PoP
+        Ayiya ayiya = new Ayiya (tunnelSpecification);
+        boolean caughtInterruptedException = false;
+
+        while (!(Thread.currentThread().isInterrupted() || caughtInterruptedException)) {
+            Log.i(TAG, "Building new local TUN and new AYIYA object");
+            try {
+                // setup local tun and routing
+                vpnFD = builder.establish();
+                vpnStatus.setActivity(R.id.vpnservice_activity_localnet);
+                vpnStatus.setProgressPerCent(50);
+
+                // Packets to be sent are queued in this input stream.
+                FileInputStream localIn = new FileInputStream(vpnFD.getFileDescriptor());
+
+                // Packets received need to be written to this output stream.
+                FileOutputStream localOut = new FileOutputStream(vpnFD.getFileDescriptor());
+
+                // setup tunnel to PoP
+                ayiya.connect();
+                vpnStatus.setProgressPerCent(75);
+                vpnStatus.setActivity(R.id.vpnservice_activity_ping_pop);
+                reportStatus();
+
+                // Initialize the input and output streams from the ayiya socket
+                DatagramSocket popSocket = ayiya.getSocket();
+                ayiyaVpnService.protect(popSocket);
+                InputStream popIn = ayiya.getInputStream();
+                OutputStream popOut = ayiya.getOutputStream();
+
+                // start the copying threads
+                inThread = startStreamCopy (localIn, popOut);
+                inThread.setName("AYIYA from local to POP");
+                outThread = startStreamCopy (popIn, localOut);
+                outThread.setName("AYIYA from POP to local");
+
+                // now do a ping on IPv6 level. This should involve receiving one packet
+                if (tunnelSpecification.getIpv6Pop().isReachable(10000)) {
+                    postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_tunnel_up, Toast.LENGTH_SHORT);
+                    /* by laws of logic, a successful ping on IPv6 *must* already have set the flag
+                       validPacketReceived in the Ayiya instance.
+                     */
+                } else {
+                    Log.e(TAG, "Warning: couldn't ping pop via ipv6!");
+                };
+
+                vpnStatus.setActivity(R.id.vpnservice_activity_online);
+
+                // loop until interrupted or tunnel defective
+                monitoredHeartbeatLoop(ayiya);
+
+            } catch (IOException e) {
+                Log.i (TAG, "Tunnel connection broke down, closing and reconnecting ayiya", e);
+                vpnStatus.setProgressPerCent(50);
+                vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
+                vpnStatus.setActivity(R.id.vpnservice_activity_reconnect);
+                reportStatus();
+                try {
+                    Thread.sleep(5000l); // @todo we should check with ConnectivityManager
+                } catch (InterruptedException e1) {
+                    caughtInterruptedException = true;
+                }
+            } catch (InterruptedException e) {
+                caughtInterruptedException = true;
+            } finally {
+                if (inThread != null && inThread.isAlive())
+                    inThread.interrupt();
+                if (outThread != null && outThread.isAlive())
+                    outThread.interrupt();
+                ayiya.close();
+                try {
+                    vpnFD.close();
+                } catch (Exception e) {
+                    Log.e(TAG, "Cannot close local socket", e);
+                }
+                postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_tunnel_down, Toast.LENGTH_SHORT);
+            }
+        }
+        Log.i(TAG, "Tunnel thread received interrupt, closing tunnel");
+    }
+
+    /**
+     * This loop monitors the two copy threads and generates heartbeats in half the heartbeat
+     * interval. It detects tunnel defects by a number of means and exits by one of its
+     * declared exceptions when either it is no longer intended to run or the given ayiya doesn't
+     * seem to work any more. It just exits if one of the copy threads terminated (see there).
+     *
+     * @param ayiya the ayiya instance with which this is operating
+     * @throws InterruptedException if someone (e.g. the user...) doesn't want us to go on.
+     * @throws IOException in case of a (usually temporary) technical problem with the current ayiya.
+     *   Often, this means that our IP address did change.
+     * @throws ConnectionFailedException in case of a more fundamental problem, e.g. if the tunnel
+     *   is not enabled any more in TIC, or the given and up-to-date TIC information in the tunnel
+     *   repeatedly doesn't lead to a working tunnel.
+     */
+    private void monitoredHeartbeatLoop(Ayiya ayiya) throws InterruptedException, IOException, ConnectionFailedException {
+        boolean timeoutSuspected = false;
+        while (!Thread.currentThread().isInterrupted() && inThread.isAlive() && outThread.isAlive()) {
+            if (ayiya.isValidPacketReceived()) {
+                // major status update, just once per session
+                vpnStatus.setTunnelProvedWorking(true);
+                vpnStatus.setStatus(VpnStatusReport.Status.Connected);
+                vpnStatus.setProgressPerCent(100);
+            }
+
+            reportStatus();
+
+            // wait for half the heartbeat interval or until inThread dies.
+            // Note: the inThread is reading from the network socket to the POP
+            // in case of network changes, this socket breaks immediately, so
+            // inThread crashes on external network changes even if no transfer
+            // is active.
+            inThread.join(tunnelSpecification.getHeartbeatInterval()*1000/2);
+            if (inThread.isAlive()) {
+                try {
+                    ayiya.beat();
+                } catch (TunnelBrokenException e) {
+                    throw new IOException ("Ayiya object claims it is broken", e);
+                }
+
+                /* See if we're receiving packets:
+                   no valid packet after one heartbeat - definitely not working
+                   no new packets for more than heartbeat interval? Might be device sleep!
+                   but if not pingable, probably broken.
+                   In the latter case we give it another heartbeat interval time to recover. */
+                if (!ayiya.isValidPacketReceived() // no valid packet after one heartbeat is annoying
+                        || (checkExpiry (ayiya.getLastPacketReceivedTime(),
+                                         tunnelSpecification.getHeartbeatInterval())
+                            && !tunnelSpecification.getIpv6Pop().isReachable(10000))
+                   ) {
+                    if (!timeoutSuspected)
+                        timeoutSuspected = true;
+                    else if (new Date().getTime() - tunnelSpecification.getCreationDate().getTime()
+                            > TIC_RECHECK_BLOCKED_MILLISECONDS) {
+                        if (readTunnelFromTIC()) {
+                            // TIC had new data - signal an IO problem to rebuild tunnel
+                            throw new IOException("Packet receiving had timeout and TIC information changed");
+                        } else {
+                            throw new ConnectionFailedException("This TIC tunnel doesn't receive data", null);
+                        }
+                    }
+                } else
+                    timeoutSuspected = false;
+
+                Log.i(TAG, "Sent heartbeat.");
+            }
+        }
+        Log.i(TAG, "Terminated loop of current ayiya object (interrupt or end of a copy thread)");
     }
 
     /**
@@ -346,7 +394,14 @@ class VpnThread extends Thread {
     private static boolean checkExpiry (Date lastReceived, int heartbeatInterval) {
         Calendar oldestExpectedPacket = Calendar.getInstance();
         oldestExpectedPacket.add(Calendar.SECOND, -heartbeatInterval);
-        return lastReceived.before(oldestExpectedPacket.getTime());
+        if (lastReceived.before(oldestExpectedPacket.getTime())) {
+            Log.i(TAG, "Our tunnel is having trouble - we didn't receive packets since "
+                    + lastReceived + " (expected no earlier than " + oldestExpectedPacket.getTime()
+                    + ")"
+            );
+            return true;
+        }
+        return false;
     }
 
     /**
