@@ -48,7 +48,7 @@ import javax.net.ssl.SSLSocketFactory;
  */
 public class Tic {
     /** A String used to identify this class in logs */
-    private static final String TAG = "Tic";
+    private static final String TAG = Tic.class.getName();
 
     /**
      * The official port number, not configurable.
