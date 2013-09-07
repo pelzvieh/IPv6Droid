@@ -24,6 +24,8 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.Handler;
@@ -117,6 +119,7 @@ class VpnThread extends Thread {
      */
     private TicTunnel tunnelSpecification;
 
+
     /**
      * The specific SSLContext, required as SixXS choose a cert provider not shipped with
      * Android trust stores.
@@ -125,7 +128,8 @@ class VpnThread extends Thread {
 
     /**
      * An instance of StatusReport that continously gets updated during the lifecycle of this
-     * VpnThread.
+     * VpnThread. Also, this object is (mis-) used as the synchronization object between threads
+     * waiting for connectivity changes and the thread announcing such a change.
      */
     private VpnStatusReport vpnStatus;
 
@@ -159,6 +163,8 @@ class VpnThread extends Thread {
         try {
             handler = new Handler(ayiyaVpnService.getApplicationContext().getMainLooper());
 
+            waitOnConnectivity();
+
             if (tunnelSpecification == null) {
                 readTunnelFromTIC();
             } else {
@@ -181,6 +187,8 @@ class VpnThread extends Thread {
         } catch (ConnectionFailedException e) {
             Log.e(TAG, "This configuration will not work on this device", e);
             postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_invalid_configuration, Toast.LENGTH_LONG);
+        } catch (InterruptedException e) {
+            Log.i(TAG, "VpnThread interrupted outside of control loops", e);
         } catch (Throwable t) {
             Log.e(TAG, "Failed to run tunnel", t);
             // if this thread fails, the service per se is out of order
@@ -258,7 +266,7 @@ class VpnThread extends Thread {
                 vpnStatus.setActivity(R.id.vpnservice_activity_reconnect);
                 reportStatus();
                 try {
-                    Thread.sleep(5000l); // @todo we should check with ConnectivityManager
+                    waitOnConnectivity();
                 } catch (InterruptedException e1) {
                     caughtInterruptedException = true;
                 }
@@ -279,6 +287,28 @@ class VpnThread extends Thread {
             }
         }
         Log.i(TAG, "Tunnel thread received interrupt, closing tunnel");
+    }
+
+    /**
+     * Waits until the device's active connection is connected.
+     * @throws InterruptedException in case of an interrupt during waiting.
+     */
+    private void waitOnConnectivity() throws InterruptedException {
+        while (!isDeviceConnected()) {
+            vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
+            vpnStatus.setActivity(R.id.vpnservice_activity_reconnect);
+            reportStatus();
+            synchronized (vpnStatus) {
+                vpnStatus.wait();
+            }
+        }
+    }
+
+    private boolean isDeviceConnected() {
+        ConnectivityManager cm =
+                (ConnectivityManager)ayiyaVpnService.getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo ni = cm.getActiveNetworkInfo();
+        return ni != null && ni.isConnected();
     }
 
     /**
@@ -437,6 +467,7 @@ class VpnThread extends Thread {
                                                    TicTunnel tunnelSpecification) {
         builder.setMtu(tunnelSpecification.getMtu());
         builder.setSession(tunnelSpecification.getPopName());
+        builder.addAddress(tunnelSpecification.getIpv6Endpoint(), tunnelSpecification.getPrefixLength());
         try {
             if (routingConfiguration.isSetDefaultRoute())
                 builder.addRoute(Inet6Address.getByName("::"), 0);
@@ -453,9 +484,11 @@ class VpnThread extends Thread {
             Log.e(TAG, "Could not add requested IPv6 route to builder", e);
             postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_route_not_added, Toast.LENGTH_SHORT);
         }
-        builder.addAddress(tunnelSpecification.getIpv6Endpoint(), tunnelSpecification.getPrefixLength());
+
+        // register an intent to call up main activity from system managed dialog.
         Intent configureIntent = new Intent("android.intent.action.MAIN");
         configureIntent.setClass(ayiyaVpnService.getApplicationContext(), MainActivity.class);
+        configureIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         builder.setConfigureIntent(PendingIntent.getActivity(ayiyaVpnService.getApplicationContext(), 0, configureIntent, 0));
         Log.i(TAG, "Builder is configured");
     }
@@ -532,4 +565,13 @@ class VpnThread extends Thread {
         LocalBroadcastManager.getInstance(ayiyaVpnService).sendBroadcast(statusBroadcast);
     }
 
+    /**
+     * Notify all threads waiting on a status change.
+     * @param intent the intent that was broadcast to flag the status change. Not currently used.
+     */
+    public void onConnectivityChange(Intent intent) {
+        synchronized (vpnStatus) {
+            vpnStatus.notifyAll();
+        }
+    }
 }

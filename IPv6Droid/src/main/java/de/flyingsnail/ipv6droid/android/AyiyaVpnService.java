@@ -20,12 +20,12 @@
 
 package de.flyingsnail.ipv6droid.android;
 
-import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
 import android.net.VpnService;
 import android.preference.PreferenceManager;
 import android.support.v4.content.LocalBroadcastManager;
@@ -60,9 +60,12 @@ public class AyiyaVpnService extends VpnService {
 
     public static final String EXTRA_CACHED_TUNNEL = AyiyaVpnService.class.getName() + ".CACHED_TUNNEL";
 
-    private PendingIntent configureIntent;
-
+    // the thread doing the work
     private VpnThread thread;
+
+    // broadcast receivers
+    private final ConnectivityReceiver connectivityReceiver = new ConnectivityReceiver();
+    private final CommandReceiver commandReceiver = new CommandReceiver();
 
 
     @Override
@@ -76,7 +79,6 @@ public class AyiyaVpnService extends VpnService {
             Log.d(TAG, "retrieved configuration");
 
             // Build up the individual SSLContext,
-            // @todo provide config to inhibit this by user configuration
             SSLContext sslContext = null;
             try {
                 sslContext = getCaCertContext();
@@ -84,15 +86,12 @@ public class AyiyaVpnService extends VpnService {
                 Toast.makeText(getApplicationContext(),
                         R.id.vpnservice_invalid_configuration,
                         Toast.LENGTH_LONG);
+                // we will run on w/o TLS
             }
 
-            // setup the intent filter for status broadcasts and register receiver
-            IntentFilter intentFilter = new IntentFilter(MainActivity.BC_STOP);
-            intentFilter.addAction(MainActivity.BC_STATUS_UPDATE);
-            CommandReceiver commandReceiver = new CommandReceiver();
-            LocalBroadcastManager.getInstance(this).registerReceiver(commandReceiver,
-                    intentFilter);
-            Log.d(TAG,"registered CommandReceiver");
+            // register receivers of broadcasts
+            registerLocalCommandReceiver();
+            registerGlobalConnectivityReceiver();
 
             // Start a new session by creating a new thread.
             TicTunnel cachedTunnel = (TicTunnel)intent.getSerializableExtra(EXTRA_CACHED_TUNNEL);
@@ -108,6 +107,51 @@ public class AyiyaVpnService extends VpnService {
         return START_STICKY;
     }
 
+    @Override
+    public void onDestroy() {
+        if (thread != null && !thread.isInterrupted()) {
+            thread.interrupt();
+        }
+        unregisterGlobalConnectivityReceiver();
+        unregisterLocalCommandReceiver();
+    }
+
+    /**
+     * Register the instance of connectivityReceiver for global CONNECTIVITY_ACTIONs.
+     */
+    private void registerGlobalConnectivityReceiver() {
+        final IntentFilter intentFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
+        getApplicationContext().registerReceiver(connectivityReceiver, intentFilter);
+        Log.d(TAG, "registered CommandReceiver for global broadcasts");
+    }
+
+    /**
+     * Revert registerGlobalConnectivityReceiver().
+     */
+    private void unregisterGlobalConnectivityReceiver() {
+        getApplicationContext().unregisterReceiver(connectivityReceiver);
+        Log.d(TAG, "un-registered CommandReceiver for global broadcasts");
+    }
+
+    /**
+     * Register the instance of commandReceiver for local BC_* actions.
+     */
+    private void registerLocalCommandReceiver() {
+        // setup the intent filter for status broadcasts and register receiver
+        final IntentFilter intentFilter = new IntentFilter(MainActivity.BC_STOP);
+        intentFilter.addAction(MainActivity.BC_STATUS_UPDATE);
+        LocalBroadcastManager.getInstance(this).registerReceiver(commandReceiver,
+                intentFilter);
+        Log.d(TAG, "registered CommandReceiver for local broadcasts");
+    }
+
+    /**
+     * Revert registerLocalCommandReceiver.
+     */
+    private void unregisterLocalCommandReceiver() {
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(commandReceiver);
+        Log.d(TAG, "un-registered CommandReceiver for local broadcasts");
+    }
 
     /**
      * Create a new instance of AyiyaVpnService.Builder. This method exists solely for VpnThread.
@@ -134,6 +178,20 @@ public class AyiyaVpnService extends VpnService {
         }
     }
 
+    /** Inner class to handle connectivity changes */
+    public class ConnectivityReceiver extends BroadcastReceiver {
+        private ConnectivityReceiver() {}
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (action.equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
+                if (thread != null)
+                    thread.onConnectivityChange (intent);
+            }
+        }
+    }
+
     private TicConfiguration loadTicConfiguration(SharedPreferences myPreferences) {
         return new TicConfiguration(myPreferences.getString("tic_username", ""),
                 myPreferences.getString("tic_password", ""),
@@ -144,13 +202,6 @@ public class AyiyaVpnService extends VpnService {
         return new RoutingConfiguration(
                 myPreferences.getBoolean("routes_default", true),
                 myPreferences.getString("routes_specific", "::/0"));
-    }
-
-    @Override
-    public void onDestroy() {
-        if (thread != null && !thread.isInterrupted()) {
-            thread.interrupt();
-        }
     }
 
     /**
