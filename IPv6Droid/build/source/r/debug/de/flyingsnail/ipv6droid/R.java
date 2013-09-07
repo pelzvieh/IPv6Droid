@@ -52,7 +52,8 @@ public final class R {
     public static final class id {
         public static final int action_connect=0x7f070017;
         public static final int action_disconnect=0x7f070018;
-        public static final int action_settings=0x7f070019;
+        public static final int action_help=0x7f070019;
+        public static final int action_settings=0x7f07001a;
         public static final int androidRobot=0x7f070011;
         public static final int earthView=0x7f070012;
         public static final int linearLayout=0x7f070010;

@@ -26,6 +26,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.net.VpnService;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -272,9 +273,20 @@ public class MainActivity extends Activity {
                 openSettings();
                 return true;
 
+            case R.id.action_help:
+                openHelp();
+                return true;
+
             default:
                 return false;
         }
+    }
+
+    private void openHelp() {
+        Intent helpIntent = new Intent(Intent.ACTION_VIEW);
+        helpIntent.setDataAndType(Uri.parse("https://sourceforge.net/p/ipv6droid/wiki/Home/"), "text/html");
+        helpIntent.addCategory(Intent.CATEGORY_BROWSABLE);
+        startActivity(helpIntent);
     }
 
     /** Inner class to handle status updates */
