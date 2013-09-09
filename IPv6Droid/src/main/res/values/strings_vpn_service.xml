@@ -38,4 +38,7 @@
     <item name="vpnservice_activity_query_tic" type="id">Query TIC</item>
     <item name="vpnservice_activity_selected_tunnel" type="id">Selected tunnel</item>
     <item name="vpnservice_route_not_added" type="id">Could not add requested IPv6 route</item>
+    <item name="vpnservice_io_during_startup" type="id">Startup requires a few seconds stable
+        network, please try later
+    </item>
 </resources>

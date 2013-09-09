@@ -187,6 +187,9 @@ class VpnThread extends Thread {
         } catch (ConnectionFailedException e) {
             Log.e(TAG, "This configuration will not work on this device", e);
             postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_invalid_configuration, Toast.LENGTH_LONG);
+        } catch (IOException e) {
+            Log.e(TAG, "IOException caught before reading in tunnel data", e);
+            postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_io_during_startup, Toast.LENGTH_LONG);
         } catch (InterruptedException e) {
             Log.i(TAG, "VpnThread interrupted outside of control loops", e);
         } catch (Throwable t) {
