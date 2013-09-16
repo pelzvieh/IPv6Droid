@@ -36,6 +36,8 @@
     <item name="vpnservice_already_running" type="id">An IPv6 tunnel is already running</item>
     <item name="vpnservice_invalid_configuration" type="id">This configuration will not work on this
         device</item>
+    <item name="vpnservice_io_during_startup" type="id">Startup requires a few seconds stable
+        network, please try later</item>
     <item name="vpnservice_route_not_added" type="id">Could not add requested IPv6 route</item>
     <item name="vpnservice_tunnel_down" type="id">Tunnel/IPv6 closed</item>
     <item name="vpnservice_tunnel_up" type="id">Tunnel is up - enjoy IPv6</item>

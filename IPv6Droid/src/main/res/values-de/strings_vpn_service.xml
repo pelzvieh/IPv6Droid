@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Copyright (c) 2013 Dr. Andreas Feldner.
+  ~
+  ~     This program is free software; you can redistribute it and/or modify
+  ~     it under the terms of the GNU General Public License as published by
+  ~     the Free Software Foundation; either version 2 of the License, or
+  ~     (at your option) any later version.
+  ~
+  ~     This program is distributed in the hope that it will be useful,
+  ~     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~     GNU General Public License for more details.
+  ~
+  ~     You should have received a copy of the GNU General Public License along
+  ~     with this program; if not, write to the Free Software Foundation, Inc.,
+  ~     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  ~
+  ~ Contact information and current version at http://www.flying-snail.de/IPv6Droid
+  -->
+
+<resources>
+    <item name="vpnservice_tunnel_up" type="id">Tunnel steht - genießen Sie IPv6</item>
+    <item name="vpnservice_tunnel_down" type="id">Tunnel/IPv6 geschlossen</item>
+    <item name="vpnservice_already_running" type="id">Ein IPv6-Tunnel läuft bereits</item>
+    <item name="vpnservice_invalid_configuration" type="id">Diese Konfiguration wird auf diesem Gerät nicht
+        funktionieren
+    </item>
+    <item name="vpnservice_unexpected_problem" type="id">Die Einrichtung des VPN lief auf einen
+        unerwarteten Fehler. Sie können es später noch einmal probieren.
+    </item>
+    <item name="vpnservice_activity_wait" type="id">Bitte starten</item>
+    <item name="vpnservice_activity_localnet" type="id">Lokale Netzeinstellungen gesetzt</item>
+    <item name="vpnservice_activity_ping_pop" type="id">Gegenstelle angestupst</item>
+    <item name="vpnservice_activity_online" type="id">Übertrage</item>
+    <item name="vpnservice_activity_reconnect" type="id">Verbinde erneut</item>
+    <item name="vpnservice_activity_closing" type="id">Baue ab</item>
+    <item name="vpnservice_activity_query_tic" type="id">Frage TIC ab</item>
+    <item name="vpnservice_activity_selected_tunnel" type="id">Tunnel ausgewählt</item>
+    <item name="vpnservice_route_not_added" type="id">Konnte die gewünschte Route nicht konfigurieren</item>
+    <item name="vpnservice_io_during_startup" type="id">Zum Aufbau ist für einige Sekunden ein stabiles Netz
+        erforderlich, bitte versuchen Sie es später erneut
+    </item>
+</resources>
