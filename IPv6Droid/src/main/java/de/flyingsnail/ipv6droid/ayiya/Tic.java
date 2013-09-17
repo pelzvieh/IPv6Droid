@@ -225,7 +225,6 @@ public class Tic {
         // now we read lines with tunnel ids until we receive a 202 code.
         while (true) {
             String line = in.readLine();
-            Log.d(TAG, "received: " + line);
             if (line.startsWith("202"))
                 break; // we're done!
             else {
@@ -259,7 +258,6 @@ public class Tic {
         // now we read lines with tunnel ids until we receive a 202 code.
         while (true) {
             String line = in.readLine();
-            Log.d(TAG, "received: " + line);
             if (line.startsWith("202"))
                 break; // we're done!
             else {
@@ -281,14 +279,10 @@ public class Tic {
 
     private String requestResponse (String request) throws IOException, ConnectionFailedException {
         assert (in != null && out != null);
-        if (Log.isLoggable(TAG, Log.DEBUG))
-            Log.d (TAG, "Sending " + request);
         out.write(request);
         out.newLine();
         out.flush();
         String answer = in.readLine();
-        if (Log.isLoggable(TAG, Log.DEBUG))
-            Log.d (TAG, "Received " + answer);
         if (!answer.startsWith("2"))
             throw new ConnectionFailedException ("No success with challenge response " + answer, null);
         return answer.substring(4); // strip the 3 digit response code and following space

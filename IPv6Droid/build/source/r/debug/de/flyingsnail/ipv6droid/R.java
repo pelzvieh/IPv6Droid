@@ -33,6 +33,7 @@ public final class R {
     public static final class dimen {
         /**  From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/IPv6Droid/src/main/res/values/dimens.xml 
  From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/IPv6Droid/src/main/res/values-sw720dp-land/dimens.xml 
+ From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/IPv6Droid/src/main/res/values-de/dimens.xml 
          */
         public static final int activity_horizontal_margin=0x7f060000;
         public static final int activity_vertical_margin=0x7f060001;
@@ -64,6 +65,7 @@ public final class R {
         public static final int statusText=0x7f070010;
         public static final int tunnelList=0x7f070016;
         /**  From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/IPv6Droid/src/main/res/values/strings_vpn_service.xml 
+ From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/IPv6Droid/src/main/res/values-de/strings_vpn_service.xml 
          */
         public static final int vpnservice_activity_closing=0x7f070000;
         public static final int vpnservice_activity_localnet=0x7f070001;
@@ -93,6 +95,7 @@ public final class R {
     }
     public static final class string {
         /**  From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/IPv6Droid/src/main/res/values/strings.xml 
+ From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/IPv6Droid/src/main/res/values-de/strings.xml 
          */
         public static final int Start=0x7f080000;
         public static final int action_connect=0x7f080001;
@@ -106,6 +109,7 @@ public final class R {
         public static final int password_set=0x7f080009;
         public static final int password_unset=0x7f08000a;
         /**  From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/IPv6Droid/src/main/res/values/strings_activity_settings.xml 
+ From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/IPv6Droid/src/main/res/values-de/strings_activity_settings.xml 
          */
         public static final int pref_default_host=0x7f08000b;
         public static final int pref_default_routes_specific=0x7f08000c;
@@ -114,9 +118,11 @@ public final class R {
         public static final int pref_title_host=0x7f08000f;
         public static final int pref_title_password=0x7f080010;
         /**  From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/IPv6Droid/src/main/res/values/strings.xml 
+ From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/IPv6Droid/src/main/res/values-de/strings.xml 
          */
         public static final int pref_title_routes=0x7f080011;
         /**  From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/IPv6Droid/src/main/res/values/strings_activity_settings.xml 
+ From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/IPv6Droid/src/main/res/values-de/strings_activity_settings.xml 
          */
         public static final int pref_title_routes_default=0x7f080012;
         public static final int pref_title_routes_specific=0x7f080013;
@@ -134,9 +140,16 @@ public final class R {
  API 11 theme customizations can go here. 
  From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/IPv6Droid/src/main/res/values-v14/styles.xml 
  API 14 theme customizations can go here. 
+ From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/IPv6Droid/src/main/res/values-de/styles.xml 
+
+            Theme customizations available in newer API levels can go in
+            res/values-vXX/styles.xml, while customizations related to
+            backward-compatibility can go here.
+        
          */
         public static final int AppBaseTheme=0x7f090000;
         /**  All customizations that are NOT specific to a particular API-level can go here. 
+ All customizations that are NOT specific to a particular API-level can go here. 
          */
         public static final int AppTheme=0x7f090001;
         /**  From: file:/Users/pelzi/AndroidStudioProjects/JAiccuProject/IPv6Droid/src/main/res/values-large/styles.xml 
