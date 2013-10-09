@@ -41,4 +41,7 @@
     <item name="vpnservice_io_during_startup" type="id">Startup requires a few seconds stable
         network, please try later
     </item>
+    <item name="vpnservice_authentication_failed" type="id">Authentication failed - please check
+        user ID and password
+    </item>
 </resources>

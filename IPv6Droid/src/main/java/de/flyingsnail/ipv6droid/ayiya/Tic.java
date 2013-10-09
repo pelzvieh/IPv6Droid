@@ -402,7 +402,11 @@ public class Tic {
         }
 
         // finally, let's see what the server says about it :-)
-        requestResponse("authenticate md5 " + signature);
+        try {
+            requestResponse("authenticate md5 " + signature);
+        } catch (ConnectionFailedException e) {
+            throw new AuthenticationFailedException(e.getMessage(), e);
+        }
         Log.i (TAG, "TIC accepted authentication with MD5");
     }
 }

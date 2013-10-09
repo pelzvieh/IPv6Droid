@@ -41,4 +41,6 @@
     <item name="vpnservice_io_during_startup" type="id">Zum Aufbau ist für einige Sekunden ein stabiles Netz
         erforderlich, bitte versuchen Sie es später erneut
     </item>
+    <item name="vpnservice_authentication_failed" type="id">Anmeldung fehlgeschlagen - bitte Benutzernamen und Passwort prüfen
+    </item>
 </resources>

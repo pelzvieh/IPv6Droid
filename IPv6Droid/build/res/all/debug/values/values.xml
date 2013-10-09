@@ -34,6 +34,8 @@
     <item name="vpnservice_activity_selected_tunnel" type="id">Selected tunnel</item>
     <item name="vpnservice_activity_wait" type="id">Please start</item>
     <item name="vpnservice_already_running" type="id">An IPv6 tunnel is already running</item>
+    <item name="vpnservice_authentication_failed" type="id">Authentication failed - please check
+        user ID and password</item>
     <item name="vpnservice_invalid_configuration" type="id">This configuration will not work on this
         device</item>
     <item name="vpnservice_io_during_startup" type="id">Startup requires a few seconds stable

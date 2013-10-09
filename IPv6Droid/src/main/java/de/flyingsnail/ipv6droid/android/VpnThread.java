@@ -50,6 +50,7 @@ import java.util.StringTokenizer;
 import javax.net.ssl.SSLContext;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.ayiya.AuthenticationFailedException;
 import de.flyingsnail.ipv6droid.ayiya.Ayiya;
 import de.flyingsnail.ipv6droid.ayiya.ConnectionFailedException;
 import de.flyingsnail.ipv6droid.ayiya.Tic;
@@ -184,6 +185,9 @@ class VpnThread extends Thread {
             vpnStatus.setStatus(VpnStatusReport.Status.Idle);
             vpnStatus.setActivity(R.id.vpnservice_activity_closing);
             reportStatus();
+        } catch (AuthenticationFailedException e) {
+            Log.e(TAG, "Authentication step failed", e);
+            postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_authentication_failed, Toast.LENGTH_LONG);
         } catch (ConnectionFailedException e) {
             Log.e(TAG, "This configuration will not work on this device", e);
             postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_invalid_configuration, Toast.LENGTH_LONG);
