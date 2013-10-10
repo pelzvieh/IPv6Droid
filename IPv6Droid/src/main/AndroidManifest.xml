@@ -21,8 +21,8 @@
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="de.flyingsnail.ipv6droid"
-    android:versionCode="7"
-    android:versionName="1.03" >
+    android:versionCode="8"
+    android:versionName="1.04" >
 
     <uses-sdk
         android:minSdkVersion="14"
