@@ -95,7 +95,7 @@ public class AyiyaVpnService extends VpnService {
 
             // Start a new session by creating a new thread.
             TicTunnel cachedTunnel = (TicTunnel)intent.getSerializableExtra(EXTRA_CACHED_TUNNEL);
-            thread = new VpnThread(this, cachedTunnel, ticConfiguration, routingConfiguration, SESSION_NAME, sslContext);
+            thread = new VpnThread(this, cachedTunnel, ticConfiguration, routingConfiguration, SESSION_NAME, sslContext, startId);
             thread.start();
             Log.i(TAG, "VpnThread started");
         } else {
@@ -104,7 +104,7 @@ public class AyiyaVpnService extends VpnService {
                     R.id.vpnservice_already_running,
                     Toast.LENGTH_LONG);
         }
-        return START_STICKY;
+        return START_REDELIVER_INTENT;
     }
 
     @Override

@@ -85,6 +85,12 @@ class VpnThread extends Thread {
     private static final int TIC_RECHECK_BLOCKED_MILLISECONDS = 5 * 60 * 1000; // 5 minutes
 
     /**
+     * The start ID of the onStartCommand call that lead to this thread being constructed. Used
+     * to stop the according service.
+     */
+    private final int startId;
+
+    /**
      * The service that created this thread.
      */
     private AyiyaVpnService ayiyaVpnService;
@@ -142,13 +148,15 @@ class VpnThread extends Thread {
      * @param routingConfiguration the routing configuration
      * @param sessionName the name of this thread
      * @param sslContext the SSLContext to use for TLS
+     * @param startId the start ID of the onStartCommand that led to this thread being constructed
      */
     VpnThread(AyiyaVpnService ayiyaVpnService,
               TicTunnel cachedTunnel,
               TicConfiguration config,
               RoutingConfiguration routingConfiguration,
               String sessionName,
-              SSLContext sslContext) {
+              SSLContext sslContext,
+              int startId) {
         setName(sessionName);
         this.vpnStatus = new VpnStatusReport();
         this.ayiyaVpnService = ayiyaVpnService;
@@ -156,6 +164,7 @@ class VpnThread extends Thread {
         this.routingConfiguration = (RoutingConfiguration)routingConfiguration.clone();
         this.tunnelSpecification = cachedTunnel;
         this.sslContext = sslContext;
+        this.startId = startId;
     };
 
 
@@ -202,7 +211,7 @@ class VpnThread extends Thread {
             postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_unexpected_problem, Toast.LENGTH_LONG);
         }
         // if this thread fails, the service per se is out of order
-        ayiyaVpnService.stopSelf();
+        ayiyaVpnService.stopSelf(startId);
         vpnStatus = new VpnStatusReport(); // back at zero
         reportStatus();
     }
