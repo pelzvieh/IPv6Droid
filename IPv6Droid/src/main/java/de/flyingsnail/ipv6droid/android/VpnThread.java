@@ -283,7 +283,8 @@ class VpnThread extends Thread {
                     outThread.interrupt();
                 ayiya.close();
                 try {
-                    vpnFD.close();
+                    if (vpnFD != null)
+                        vpnFD.close();
                 } catch (Exception e) {
                     Log.e(TAG, "Cannot close local socket", e);
                 }
