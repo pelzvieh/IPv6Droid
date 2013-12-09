@@ -32,19 +32,6 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
 
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.security.GeneralSecurityException;
-import java.security.KeyStore;
-import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManagerFactory;
-
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.ayiya.TicConfiguration;
 import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
@@ -78,24 +65,13 @@ public class AyiyaVpnService extends VpnService {
             RoutingConfiguration routingConfiguration = loadRoutingConfiguration(myPreferences);
             Log.d(TAG, "retrieved configuration");
 
-            // Build up the individual SSLContext,
-            SSLContext sslContext = null;
-            try {
-                sslContext = getCaCertContext();
-            } catch (IllegalStateException e) {
-                Toast.makeText(getApplicationContext(),
-                        R.id.vpnservice_invalid_configuration,
-                        Toast.LENGTH_LONG);
-                // we will run on w/o TLS
-            }
-
             // register receivers of broadcasts
             registerLocalCommandReceiver();
             registerGlobalConnectivityReceiver();
 
             // Start a new session by creating a new thread.
             TicTunnel cachedTunnel = (TicTunnel)intent.getSerializableExtra(EXTRA_CACHED_TUNNEL);
-            thread = new VpnThread(this, cachedTunnel, ticConfiguration, routingConfiguration, SESSION_NAME, sslContext, startId);
+            thread = new VpnThread(this, cachedTunnel, ticConfiguration, routingConfiguration, SESSION_NAME, startId);
             thread.start();
             Log.i(TAG, "VpnThread started");
         } else {
@@ -202,52 +178,6 @@ public class AyiyaVpnService extends VpnService {
         return new RoutingConfiguration(
                 myPreferences.getBoolean("routes_default", true),
                 myPreferences.getString("routes_specific", "::/0"));
-    }
-
-    /**
-     * Get a SSLContext that trusts the issuer that SixXS decided to use.
-     * This method is quite verbatim the code that Google quotes in their developer documentation,
-     * from https://www.washington.edu/itconnect/security/ca/load-der.crt
-     * @return a SSLContext
-     */
-    private SSLContext getCaCertContext () throws IllegalStateException {
-        try {
-            // Load CAs from an InputStream
-            CertificateFactory cf = CertificateFactory.getInstance("X.509");
-            InputStream caInput = new BufferedInputStream(getResources().openRawResource(R.raw.trustanchor));
-            Certificate ca;
-            try {
-                ca = cf.generateCertificate(caInput);
-                Log.i(TAG, "Loaded trust anchor with subject " + ((X509Certificate) ca).getSubjectDN());
-            } finally {
-                caInput.close();
-            }
-
-            // Create a KeyStore containing our trusted CAs
-            String keyStoreType = KeyStore.getDefaultType();
-            KeyStore keyStore = KeyStore.getInstance(keyStoreType);
-            keyStore.load(null, null);
-            keyStore.setCertificateEntry("ca", ca);
-
-            // Create a TrustManager that trusts the CAs in our KeyStore
-            String tmfAlgorithm = TrustManagerFactory.getDefaultAlgorithm();
-            TrustManagerFactory tmf = TrustManagerFactory.getInstance(tmfAlgorithm);
-            tmf.init(keyStore);
-
-            // Create an SSLContext that uses our TrustManager
-            SSLContext context = SSLContext.getInstance("TLS");
-            context.init(null, tmf.getTrustManagers(), null);
-            return context;
-        } catch (CertificateException e) {
-            Log.e(TAG, "Packaged certificate invalid", e);
-            throw new IllegalStateException("Certificate bundled with this app seems damaged (internal error)", e);
-        } catch (IOException e) {
-            Log.e(TAG, "Cannot read from internal stream", e);
-            throw new IllegalStateException("Cannot read certificate bundled with this app (internal error)", e);
-        } catch (GeneralSecurityException e) {
-            Log.e(TAG, "Cannot create a keystore from bundled certificate", e);
-            throw new IllegalStateException("Cannot create a keystore from trust root at this device", e);
-        }
     }
 
 }

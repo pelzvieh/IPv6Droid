@@ -47,8 +47,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.StringTokenizer;
 
-import javax.net.ssl.SSLContext;
-
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.ayiya.AuthenticationFailedException;
 import de.flyingsnail.ipv6droid.ayiya.Ayiya;
@@ -126,13 +124,6 @@ class VpnThread extends Thread {
      */
     private TicTunnel tunnelSpecification;
 
-
-    /**
-     * The specific SSLContext, required as SixXS choose a cert provider not shipped with
-     * Android trust stores.
-     */
-    private SSLContext sslContext;
-
     /**
      * An instance of StatusReport that continously gets updated during the lifecycle of this
      * VpnThread. Also, this object is (mis-) used as the synchronization object between threads
@@ -147,7 +138,6 @@ class VpnThread extends Thread {
      * @param config the tic configuration
      * @param routingConfiguration the routing configuration
      * @param sessionName the name of this thread
-     * @param sslContext the SSLContext to use for TLS
      * @param startId the start ID of the onStartCommand that led to this thread being constructed
      */
     VpnThread(AyiyaVpnService ayiyaVpnService,
@@ -155,7 +145,6 @@ class VpnThread extends Thread {
               TicConfiguration config,
               RoutingConfiguration routingConfiguration,
               String sessionName,
-              SSLContext sslContext,
               int startId) {
         setName(sessionName);
         this.vpnStatus = new VpnStatusReport();
@@ -163,7 +152,6 @@ class VpnThread extends Thread {
         this.ticConfig = (TicConfiguration)config.clone();
         this.routingConfiguration = (RoutingConfiguration)routingConfiguration.clone();
         this.tunnelSpecification = cachedTunnel;
-        this.sslContext = sslContext;
         this.startId = startId;
     };
 
@@ -425,7 +413,7 @@ class VpnThread extends Thread {
             vpnStatus.setStatus(VpnStatusReport.Status.Connecting);
             reportStatus();
 
-            tic.connect(sslContext);
+            tic.connect();
             List<String> tunnelIds = tic.listTunnels();
             TicTunnel newTunnelSpecification = selectFirstSuitable(tunnelIds, tic);
             tunnelChanged = !newTunnelSpecification.equals(tunnelSpecification);

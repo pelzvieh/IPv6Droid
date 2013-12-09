@@ -37,7 +37,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.StringTokenizer;
 
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
@@ -139,9 +138,8 @@ public class Tic {
      * Once connected, close must be called when done.
      * @throws ConnectionFailedException in case of a permanent functional problem with this configuration on this device.
      * @throws IOException in case of a (presumably) temporary technical problem, e.g. a connection breakdown.
-     * @param sslContext the SSLContext to use or null to disable SSL
      */
-    public synchronized void connect(SSLContext sslContext) throws ConnectionFailedException, IOException {
+    public synchronized void connect() throws ConnectionFailedException, IOException {
         try {
             if (socket != null) {
                 throw new IllegalStateException("This Tic is already connected.");
@@ -155,8 +153,7 @@ public class Tic {
             protocolStepWelcome ();
             protocolStepClientIdentification ();
             protocolStepTimeComparison ();
-            if (sslContext != null)
-                protocolStepStartTLS(sslContext);
+            protocolStepStartTLS();
             protocolStepSendUsername();
             String challenge = protocolStepRequestChallenge();
             protocolStepSendAuthentication (challenge);
@@ -329,9 +326,8 @@ public class Tic {
     /**
      * Send STARTTLS command. On success message from server, replace active socket and reader/writer
      * by SSLSocket wrapped around the TCP socket.
-     * @param sslContext the SSLContext to use for the SSLSocket.
      */
-    private void protocolStepStartTLS(SSLContext sslContext) throws IOException, ConnectionFailedException {
+    private void protocolStepStartTLS() throws IOException, ConnectionFailedException {
         String answer;
         try {
             answer = requestResponse("STARTTLS");
@@ -342,7 +338,7 @@ public class Tic {
         }
         Log.i(TAG, "Switching to SSL encrypted connection");
 
-        SSLSocketFactory socketFactory = sslContext.getSocketFactory();
+        SSLSocketFactory socketFactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
         socket = (SSLSocket)socketFactory.createSocket(socket,
                 config.getServer(),
                 TIC_PORT,
