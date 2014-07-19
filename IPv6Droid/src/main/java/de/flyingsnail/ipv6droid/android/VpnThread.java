@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 Dr. Andreas Feldner.
+ * Copyright (c) 2014 Dr. Andreas Feldner.
  *
  *     This program is free software; you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -34,10 +34,12 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.DatagramSocket;
 import java.net.Inet6Address;
@@ -230,6 +232,19 @@ class VpnThread extends Thread {
                 // Packets received need to be written to this output stream.
                 FileOutputStream localOut = new FileOutputStream(vpnFD.getFileDescriptor());
 
+                // due to issue #... which doesn't appear to get fixed upstream, check local health
+                if (!checkRouting()) {
+                    Log.e(TAG, "Routing broken on this device, no default route is set for IPv6");
+                    postToast(ayiyaVpnService.getApplicationContext(), R.string.routingbroken, Toast.LENGTH_LONG);
+                    if (routingConfiguration.isTryRoutingWorkaround()) {
+                        fixRouting();
+                        if (checkRouting()) {
+                            Log.i(TAG, "VPNService routing was broken on this device, but could be fixed by the workaround");
+                            postToast(ayiyaVpnService.getApplicationContext(), R.string.routingfixed, Toast.LENGTH_LONG);
+                        }
+                    }
+                }
+
                 // setup tunnel to PoP
                 ayiya.connect();
                 vpnStatus.setProgressPerCent(75);
@@ -295,6 +310,67 @@ class VpnThread extends Thread {
     }
 
     /**
+     *     Android 4.4 has introduced a bug with VPN routing. The android developers appear very
+     *     pleased with their broken idea and unwilling to fix in any forseeable future.
+     *     This methods tries to check if our device suffers from this problem.
+     *     @return true if routing is OK
+     */
+    private boolean checkRouting() {
+        try {
+            Process routeChecker = Runtime.getRuntime().exec(new String[]{"/system/bin/ip", "-f", "inet6", "route show default"});
+            BufferedReader reader = new BufferedReader (
+                    new InputStreamReader(
+                            routeChecker.getInputStream()));
+            String output = reader.readLine();
+            try {
+                routeChecker.waitFor();
+            } catch (InterruptedException e) {
+                // we got interrupted, so we kill our process
+                routeChecker.destroy();
+            }
+            int exitValue = 0;
+            try {
+                exitValue = routeChecker.exitValue();
+            } catch (IllegalStateException ise) {
+                // command still running. Hmmm.
+            }
+            if (output == null || exitValue != 0)
+                return false; // default route is not set on ipv6
+            else
+                return output.contains("default");
+        } catch (IOException e) {
+            return false; // we cannot even check :-(
+        }
+    }
+
+    /**
+     * Try to fix the problem detected by checkRouting. This requires rooted devices :-(
+     */
+    private void fixRouting() {
+        try {
+            Process routeAdder = Runtime.getRuntime().exec(
+                    new String[]{
+                            "/system/bin/su", "-c",
+                            "/system/bin/ip -f inet6 route add default dev lo"});
+            BufferedReader reader = new BufferedReader (
+                    new InputStreamReader(
+                            routeAdder.getErrorStream()));
+            String errors = reader.readLine();
+            try {
+                routeAdder.waitFor();
+            } catch (InterruptedException e) {
+                // we got interrupted, so we kill our process
+                routeAdder.destroy();
+            }
+            if (errors != null) {
+                Log.e(TAG, "Command to set default route created error message: " + errors);
+            }
+        } catch (IOException e) {
+            Log.d(TAG, "Failed to fix routing", e);
+        }
+    }
+
+    /**
      * Waits until the device's active connection is connected.
      * @throws InterruptedException in case of an interrupt during waiting.
      */
@@ -304,7 +380,7 @@ class VpnThread extends Thread {
             vpnStatus.setActivity(R.id.vpnservice_activity_reconnect);
             reportStatus();
             synchronized (vpnStatus) {
-                vpnStatus.wait();
+                ((Object)vpnStatus).wait();
             }
         }
     }
@@ -576,7 +652,7 @@ class VpnThread extends Thread {
      */
     public void onConnectivityChange(Intent intent) {
         synchronized (vpnStatus) {
-            vpnStatus.notifyAll();
+            ((Object)vpnStatus).notifyAll();
         }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 Dr. Andreas Feldner.
+ * Copyright (c) 2014 Dr. Andreas Feldner.
  *
  *     This program is free software; you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -177,7 +177,8 @@ public class AyiyaVpnService extends VpnService {
     private RoutingConfiguration loadRoutingConfiguration(SharedPreferences myPreferences) {
         return new RoutingConfiguration(
                 myPreferences.getBoolean("routes_default", true),
-                myPreferences.getString("routes_specific", "::/0"));
+                myPreferences.getString("routes_specific", "::/0"),
+                myPreferences.getBoolean("routes_workaround", false));
     }
 
 }

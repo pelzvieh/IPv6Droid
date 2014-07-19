@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 Dr. Andreas Feldner.
+ * Copyright (c) 2014 Dr. Andreas Feldner.
  *
  *     This program is free software; you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -32,10 +32,12 @@ public class RoutingConfiguration implements Cloneable {
      * a String that gives a different route specification if default route is not to be set.
      */
     private String specificRoute;
+    private boolean tryRoutingWorkaround;
 
-    public RoutingConfiguration(boolean setDefaultRoute, String specificRoute) {
+    public RoutingConfiguration(boolean setDefaultRoute, String specificRoute, boolean tryRoutingWorkaround) {
         this.setDefaultRoute = setDefaultRoute;
         this.specificRoute = specificRoute;
+        this.tryRoutingWorkaround = tryRoutingWorkaround;
     }
 
     public boolean isSetDefaultRoute() {
@@ -54,6 +56,14 @@ public class RoutingConfiguration implements Cloneable {
         this.specificRoute = specificRoute;
     }
 
+    public boolean isTryRoutingWorkaround() {
+        return tryRoutingWorkaround;
+    }
+
+    public void setTryRoutingWorkaround(boolean tryRoutingWorkaround) {
+        this.tryRoutingWorkaround = tryRoutingWorkaround;
+    }
+
     @Override
     protected Object clone() {
         try {
@@ -62,5 +72,4 @@ public class RoutingConfiguration implements Cloneable {
             throw new IllegalStateException("Cloning failed", e);
         }
     }
-
 }
