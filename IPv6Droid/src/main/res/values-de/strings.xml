@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ~ Copyright (c) 2013 Dr. Andreas Feldner.
+  ~ Copyright (c) 2014 Dr. Andreas Feldner.
   ~
   ~     This program is free software; you can redistribute it and/or modify
   ~     it under the terms of the GNU General Public License as published by
@@ -34,4 +34,7 @@
     <string name="boolean_unset">deaktiviert</string>
     <string name="action_disconnect">Trennen</string>
     <string name="main_activity_please_start">Bitte starten</string>
+    <string name="routingbroken">IPv6-Routing scheint defekt zu sein</string>
+    <string name="routingfixed">IPv6-Routing durch Workaround behoben</string>
+
 </resources>

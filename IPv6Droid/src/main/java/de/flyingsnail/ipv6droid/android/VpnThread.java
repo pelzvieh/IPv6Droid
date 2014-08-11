@@ -223,6 +223,7 @@ class VpnThread extends Thread {
             try {
                 // setup local tun and routing
                 vpnFD = builder.establish();
+
                 vpnStatus.setActivity(R.id.vpnservice_activity_localnet);
                 vpnStatus.setProgressPerCent(50);
 
@@ -317,11 +318,16 @@ class VpnThread extends Thread {
      */
     private boolean checkRouting() {
         try {
-            Process routeChecker = Runtime.getRuntime().exec(new String[]{"/system/bin/ip", "-f", "inet6", "route show default"});
+            Process routeChecker = Runtime.getRuntime().exec(
+                    new String[]{"/system/bin/ip", "-f", "inet6", "route", "show", "default", "::/1"});
             BufferedReader reader = new BufferedReader (
                     new InputStreamReader(
                             routeChecker.getInputStream()));
+            BufferedReader errreader = new BufferedReader (
+                    new InputStreamReader(
+                            routeChecker.getErrorStream()));
             String output = reader.readLine();
+            String errors = errreader.readLine();
             try {
                 routeChecker.waitFor();
             } catch (InterruptedException e) {
@@ -334,10 +340,11 @@ class VpnThread extends Thread {
             } catch (IllegalStateException ise) {
                 // command still running. Hmmm.
             }
-            if (output == null || exitValue != 0)
+            if (output == null || exitValue != 0) {
+                Log.e(TAG, "error checking route: " + errors);
                 return false; // default route is not set on ipv6
-            else
-                return output.contains("default");
+            } else
+                return true;
         } catch (IOException e) {
             return false; // we cannot even check :-(
         }
@@ -351,7 +358,7 @@ class VpnThread extends Thread {
             Process routeAdder = Runtime.getRuntime().exec(
                     new String[]{
                             "/system/bin/su", "-c",
-                            "/system/bin/ip -f inet6 route add default dev lo"});
+                            "/system/bin/ip -f inet6 route add default dev tun0"});
             BufferedReader reader = new BufferedReader (
                     new InputStreamReader(
                             routeAdder.getErrorStream()));

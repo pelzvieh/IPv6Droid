@@ -35,5 +35,4 @@
     <string name="main_activity_please_start">Please start</string>
     <string name="routingbroken">IPv6 routing broken</string>
     <string name="routingfixed">IPv6 routing has been fixed</string>
-    <string name="pref_title_routes_workaround">Try workaround of Android 4.4 routing bug</string>
 </resources>

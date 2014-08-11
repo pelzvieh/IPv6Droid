@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) 2013 Dr. Andreas Feldner.
+  ~ Copyright (c) 2014 Dr. Andreas Feldner.
   ~
   ~     This program is free software; you can redistribute it and/or modify
   ~     it under the terms of the GNU General Public License as published by
@@ -35,5 +35,6 @@
     <string name="pref_title_routes_default">IPv6 Standardroute</string>
     <string name="pref_title_routes_specific">Auf spezielles IPv6 Subnetz beschränken</string>
     <string name="pref_default_routes_specific"></string>
+    <string name="pref_title_routes_workaround">Versuche, Routing-Bug in Android 4.4 zu umgehen</string>
 
 </resources>
