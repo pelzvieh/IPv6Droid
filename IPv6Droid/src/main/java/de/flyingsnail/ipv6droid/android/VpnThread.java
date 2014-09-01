@@ -214,7 +214,7 @@ class VpnThread extends Thread {
 
      */
     private void refreshTunnelLoop(VpnService.Builder builder) throws ConnectionFailedException {
-        // Perpare the tunnel to PoP
+        // Prepare the tunnel to PoP
         Ayiya ayiya = new Ayiya (tunnelSpecification);
         boolean caughtInterruptedException = false;
 
@@ -357,7 +357,7 @@ class VpnThread extends Thread {
         try {
             Process routeAdder = Runtime.getRuntime().exec(
                     new String[]{
-                            "/system/bin/su", "-c",
+                            "/system/xbin/su", "-c",
                             "/system/bin/ip -f inet6 route add default dev tun0"});
             BufferedReader reader = new BufferedReader (
                     new InputStreamReader(
