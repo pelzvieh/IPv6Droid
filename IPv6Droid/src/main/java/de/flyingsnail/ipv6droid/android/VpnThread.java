@@ -238,10 +238,14 @@ class VpnThread extends Thread {
                     Log.e(TAG, "Routing broken on this device, no default route is set for IPv6");
                     postToast(ayiyaVpnService.getApplicationContext(), R.string.routingbroken, Toast.LENGTH_LONG);
                     if (routingConfiguration.isTryRoutingWorkaround()) {
-                        fixRouting();
-                        if (checkRouting()) {
-                            Log.i(TAG, "VPNService routing was broken on this device, but could be fixed by the workaround");
-                            postToast(ayiyaVpnService.getApplicationContext(), R.string.routingfixed, Toast.LENGTH_LONG);
+                        try {
+                            fixRouting();
+                            if (checkRouting()) {
+                                Log.i(TAG, "VPNService routing was broken on this device, but could be fixed by the workaround");
+                                postToast(ayiyaVpnService.getApplicationContext(), R.string.routingfixed, Toast.LENGTH_LONG);
+                            }
+                        } catch (RuntimeException re) {
+                            Log.e(TAG, "Error fixing routing", re);
                         }
                     }
                 }
@@ -319,7 +323,7 @@ class VpnThread extends Thread {
     private boolean checkRouting() {
         try {
             Process routeChecker = Runtime.getRuntime().exec(
-                    new String[]{"/system/bin/ip", "-f", "inet6", "route", "show", "default", "::/1"});
+                    new String[]{"/system/bin/ip", "-f", "inet6", "route", "show", "default"});
             BufferedReader reader = new BufferedReader (
                     new InputStreamReader(
                             routeChecker.getInputStream()));
@@ -371,7 +375,36 @@ class VpnThread extends Thread {
             }
             if (errors != null) {
                 Log.e(TAG, "Command to set default route created error message: " + errors);
+                throw new IllegalStateException("Error adding default route");
             }
+
+            Process filterCleaner = Runtime.getRuntime().exec(
+                    new String[]{
+                            "/system/xbin/su", "-c",
+                            "/system/bin/ip6tables -t filter -F OUTPUT"});
+            reader = new BufferedReader (
+                    new InputStreamReader(
+                            filterCleaner.getErrorStream()));
+            errors = reader.readLine();
+            try {
+                filterCleaner.waitFor();
+            } catch (InterruptedException e) {
+                // we got interrupted, so we kill our process
+                filterCleaner.destroy();
+            }
+            int exitValue = 0;
+            try {
+                exitValue = filterCleaner.exitValue();
+            } catch (IllegalStateException ise) {
+                // command still running. Hmmm.
+            }
+            if (exitValue != 0) {
+                Log.e(TAG, "error flushing OUTPUT: " + errors);
+                throw new IllegalStateException("Error flushing OUTPUT filter");
+            } else {
+                Log.i(TAG, "succeeded flushing OUTPUT");
+            }
+            Log.d(TAG, "Routing should be fixed, command result is " + routeAdder.exitValue());
         } catch (IOException e) {
             Log.d(TAG, "Failed to fix routing", e);
         }
