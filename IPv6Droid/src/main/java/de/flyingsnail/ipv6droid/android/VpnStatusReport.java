@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 Dr. Andreas Feldner.
+ * Copyright (c) 2014 Dr. Andreas Feldner.
  *
  *     This program is free software; you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 package de.flyingsnail.ipv6droid.android;
 
 import java.io.Serializable;
+import java.util.List;
 
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
@@ -34,6 +35,7 @@ class VpnStatusReport implements Serializable {
     private int activity;
     private TicTunnel activeTunnel;
     private boolean tunnelProvedWorking;
+    private List<TicTunnel> updatedTunnelList;
 
     /**
      * Constructor setting defaults.
@@ -116,6 +118,14 @@ class VpnStatusReport implements Serializable {
 
     public TicTunnel getActiveTunnel() {
         return activeTunnel;
+    }
+
+    public void setUpdatedTunnelList(List<TicTunnel> updatedTunnelList) {
+        this.updatedTunnelList = updatedTunnelList;
+    }
+
+    public List<TicTunnel> getUpdatedTunnelList() {
+        return updatedTunnelList;
     }
 
     /**

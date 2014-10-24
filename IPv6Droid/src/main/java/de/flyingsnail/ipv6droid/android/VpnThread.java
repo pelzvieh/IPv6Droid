@@ -31,6 +31,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.ParcelFileDescriptor;
 import android.support.v4.content.LocalBroadcastManager;
+import android.system.OsConstants;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -41,9 +42,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.DatagramSocket;
 import java.net.Inet6Address;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -522,6 +526,58 @@ class VpnThread extends Thread {
             throw new ConnectionFailedException("Unable to read version name", e);
         }
 
+/*
+        //@todo move test code to test class
+        List<TicTunnel> availableTunnels = new ArrayList<TicTunnel>(3);
+        final TicTunnel t1 = new TicTunnel("1");
+        t1.setAdminState("active");
+        t1.setHeartbeatInterval(1000);
+        t1.setIpv4Endpoint("192.168.1.1");
+        t1.setIPv4Pop("192.168.1.2");
+        t1.setIpv6Pop("2001::1");
+        t1.setMtu(1000);
+        t1.setPassword("abcdef");
+        t1.setPopName("test");
+        t1.setPrefixLength(64);
+        t1.setTunnelId("TEST-1");
+        t1.setTunnelName("The first test tunnel");
+        t1.setType("ayiya");
+        t1.setUserState("active");
+        availableTunnels.add(t1);
+        final TicTunnel t2 = new TicTunnel ("2");
+        t2.setAdminState("active");
+        t2.setHeartbeatInterval(1000);
+        t2.setIpv4Endpoint("192.168.1.1");
+        t2.setIPv4Pop("192.168.1.2");
+        t2.setIpv6Pop("2001::1");
+        t2.setMtu(1000);
+        t2.setPassword("abcdef");
+        t2.setPopName("test");
+        t2.setPrefixLength(64);
+        t2.setTunnelId("TEST-2");
+        t2.setTunnelName("The 2nd test tunnel");
+        t2.setType("ayiya");
+        t2.setUserState("active");
+        availableTunnels.add(t2);
+        final TicTunnel t3 = new TicTunnel ("3");
+        t3.setAdminState("active");
+        t3.setHeartbeatInterval(1000);
+        t3.setIpv4Endpoint("192.168.1.1");
+        t3.setIPv4Pop("192.168.1.2");
+        t3.setIpv6Pop("2001::1");
+        t3.setMtu(1000);
+        t3.setPassword("abcdef");
+        t3.setPopName("test");
+        t3.setPrefixLength(64);
+        t3.setTunnelId("TEST-3");
+        t3.setTunnelName("The 3rd test tunnel");
+        t3.setType("ayiya");
+        t3.setUserState("active");
+        availableTunnels.add(t3);
+        tunnelChanged=true;
+        vpnStatus.setUpdatedTunnelList(availableTunnels);
+        tunnelSpecification = t2;
+*/
         // Initialize new Tic object
         Tic tic = new Tic(ticConfig, contextInfo);
         try {
@@ -532,13 +588,19 @@ class VpnThread extends Thread {
 
             tic.connect();
             List<String> tunnelIds = tic.listTunnels();
-            TicTunnel newTunnelSpecification = selectFirstSuitable(tunnelIds, tic);
-            tunnelChanged = !newTunnelSpecification.equals(tunnelSpecification);
-            tunnelSpecification = newTunnelSpecification;
+            List<TicTunnel> availableTunnels = expandSuitables (tunnelIds, tic);
+            if (!availableTunnels.contains(tunnelSpecification)) {
+                tunnelChanged = true;
+                vpnStatus.setUpdatedTunnelList(availableTunnels);
+                if (availableTunnels.isEmpty())
+                    throw new ConnectionFailedException("No suitable tunnels found", null);
+                tunnelSpecification = availableTunnels.get(0);
+            }
             vpnStatus.setActivity(R.id.vpnservice_activity_selected_tunnel);
         } finally {
             tic.close();
         }
+
         return tunnelChanged;
     }
 
@@ -556,14 +618,15 @@ class VpnThread extends Thread {
     }
 
     /**
-     * Return the first tunnel from available tunnels that is suitable for this VpnThread.
+     * Return the tunnel descriptions from available tunnels that are suitable for this VpnThread.
      * @param tunnelIds the List of Strings containing tunnel IDs each
      * @param tic the connected Tic object
-     * @return a TicTunnel specifying the tunnel to build up
+     * @return a List&lt;TicTunnel&gt; containing suitable tunnel specifications from the ID list
      * @throws IOException in case of a communication problem
      * @throws ConnectionFailedException in case of a logical problem with the setup
      */
-    private TicTunnel selectFirstSuitable(List<String> tunnelIds, Tic tic) throws IOException, ConnectionFailedException {
+    private List<TicTunnel> expandSuitables(List<String> tunnelIds, Tic tic) throws IOException, ConnectionFailedException {
+        List<TicTunnel> retval = new ArrayList<TicTunnel>(tunnelIds.size());
         for (String id: tunnelIds) {
             TicTunnel desc;
             try {
@@ -573,10 +636,10 @@ class VpnThread extends Thread {
             }
             if (desc.isValid() && desc.isEnabled() && "ayiya".equals(desc.getType())){
                 Log.i(TAG, "Tunnel " + id + " is suitable");
-                return desc;
+                retval.add(desc);
             }
         }
-        throw new ConnectionFailedException("No suitable tunnels found", null);
+        return retval;
     }
 
     /**
@@ -604,6 +667,17 @@ class VpnThread extends Thread {
         } catch (UnknownHostException e) {
             Log.e(TAG, "Could not add requested IPv6 route to builder", e);
             postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_route_not_added, Toast.LENGTH_SHORT);
+        }
+        try {
+            Method familyAllower = builder.getClass().getMethod("allowFamily", int.class);
+//                    new Class<?>[]{int.class});
+            familyAllower.invoke(builder, OsConstants.AF_INET);
+        } catch (NoSuchMethodException e) {
+            Log.i(TAG, "method allowFamily does not exist - should Android 4.x");
+        } catch (InvocationTargetException e) {
+            Log.i(TAG, "invocation of allowFamily failed");
+        } catch (IllegalAccessException e) {
+            Log.i(TAG, "method allowFamily not public");
         }
 
         // register an intent to call up main activity from system managed dialog.

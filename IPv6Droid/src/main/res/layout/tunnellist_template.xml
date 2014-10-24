@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <!--
-  ~ Copyright (c) 2013 Dr. Andreas Feldner.
+  ~ Copyright (c) 2014 Dr. Andreas Feldner.
   ~
   ~     This program is free software; you can redistribute it and/or modify
   ~     it under the terms of the GNU General Public License as published by
@@ -20,20 +20,11 @@
   ~ Contact information and current version at http://www.flying-snail.de/IPv6Droid
   -->
 
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical" android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
-    <TextView
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="tunnel description"
-        android:id="@+id/listEntry"
-        android:layout_gravity="left|center_vertical"
-        android:textIsSelectable="true"
-        android:layout_marginTop="5dp"
-        android:layout_marginBottom="5dp"
-        android:layout_marginLeft="3dp"
-        android:layout_marginRight="3dp" />
-</LinearLayout>
+<CheckedTextView
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:text="New CheckedTextView"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/checkedTextView"
+    android:checkMark="@android:drawable/checkbox_on_background"
+    android:duplicateParentState="true"></CheckedTextView>
