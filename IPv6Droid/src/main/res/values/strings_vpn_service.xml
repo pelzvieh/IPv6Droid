@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ~ Copyright (c) 2013 Dr. Andreas Feldner.
+  ~ Copyright (c) 2014 Dr. Andreas Feldner.
   ~
   ~     This program is free software; you can redistribute it and/or modify
   ~     it under the terms of the GNU General Public License as published by
@@ -20,28 +20,28 @@
   -->
 
 <resources>
-    <item name="vpnservice_tunnel_up" type="id">Tunnel is up - enjoy IPv6</item>
-    <item name="vpnservice_tunnel_down" type="id">Tunnel/IPv6 closed</item>
-    <item name="vpnservice_already_running" type="id">An IPv6 tunnel is already running</item>
-    <item name="vpnservice_invalid_configuration" type="id">This configuration will not work on this
+    <string name="vpnservice_tunnel_up">Tunnel is up - enjoy IPv6</string>
+    <string name="vpnservice_tunnel_down">Tunnel/IPv6 closed</string>
+    <string name="vpnservice_already_running">An IPv6 tunnel is already running</string>
+    <string name="vpnservice_invalid_configuration">This configuration will not work on this
         device
-    </item>
-    <item name="vpnservice_unexpected_problem" type="id">VPN setup experienced an unexpected
+    </string>
+    <string name="vpnservice_unexpected_problem">VPN setup experienced an unexpected
         problem. You might want to try later.
-    </item>
-    <item name="vpnservice_activity_wait" type="id">Please start</item>
-    <item name="vpnservice_activity_localnet" type="id">Configured local network</item>
-    <item name="vpnservice_activity_ping_pop" type="id">Pinging PoP</item>
-    <item name="vpnservice_activity_online" type="id">Transmitting</item>
-    <item name="vpnservice_activity_reconnect" type="id">Reconnecting</item>
-    <item name="vpnservice_activity_closing" type="id">Tearing down</item>
-    <item name="vpnservice_activity_query_tic" type="id">Query TIC</item>
-    <item name="vpnservice_activity_selected_tunnel" type="id">Selected tunnel</item>
-    <item name="vpnservice_route_not_added" type="id">Could not add requested IPv6 route</item>
-    <item name="vpnservice_io_during_startup" type="id">Startup requires a few seconds stable
+    </string>
+    <string name="vpnservice_activity_wait">Please start</string>
+    <string name="vpnservice_activity_localnet">Configured local network</string>
+    <string name="vpnservice_activity_ping_pop">Pinging PoP</string>
+    <string name="vpnservice_activity_online">Transmitting</string>
+    <string name="vpnservice_activity_reconnect" >Reconnecting</string>
+    <string name="vpnservice_activity_closing">Tearing down</string>
+    <string name="vpnservice_activity_query_tic">Query TIC</string>
+    <string name="vpnservice_activity_selected_tunnel">Selected tunnel</string>
+    <string name="vpnservice_route_not_added">Could not add requested IPv6 route</string>
+    <string name="vpnservice_io_during_startup">Startup requires a few seconds stable
         network, please try later
-    </item>
-    <item name="vpnservice_authentication_failed" type="id">Authentication failed - please check
+    </string>
+    <string name="vpnservice_authentication_failed">Authentication failed - please check
         user ID and password
-    </item>
+    </string>
 </resources>

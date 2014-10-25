@@ -77,7 +77,7 @@ public class AyiyaVpnService extends VpnService {
         } else {
             Log.i(TAG, "VpnThread not started again - already running");
             Toast.makeText(getApplicationContext(),
-                    R.id.vpnservice_already_running,
+                    R.string.vpnservice_already_running,
                     Toast.LENGTH_LONG);
         }
         return START_REDELIVER_INTENT;

@@ -43,7 +43,7 @@ class VpnStatusReport implements Serializable {
     public VpnStatusReport() {
         progressPerCent = 0;
         status = Status.Idle;
-        activity = R.id.vpnservice_activity_wait;
+        activity = R.string.vpnservice_activity_wait;
         activeTunnel = null;
         tunnelProvedWorking = false;
     }

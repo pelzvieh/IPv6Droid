@@ -167,6 +167,7 @@ class VpnThread extends Thread {
         try {
             handler = new Handler(ayiyaVpnService.getApplicationContext().getMainLooper());
 
+            vpnStatus.setProgressPerCent(5);
             waitOnConnectivity();
 
             if (tunnelSpecification == null) {
@@ -186,23 +187,23 @@ class VpnThread extends Thread {
             // important status change
             vpnStatus.setProgressPerCent(0);
             vpnStatus.setStatus(VpnStatusReport.Status.Idle);
-            vpnStatus.setActivity(R.id.vpnservice_activity_closing);
+            vpnStatus.setActivity(R.string.vpnservice_activity_closing);
             reportStatus();
         } catch (AuthenticationFailedException e) {
             Log.e(TAG, "Authentication step failed", e);
-            postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_authentication_failed, Toast.LENGTH_LONG);
+            postToast(ayiyaVpnService.getApplicationContext(), R.string.vpnservice_authentication_failed, Toast.LENGTH_LONG);
         } catch (ConnectionFailedException e) {
             Log.e(TAG, "This configuration will not work on this device", e);
-            postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_invalid_configuration, Toast.LENGTH_LONG);
+            postToast(ayiyaVpnService.getApplicationContext(), R.string.vpnservice_invalid_configuration, Toast.LENGTH_LONG);
         } catch (IOException e) {
             Log.e(TAG, "IOException caught before reading in tunnel data", e);
-            postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_io_during_startup, Toast.LENGTH_LONG);
+            postToast(ayiyaVpnService.getApplicationContext(), R.string.vpnservice_io_during_startup, Toast.LENGTH_LONG);
         } catch (InterruptedException e) {
             Log.i(TAG, "VpnThread interrupted outside of control loops", e);
         } catch (Throwable t) {
             Log.e(TAG, "Failed to run tunnel", t);
             // if this thread fails, the service per se is out of order
-            postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_unexpected_problem, Toast.LENGTH_LONG);
+            postToast(ayiyaVpnService.getApplicationContext(), R.string.vpnservice_unexpected_problem, Toast.LENGTH_LONG);
         }
         // if this thread fails, the service per se is out of order
         ayiyaVpnService.stopSelf(startId);
@@ -228,7 +229,7 @@ class VpnThread extends Thread {
                 // setup local tun and routing
                 vpnFD = builder.establish();
 
-                vpnStatus.setActivity(R.id.vpnservice_activity_localnet);
+                vpnStatus.setActivity(R.string.vpnservice_activity_localnet);
                 vpnStatus.setProgressPerCent(50);
 
                 // Packets to be sent are queued in this input stream.
@@ -257,7 +258,7 @@ class VpnThread extends Thread {
                 // setup tunnel to PoP
                 ayiya.connect();
                 vpnStatus.setProgressPerCent(75);
-                vpnStatus.setActivity(R.id.vpnservice_activity_ping_pop);
+                vpnStatus.setActivity(R.string.vpnservice_activity_ping_pop);
                 reportStatus();
 
                 // Initialize the input and output streams from the ayiya socket
@@ -274,7 +275,7 @@ class VpnThread extends Thread {
 
                 // now do a ping on IPv6 level. This should involve receiving one packet
                 if (tunnelSpecification.getIpv6Pop().isReachable(10000)) {
-                    postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_tunnel_up, Toast.LENGTH_SHORT);
+                    postToast(ayiyaVpnService.getApplicationContext(), R.string.vpnservice_tunnel_up, Toast.LENGTH_SHORT);
                     /* by laws of logic, a successful ping on IPv6 *must* already have set the flag
                        validPacketReceived in the Ayiya instance.
                      */
@@ -282,7 +283,7 @@ class VpnThread extends Thread {
                     Log.e(TAG, "Warning: couldn't ping pop via ipv6!");
                 };
 
-                vpnStatus.setActivity(R.id.vpnservice_activity_online);
+                vpnStatus.setActivity(R.string.vpnservice_activity_online);
 
                 // loop until interrupted or tunnel defective
                 monitoredHeartbeatLoop(ayiya);
@@ -291,7 +292,7 @@ class VpnThread extends Thread {
                 Log.i (TAG, "Tunnel connection broke down, closing and reconnecting ayiya", e);
                 vpnStatus.setProgressPerCent(50);
                 vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
-                vpnStatus.setActivity(R.id.vpnservice_activity_reconnect);
+                vpnStatus.setActivity(R.string.vpnservice_activity_reconnect);
                 reportStatus();
                 try {
                     waitOnConnectivity();
@@ -312,7 +313,7 @@ class VpnThread extends Thread {
                 } catch (Exception e) {
                     Log.e(TAG, "Cannot close local socket", e);
                 }
-                postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_tunnel_down, Toast.LENGTH_SHORT);
+                postToast(ayiyaVpnService.getApplicationContext(), R.string.vpnservice_tunnel_down, Toast.LENGTH_SHORT);
             }
         }
         Log.i(TAG, "Tunnel thread received interrupt, closing tunnel");
@@ -421,7 +422,7 @@ class VpnThread extends Thread {
     private void waitOnConnectivity() throws InterruptedException {
         while (!isDeviceConnected()) {
             vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
-            vpnStatus.setActivity(R.id.vpnservice_activity_reconnect);
+            vpnStatus.setActivity(R.string.vpnservice_activity_reconnect);
             reportStatus();
             synchronized (vpnStatus) {
                 ((Object)vpnStatus).wait();
@@ -582,13 +583,30 @@ class VpnThread extends Thread {
         Tic tic = new Tic(ticConfig, contextInfo);
         try {
             // some status reporting...
-            vpnStatus.setActivity(R.id.vpnservice_activity_query_tic);
+            vpnStatus.setActivity(R.string.vpnservice_activity_query_tic);
             vpnStatus.setStatus(VpnStatusReport.Status.Connecting);
             reportStatus();
 
             tic.connect();
             List<String> tunnelIds = tic.listTunnels();
             List<TicTunnel> availableTunnels = expandSuitables (tunnelIds, tic);
+            // test code
+            final TicTunnel t3 = new TicTunnel ("3");
+            t3.setAdminState("active");
+            t3.setHeartbeatInterval(1000);
+            t3.setIpv4Endpoint("192.168.1.1");
+            t3.setIPv4Pop("192.168.1.2");
+            t3.setIpv6Pop("2001::1");
+            t3.setMtu(1000);
+            t3.setPassword("abcdef");
+            t3.setPopName("test");
+            t3.setPrefixLength(64);
+            t3.setTunnelId("TEST-3");
+            t3.setTunnelName("The 3rd test tunnel");
+            t3.setType("ayiya");
+            t3.setUserState("active");
+            availableTunnels.add(t3);
+
             if (!availableTunnels.contains(tunnelSpecification)) {
                 tunnelChanged = true;
                 vpnStatus.setUpdatedTunnelList(availableTunnels);
@@ -596,7 +614,7 @@ class VpnThread extends Thread {
                     throw new ConnectionFailedException("No suitable tunnels found", null);
                 tunnelSpecification = availableTunnels.get(0);
             }
-            vpnStatus.setActivity(R.id.vpnservice_activity_selected_tunnel);
+            vpnStatus.setActivity(R.string.vpnservice_activity_selected_tunnel);
         } finally {
             tic.close();
         }
@@ -666,11 +684,12 @@ class VpnThread extends Thread {
             }
         } catch (UnknownHostException e) {
             Log.e(TAG, "Could not add requested IPv6 route to builder", e);
-            postToast(ayiyaVpnService.getApplicationContext(), R.id.vpnservice_route_not_added, Toast.LENGTH_SHORT);
+            postToast(ayiyaVpnService.getApplicationContext(), R.string.vpnservice_route_not_added, Toast.LENGTH_SHORT);
         }
+
+        // call method allowFamily on Builder object if it has one (required in Android 5 and later
         try {
             Method familyAllower = builder.getClass().getMethod("allowFamily", int.class);
-//                    new Class<?>[]{int.class});
             familyAllower.invoke(builder, OsConstants.AF_INET);
         } catch (NoSuchMethodException e) {
             Log.i(TAG, "method allowFamily does not exist - should Android 4.x");
@@ -749,11 +768,7 @@ class VpnThread extends Thread {
     }
 
 
-    void reportStatus(/*int progressPerCent,
-                               VpnStatusReport.Status status,
-                               String activity,
-                               TicTunnel activeTunnel,
-                               boolean tunnelProvedWorking*/) {
+    void reportStatus() {
         Intent statusBroadcast = new Intent(BC_STATUS)
                 .putExtra(EDATA_STATUS_REPORT, vpnStatus);
         // Broadcast locally

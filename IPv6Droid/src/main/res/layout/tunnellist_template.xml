@@ -26,5 +26,5 @@
     android:text="New CheckedTextView"
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/checkedTextView"
-    android:checkMark="@android:drawable/checkbox_on_background"
+    android:checkMark="@drawable/tunnelitemstate"
     android:duplicateParentState="true"></CheckedTextView>

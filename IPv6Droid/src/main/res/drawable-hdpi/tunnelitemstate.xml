@@ -1,3 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+
 <!--
   ~ Copyright (c) 2014 Dr. Andreas Feldner.
   ~
@@ -18,23 +20,8 @@
   ~ Contact information and current version at http://www.flying-snail.de/IPv6Droid
   -->
 
-<resources>
-        <string name="title_activity_settings">Einstellungen</string>
-
-    <!-- Strings related to Settings -->
-
-    <!-- Login settings -->
-    <string name="pref_header_login">Anmeldedaten</string>
-    <string name="pref_title_username">Benutzername</string>
-    <string name="pref_title_password">Passwort</string>
-    <string name="pref_title_host">TIC-Server</string>
-    <string name="pref_default_host"></string>
-
-    <!-- Routes settings -->
-    <string name="pref_header_routes">Routen-Einstellungen</string>
-    <string name="pref_title_routes_default">IPv6 Standardroute</string>
-    <string name="pref_title_routes_specific">Nur spezielles IPv6 Subnetz</string>
-    <string name="pref_default_routes_specific"></string>
-    <string name="pref_title_routes_workaround">Routing-Bug in Android 4.4 umgehen</string>
-
-</resources>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+        <item android:state_checked="true"
+            android:drawable="@android:drawable/checkbox_on_background" /> <!-- checked -->
+        <item android:drawable="@android:drawable/checkbox_off_background" /> <!-- default -->
+</selector>

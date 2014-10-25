@@ -27,6 +27,8 @@
     <string name="Start">Starten</string>
     <string name="pref_title_routes">Routen</string>
     <string name="action_connect">Verbinden</string>
+    <string name="action_tic_reload">Tunneldefinitionen neu laden</string>
+    <string name="action_help">Hilfe</string>
 
     <string name="password_set">&lt;gesetzt&gt;</string>
     <string name="password_unset">&lt;leer&gt;</string>

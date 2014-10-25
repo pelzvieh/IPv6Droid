@@ -141,7 +141,7 @@ public class SettingsActivity extends PreferenceActivity {
     private static Preference.OnPreferenceChangeListener sBindPreferenceSummaryToValueListener = new Preference.OnPreferenceChangeListener() {
         @Override
         public boolean onPreferenceChange(Preference preference, Object value) {
-            String stringValue = value.toString();
+            String stringValue = String.valueOf(value);
 
             /* if (preference instanceof ListPreference) {
                 // For list preferences, look up the correct display value in
@@ -156,8 +156,8 @@ public class SettingsActivity extends PreferenceActivity {
                                 : null);
 
             } else */ if (preference instanceof CheckBoxPreference) {
-                Boolean boolValue = (Boolean)value;
-                preference.setSummary (boolValue.booleanValue()?R.string.boolean_set:R.string.boolean_unset);
+                Boolean boolValue = value == null ? false : (Boolean)value;
+                preference.setSummary (boolValue?R.string.boolean_set:R.string.boolean_unset);
             } else if (preference.getKey().contains("password")) {
                 if (value != null && !stringValue.isEmpty())
                     preference.setSummary (R.string.password_set);
@@ -166,7 +166,7 @@ public class SettingsActivity extends PreferenceActivity {
             } else {
                 // For all other preferences, set the summary to the value's
                 // simple string representation.
-                preference.setSummary(stringValue);
+                preference.setSummary(value == null ? "" : stringValue);
             }
             return true;
         }

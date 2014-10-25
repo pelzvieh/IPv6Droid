@@ -20,6 +20,7 @@
   -->
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="de.flyingsnail.ipv6droid"
     android:versionCode="12"
     android:versionName="1.10" >
@@ -56,11 +57,12 @@
         <activity
             android:name=".android.SettingsActivity"
             android:label="@string/title_activity_settings"
-            android:parentActivityName="de.flyingsnail.ipv6droid.MainActivity" >
+            android:parentActivityName=".android.MainActivity"
+            tools:ignore="UnusedAttribute">
             <!-- Parent activity meta-data to support 4.0 and lower -->
             <meta-data
                     android:name="android.support.PARENT_ACTIVITY"
-                    android:value="de.flyingsnail.ipv6droid.MainActivity" />
+                    android:value="de.flyingsnail.ipv6droid.android.MainActivity" />
         </activity>
     </application>
 

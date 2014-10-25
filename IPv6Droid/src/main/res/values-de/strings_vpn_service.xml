@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ~ Copyright (c) 2013 Dr. Andreas Feldner.
+  ~ Copyright (c) 2014 Dr. Andreas Feldner.
   ~
   ~     This program is free software; you can redistribute it and/or modify
   ~     it under the terms of the GNU General Public License as published by
@@ -20,27 +20,27 @@
   -->
 
 <resources>
-    <item name="vpnservice_tunnel_up" type="id">Tunnel steht - genießen Sie IPv6</item>
-    <item name="vpnservice_tunnel_down" type="id">Tunnel/IPv6 geschlossen</item>
-    <item name="vpnservice_already_running" type="id">Ein IPv6-Tunnel läuft bereits</item>
-    <item name="vpnservice_invalid_configuration" type="id">Diese Konfiguration wird auf diesem Gerät nicht
+    <string name="vpnservice_tunnel_up" type="id">Tunnel steht - genießen Sie IPv6</string>
+    <string name="vpnservice_tunnel_down" type="id">Tunnel/IPv6 geschlossen</string>
+    <string name="vpnservice_already_running" type="id">Ein IPv6-Tunnel läuft bereits</string>
+    <string name="vpnservice_invalid_configuration" type="id">Diese Konfiguration wird auf diesem Gerät nicht
         funktionieren
-    </item>
-    <item name="vpnservice_unexpected_problem" type="id">Die Einrichtung des VPN lief auf einen
+    </string>
+    <string name="vpnservice_unexpected_problem" type="id">Die Einrichtung des VPN lief auf einen
         unerwarteten Fehler. Sie können es später noch einmal probieren.
-    </item>
-    <item name="vpnservice_activity_wait" type="id">Bitte starten</item>
-    <item name="vpnservice_activity_localnet" type="id">Lokale Netzeinstellungen gesetzt</item>
-    <item name="vpnservice_activity_ping_pop" type="id">Gegenstelle angestupst</item>
-    <item name="vpnservice_activity_online" type="id">Übertrage</item>
-    <item name="vpnservice_activity_reconnect" type="id">Verbinde erneut</item>
-    <item name="vpnservice_activity_closing" type="id">Baue ab</item>
-    <item name="vpnservice_activity_query_tic" type="id">Frage TIC ab</item>
-    <item name="vpnservice_activity_selected_tunnel" type="id">Tunnel ausgewählt</item>
-    <item name="vpnservice_route_not_added" type="id">Konnte die gewünschte Route nicht konfigurieren</item>
-    <item name="vpnservice_io_during_startup" type="id">Zum Aufbau ist für einige Sekunden ein stabiles Netz
+    </string>
+    <string name="vpnservice_activity_wait" type="id">Bitte starten</string>
+    <string name="vpnservice_activity_localnet" type="id">Lokale Netzeinstellungen gesetzt</string>
+    <string name="vpnservice_activity_ping_pop" type="id">Gegenstelle angestupst</string>
+    <string name="vpnservice_activity_online" type="id">Übertrage</string>
+    <string name="vpnservice_activity_reconnect" type="id">Verbinde erneut</string>
+    <string name="vpnservice_activity_closing" type="id">Baue ab</string>
+    <string name="vpnservice_activity_query_tic" type="id">Frage TIC ab</string>
+    <string name="vpnservice_activity_selected_tunnel" type="id">Tunnel ausgewählt</string>
+    <string name="vpnservice_route_not_added" type="id">Konnte die gewünschte Route nicht konfigurieren</string>
+    <string name="vpnservice_io_during_startup" type="id">Zum Aufbau ist für einige Sekunden ein stabiles Netz
         erforderlich, bitte versuchen Sie es später erneut
-    </item>
-    <item name="vpnservice_authentication_failed" type="id">Anmeldung fehlgeschlagen - bitte Benutzernamen und Passwort prüfen
-    </item>
+    </string>
+    <string name="vpnservice_authentication_failed" type="id">Anmeldung fehlgeschlagen - bitte Benutzernamen und Passwort prüfen
+    </string>
 </resources>
