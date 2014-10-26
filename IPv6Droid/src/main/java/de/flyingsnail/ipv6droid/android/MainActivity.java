@@ -96,14 +96,12 @@ public class MainActivity extends Activity {
         redundantStartButton = (Button) findViewById(R.id.redundant_start_button);
         tunnelListView = (ListView) findViewById(R.id.tunnelList);
         flushTunnelLists();
+        if (statusReceiver == null)
+            statusReceiver = new StatusReceiver();
 
         // setup the intent filter for status broadcasts
         // The filter's action is BROADCAST_ACTION
         IntentFilter statusIntentFilter = new IntentFilter(VpnThread.BC_STATUS);
-
-
-        if (statusReceiver == null)
-            statusReceiver = new StatusReceiver();
 
         // Registers the StatusReceiver and its intent filter
         LocalBroadcastManager.getInstance(this).registerReceiver(statusReceiver,
@@ -124,6 +122,10 @@ public class MainActivity extends Activity {
     private void flushTunnelLists() {
         availableTunnels = new ArrayList<TicTunnel>();
         selectedTunnel = null;
+        tunnelListView.setAdapter(new ArrayAdapter<TicTunnel>(MainActivity.this,
+                        R.layout.tunnellist_template,
+                        availableTunnels)
+        );
     }
 
     @Override
@@ -362,22 +364,28 @@ public class MainActivity extends Activity {
             // read tunnel information, if updated
             if (statusReport.getUpdatedTunnelList() != null)
                 availableTunnels = statusReport.getUpdatedTunnelList();
+            // deal with null here to avoid nasty checks everywhere else...
+            if (availableTunnels == null)
+                availableTunnels = new ArrayList<TicTunnel>(0);
 
             if (statusReport.getActiveTunnel() != null)
                 selectedTunnel = statusReport.getActiveTunnel();
 
             // show tunnel information
             // @todo implementation is too cheap - no internationalization, etc. Necessary to generate custom Adapter.
+            tunnelListView.setAdapter(new ArrayAdapter<TicTunnel>(MainActivity.this,
+                            R.layout.tunnellist_template,
+                            availableTunnels)
+            );
             if (!availableTunnels.isEmpty()) {
                 tunnelListView.setVisibility(View.VISIBLE);
-                tunnelListView.setAdapter(new ArrayAdapter<TicTunnel>(MainActivity.this,
-                                R.layout.tunnellist_template,
-                                availableTunnels)
-                );
+
                 int position = availableTunnels.indexOf(selectedTunnel);
-                tunnelListView.setItemChecked(position, true);
-            } else
+                if (position >= 0)
+                  tunnelListView.setItemChecked(position, true);
+            } else {
                 tunnelListView.setVisibility(View.INVISIBLE);
+            }
         }
 
         @Override

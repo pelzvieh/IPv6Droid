@@ -590,26 +590,11 @@ class VpnThread extends Thread {
             tic.connect();
             List<String> tunnelIds = tic.listTunnels();
             List<TicTunnel> availableTunnels = expandSuitables (tunnelIds, tic);
-            // test code
-            final TicTunnel t3 = new TicTunnel ("3");
-            t3.setAdminState("active");
-            t3.setHeartbeatInterval(1000);
-            t3.setIpv4Endpoint("192.168.1.1");
-            t3.setIPv4Pop("192.168.1.2");
-            t3.setIpv6Pop("2001::1");
-            t3.setMtu(1000);
-            t3.setPassword("abcdef");
-            t3.setPopName("test");
-            t3.setPrefixLength(64);
-            t3.setTunnelId("TEST-3");
-            t3.setTunnelName("The 3rd test tunnel");
-            t3.setType("ayiya");
-            t3.setUserState("active");
-            availableTunnels.add(t3);
 
             if (!availableTunnels.contains(tunnelSpecification)) {
                 tunnelChanged = true;
                 vpnStatus.setUpdatedTunnelList(availableTunnels);
+                reportStatus();
                 if (availableTunnels.isEmpty())
                     throw new ConnectionFailedException("No suitable tunnels found", null);
                 tunnelSpecification = availableTunnels.get(0);
@@ -773,6 +758,8 @@ class VpnThread extends Thread {
                 .putExtra(EDATA_STATUS_REPORT, vpnStatus);
         // Broadcast locally
         LocalBroadcastManager.getInstance(ayiyaVpnService).sendBroadcast(statusBroadcast);
+        // clear updated tunnel list after posting
+        vpnStatus.setUpdatedTunnelList(null);
     }
 
     /**
