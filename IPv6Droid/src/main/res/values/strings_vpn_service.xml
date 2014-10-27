@@ -30,6 +30,7 @@
         problem. You might want to try later.
     </string>
     <string name="vpnservice_activity_wait">Please start</string>
+    <string name="vpnservice_activity_connectivity">Waiting for network</string>
     <string name="vpnservice_activity_localnet">Configured local network</string>
     <string name="vpnservice_activity_ping_pop">Pinging PoP</string>
     <string name="vpnservice_activity_online">Transmitting</string>

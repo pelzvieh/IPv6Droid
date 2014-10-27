@@ -362,8 +362,8 @@ public class MainActivity extends Activity {
                 MainActivity.this.activity.setText(getResources().getString(statusReport.getActivity()));
 
             // read tunnel information, if updated
-            if (statusReport.getUpdatedTunnelList() != null)
-                availableTunnels = statusReport.getUpdatedTunnelList();
+            if (statusReport.getTicTunnelList() != null)
+                availableTunnels = statusReport.getTicTunnelList();
             // deal with null here to avoid nasty checks everywhere else...
             if (availableTunnels == null)
                 availableTunnels = new ArrayList<TicTunnel>(0);

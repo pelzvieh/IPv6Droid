@@ -35,7 +35,7 @@ class VpnStatusReport implements Serializable {
     private int activity;
     private TicTunnel activeTunnel;
     private boolean tunnelProvedWorking;
-    private List<TicTunnel> updatedTunnelList;
+    private List<TicTunnel> ticTunnelList;
 
     /**
      * Constructor setting defaults.
@@ -120,12 +120,12 @@ class VpnStatusReport implements Serializable {
         return activeTunnel;
     }
 
-    public void setUpdatedTunnelList(List<TicTunnel> updatedTunnelList) {
-        this.updatedTunnelList = updatedTunnelList;
+    public void setTicTunnelList(List<TicTunnel> ticTunnelList) {
+        this.ticTunnelList = ticTunnelList;
     }
 
-    public List<TicTunnel> getUpdatedTunnelList() {
-        return updatedTunnelList;
+    public List<TicTunnel> getTicTunnelList() {
+        return ticTunnelList;
     }
 
     /**

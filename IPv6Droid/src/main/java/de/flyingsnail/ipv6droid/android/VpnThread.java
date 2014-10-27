@@ -168,6 +168,9 @@ class VpnThread extends Thread {
             handler = new Handler(ayiyaVpnService.getApplicationContext().getMainLooper());
 
             vpnStatus.setProgressPerCent(5);
+            vpnStatus.setStatus(VpnStatusReport.Status.Connecting);
+            vpnStatus.setActivity(R.string.vpnservice_activity_wait);
+            reportStatus();
             waitOnConnectivity();
 
             if (tunnelSpecification == null) {
@@ -239,19 +242,17 @@ class VpnThread extends Thread {
                 FileOutputStream localOut = new FileOutputStream(vpnFD.getFileDescriptor());
 
                 // due to issue #... which doesn't appear to get fixed upstream, check local health
-                if (!checkRouting()) {
+                if (routingConfiguration.isTryRoutingWorkaround() && !checkRouting()) {
                     Log.e(TAG, "Routing broken on this device, no default route is set for IPv6");
                     postToast(ayiyaVpnService.getApplicationContext(), R.string.routingbroken, Toast.LENGTH_LONG);
-                    if (routingConfiguration.isTryRoutingWorkaround()) {
-                        try {
-                            fixRouting();
-                            if (checkRouting()) {
-                                Log.i(TAG, "VPNService routing was broken on this device, but could be fixed by the workaround");
-                                postToast(ayiyaVpnService.getApplicationContext(), R.string.routingfixed, Toast.LENGTH_LONG);
-                            }
-                        } catch (RuntimeException re) {
-                            Log.e(TAG, "Error fixing routing", re);
+                    try {
+                        fixRouting();
+                        if (checkRouting()) {
+                            Log.i(TAG, "VPNService routing was broken on this device, but could be fixed by the workaround");
+                            postToast(ayiyaVpnService.getApplicationContext(), R.string.routingfixed, Toast.LENGTH_LONG);
                         }
+                    } catch (RuntimeException re) {
+                        Log.e(TAG, "Error fixing routing", re);
                     }
                 }
 
@@ -576,7 +577,7 @@ class VpnThread extends Thread {
         t3.setUserState("active");
         availableTunnels.add(t3);
         tunnelChanged=true;
-        vpnStatus.setUpdatedTunnelList(availableTunnels);
+        vpnStatus.setTicTunnelList(availableTunnels);
         tunnelSpecification = t2;
 */
         // Initialize new Tic object
@@ -593,10 +594,12 @@ class VpnThread extends Thread {
 
             if (!availableTunnels.contains(tunnelSpecification)) {
                 tunnelChanged = true;
-                vpnStatus.setUpdatedTunnelList(availableTunnels);
+                vpnStatus.setTicTunnelList(availableTunnels);
                 reportStatus();
                 if (availableTunnels.isEmpty())
                     throw new ConnectionFailedException("No suitable tunnels found", null);
+                else if (availableTunnels.size()>1)
+                    throw new ConnectionFailedException("You must select a tunnel from list", null);
                 tunnelSpecification = availableTunnels.get(0);
             }
             vpnStatus.setActivity(R.string.vpnservice_activity_selected_tunnel);
@@ -758,8 +761,6 @@ class VpnThread extends Thread {
                 .putExtra(EDATA_STATUS_REPORT, vpnStatus);
         // Broadcast locally
         LocalBroadcastManager.getInstance(ayiyaVpnService).sendBroadcast(statusBroadcast);
-        // clear updated tunnel list after posting
-        vpnStatus.setUpdatedTunnelList(null);
     }
 
     /**

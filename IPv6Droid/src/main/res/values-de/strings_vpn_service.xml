@@ -30,6 +30,7 @@
         unerwarteten Fehler. Sie können es später noch einmal probieren.
     </string>
     <string name="vpnservice_activity_wait" type="id">Bitte starten</string>
+    <string name="vpnservice_activity_connectivity">Warte auf Netz</string>
     <string name="vpnservice_activity_localnet" type="id">Lokale Netzeinstellungen gesetzt</string>
     <string name="vpnservice_activity_ping_pop" type="id">Gegenstelle angestupst</string>
     <string name="vpnservice_activity_online" type="id">Übertrage</string>
