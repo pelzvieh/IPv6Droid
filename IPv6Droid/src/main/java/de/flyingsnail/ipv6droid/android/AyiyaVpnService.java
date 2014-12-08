@@ -27,6 +27,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.VpnService;
+import android.os.Build;
 import android.preference.PreferenceManager;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
@@ -175,10 +176,17 @@ public class AyiyaVpnService extends VpnService {
     }
 
     private RoutingConfiguration loadRoutingConfiguration(SharedPreferences myPreferences) {
+        boolean workaround = myPreferences.getBoolean("routes_workaround", false) &&
+                checkAndroidVersionForWorkaround();
         return new RoutingConfiguration(
                 myPreferences.getBoolean("routes_default", true),
                 myPreferences.getString("routes_specific", "::/0"),
-                myPreferences.getBoolean("routes_workaround", false));
+                workaround);
+    }
+
+    public static boolean checkAndroidVersionForWorkaround() {
+        return (Build.VERSION.SDK_INT == Build.VERSION_CODES.KITKAT ||
+                Build.VERSION.SDK_INT == Build.VERSION_CODES.KITKAT_WATCH);
     }
 
 }
