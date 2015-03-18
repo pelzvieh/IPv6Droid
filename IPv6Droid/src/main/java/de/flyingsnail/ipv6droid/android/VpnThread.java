@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Dr. Andreas Feldner.
+ * Copyright (c) 2015 Dr. Andreas Feldner.
  *
  *     This program is free software; you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 
 package de.flyingsnail.ipv6droid.android;
 
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -30,6 +31,7 @@ import android.net.VpnService;
 import android.os.Build;
 import android.os.Handler;
 import android.os.ParcelFileDescriptor;
+import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.system.OsConstants;
 import android.util.Log;
@@ -93,6 +95,11 @@ class VpnThread extends Thread {
      * to stop the according service.
      */
     private final int startId;
+
+    /**
+     * A pre-constructed notification builder for building user notifications.
+     */
+    private final NotificationCompat.Builder notificationBuilder;
 
     /**
      * The service that created this thread.
@@ -159,6 +166,8 @@ class VpnThread extends Thread {
         this.routingConfiguration = (RoutingConfiguration)routingConfiguration.clone();
         this.tunnelSpecification = cachedTunnel;
         this.startId = startId;
+        this.notificationBuilder = new NotificationCompat.Builder(ayiyaVpnService.getApplicationContext())
+            .setSmallIcon(R.drawable.disturbed);
     };
 
 
@@ -194,17 +203,21 @@ class VpnThread extends Thread {
             reportStatus();
         } catch (AuthenticationFailedException e) {
             Log.e(TAG, "Authentication step failed", e);
+            notifyUserOfError(R.string.vpnservice_authentication_failed, e);
             postToast(ayiyaVpnService.getApplicationContext(), R.string.vpnservice_authentication_failed, Toast.LENGTH_LONG);
         } catch (ConnectionFailedException e) {
             Log.e(TAG, "This configuration will not work on this device", e);
+            notifyUserOfError(R.string.vpnservice_invalid_configuration, e);
             postToast(ayiyaVpnService.getApplicationContext(), R.string.vpnservice_invalid_configuration, Toast.LENGTH_LONG);
         } catch (IOException e) {
             Log.e(TAG, "IOException caught before reading in tunnel data", e);
+            notifyUserOfError(R.string.vpnservice_io_during_startup, e);
             postToast(ayiyaVpnService.getApplicationContext(), R.string.vpnservice_io_during_startup, Toast.LENGTH_LONG);
         } catch (InterruptedException e) {
             Log.i(TAG, "VpnThread interrupted outside of control loops", e);
         } catch (Throwable t) {
             Log.e(TAG, "Failed to run tunnel", t);
+            notifyUserOfError(R.string.vpnservice_unexpected_problem, t);
             // if this thread fails, the service per se is out of order
             postToast(ayiyaVpnService.getApplicationContext(), R.string.vpnservice_unexpected_problem, Toast.LENGTH_LONG);
         }
@@ -213,6 +226,35 @@ class VpnThread extends Thread {
         vpnStatus = new VpnStatusReport(); // back at zero
         reportStatus();
     }
+
+    /**
+     * Generate a user notification with the supplied expection's cause as detail message.
+     * @param resourceId the string resource supplying the notification title
+     * @param e the Exception the cause of which is to be displayed
+     */
+    private void notifyUserOfError(int resourceId, Throwable e) {
+        notificationBuilder.setContentTitle(ayiyaVpnService.getString(resourceId));
+        if (e.getCause()!= null) {
+            e = e.getCause();
+        }
+        notificationBuilder.setContentText(
+                String.valueOf(e.getLocalizedMessage()) + " ("+e.getClass()+")");
+
+        Intent settingsIntent = new Intent(ayiyaVpnService.getApplicationContext(), SettingsActivity.class);
+        // the following code is adopted directly from developer.android.com
+        PendingIntent resultPendingIntent = PendingIntent.getActivity(
+                ayiyaVpnService.getApplicationContext(),
+                0,
+                settingsIntent,
+                PendingIntent.FLAG_ONE_SHOT);
+        notificationBuilder.setContentIntent(resultPendingIntent);
+
+        NotificationManager notificationManager =
+                (NotificationManager) ayiyaVpnService.getSystemService(Context.NOTIFICATION_SERVICE);
+        // mId allows you to update the notification later on.
+        notificationManager.notify(0, notificationBuilder.build());
+    }
+
 
     /**
      * Run the tunnel as long as it should be running. This method ends via one of its declared
