@@ -167,7 +167,7 @@ class VpnThread extends Thread {
         this.tunnelSpecification = cachedTunnel;
         this.startId = startId;
         this.notificationBuilder = new NotificationCompat.Builder(ayiyaVpnService.getApplicationContext())
-            .setSmallIcon(R.drawable.disturbed);
+            .setSmallIcon(R.drawable.ic_launcher);
     };
 
 
