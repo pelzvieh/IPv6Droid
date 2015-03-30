@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Dr. Andreas Feldner.
+ * Copyright (c) 2015 Dr. Andreas Feldner.
  *
  *     This program is free software; you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -141,14 +141,7 @@ public class MainActivity extends Activity {
      * declared callback in layout xml definitions.
      * @param clickedView is the View where the click occurred. This parameter is not used.
      */
-    public void startVPN(View clickedView){
-        startVPN();
-    }
-
-    /**
-     * Start the system-managed setup of VPN
-     */
-    private void startVPN () {
+    public void startVPN(View clickedView) {
         // update selected tunnel
         int checkedItem = tunnelListView.getCheckedItemPosition();
         if (checkedItem != AdapterView.INVALID_POSITION) {
@@ -156,7 +149,8 @@ public class MainActivity extends Activity {
         }
 
         // Start system-managed intent for VPN
-        Intent systemVpnIntent = VpnService.prepare(getApplicationContext());
+        Intent systemVpnIntent = VpnService.prepare(clickedView == null ?
+                getApplicationContext() : clickedView.getContext());
         if (systemVpnIntent != null) {
             startActivityForResult(systemVpnIntent, REQUEST_START_VPN);
         } else {
@@ -269,7 +263,7 @@ public class MainActivity extends Activity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_connect:
-                startVPN();
+                startVPN(item.getActionView());
                 return true;
 
             case R.id.action_disconnect:
@@ -285,7 +279,7 @@ public class MainActivity extends Activity {
                 return true;
 
             case R.id.action_tic_reload:
-                forceTunnelReload();
+                forceTunnelReload(item.getActionView());
                 return true;
 
             default:
@@ -300,9 +294,9 @@ public class MainActivity extends Activity {
         startActivity(helpIntent);
     }
 
-    private void forceTunnelReload() {
+    private void forceTunnelReload(View clickedView) {
         flushTunnelLists();
-        startVPN();
+        startVPN(clickedView);
     }
 
     /** Inner class to handle status updates */

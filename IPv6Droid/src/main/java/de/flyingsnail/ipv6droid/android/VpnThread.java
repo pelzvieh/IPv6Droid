@@ -20,6 +20,7 @@
 
 package de.flyingsnail.ipv6droid.android;
 
+import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -31,7 +32,6 @@ import android.net.VpnService;
 import android.os.Build;
 import android.os.Handler;
 import android.os.ParcelFileDescriptor;
-import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.system.OsConstants;
 import android.util.Log;
@@ -99,7 +99,7 @@ class VpnThread extends Thread {
     /**
      * A pre-constructed notification builder for building user notifications.
      */
-    private final NotificationCompat.Builder notificationBuilder;
+    private final Notification.Builder notificationBuilder;
 
     /**
      * The service that created this thread.
@@ -166,7 +166,7 @@ class VpnThread extends Thread {
         this.routingConfiguration = (RoutingConfiguration)routingConfiguration.clone();
         this.tunnelSpecification = cachedTunnel;
         this.startId = startId;
-        this.notificationBuilder = new NotificationCompat.Builder(ayiyaVpnService.getApplicationContext())
+        this.notificationBuilder = new Notification.Builder(ayiyaVpnService.getApplicationContext())
             .setSmallIcon(R.drawable.ic_launcher);
     };
 
@@ -252,7 +252,7 @@ class VpnThread extends Thread {
         NotificationManager notificationManager =
                 (NotificationManager) ayiyaVpnService.getSystemService(Context.NOTIFICATION_SERVICE);
         // mId allows you to update the notification later on.
-        notificationManager.notify(0, notificationBuilder.build());
+        notificationManager.notify(0, notificationBuilder.getNotification());
     }
 
 
@@ -294,6 +294,7 @@ class VpnThread extends Thread {
                             postToast(ayiyaVpnService.getApplicationContext(), R.string.routingfixed, Toast.LENGTH_LONG);
                         }
                     } catch (RuntimeException re) {
+                        notifyUserOfError(R.string.routingbroken, re);
                         Log.e(TAG, "Error fixing routing", re);
                     }
                 }
@@ -706,6 +707,8 @@ class VpnThread extends Thread {
             else {
                 String routeDefinition = routingConfiguration.getSpecificRoute();
                 StringTokenizer tok = new StringTokenizer(routeDefinition, "/");
+                if (!tok.hasMoreTokens())
+                    throw new UnknownHostException("Empty string as route");
                 Inet6Address address = (Inet6Address) Inet6Address.getByName(tok.nextToken());
                 int prefixLen = 128;
                 if (tok.hasMoreTokens())
@@ -714,6 +717,7 @@ class VpnThread extends Thread {
             }
         } catch (UnknownHostException e) {
             Log.e(TAG, "Could not add requested IPv6 route to builder", e);
+            notifyUserOfError(R.string.vpnservice_route_not_added, e);
             postToast(ayiyaVpnService.getApplicationContext(), R.string.vpnservice_route_not_added, Toast.LENGTH_SHORT);
         }
 
