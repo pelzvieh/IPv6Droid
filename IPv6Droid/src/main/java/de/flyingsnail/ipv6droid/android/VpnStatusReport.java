@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Dr. Andreas Feldner.
+ * Copyright (c) 2015 Dr. Andreas Feldner.
  *
  *     This program is free software; you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -41,6 +41,13 @@ class VpnStatusReport implements Serializable {
      * Constructor setting defaults.
      */
     public VpnStatusReport() {
+        clear();
+    }
+
+    /**
+     * Reset to state as freshly constructed.
+     */
+    public void clear() {
         progressPerCent = 0;
         status = Status.Idle;
         activity = R.string.vpnservice_activity_wait;
@@ -79,10 +86,8 @@ class VpnStatusReport implements Serializable {
         if (tunnelProvedWorking != that.tunnelProvedWorking) return false;
         if (activeTunnel != null ? !activeTunnel.equals(that.activeTunnel) : that.activeTunnel != null)
             return false;
-        if (activity != that.activity) return false;
-        if (status != that.status) return false;
+        return activity == that.activity && status == that.status;
 
-        return true;
     }
 
     @Override

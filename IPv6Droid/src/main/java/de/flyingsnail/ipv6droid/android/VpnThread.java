@@ -20,7 +20,6 @@
 
 package de.flyingsnail.ipv6droid.android;
 
-import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -32,6 +31,7 @@ import android.net.VpnService;
 import android.os.Build;
 import android.os.Handler;
 import android.os.ParcelFileDescriptor;
+import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.system.OsConstants;
 import android.util.Log;
@@ -99,7 +99,12 @@ class VpnThread extends Thread {
     /**
      * A pre-constructed notification builder for building user notifications.
      */
-    private final Notification.Builder notificationBuilder;
+    private final NotificationCompat.Builder notificationBuilder;
+
+    /**
+     * We're only ever displaying one notification, this is its ID.
+     */
+    private final int notificationID = 0xdeadbeef;
 
     /**
      * The service that created this thread.
@@ -142,7 +147,7 @@ class VpnThread extends Thread {
      * VpnThread. Also, this object is (mis-) used as the synchronization object between threads
      * waiting for connectivity changes and the thread announcing such a change.
      */
-    private VpnStatusReport vpnStatus;
+    private final VpnStatusReport vpnStatus;
 
     /**
      * The constructor setting all required fields.
@@ -166,9 +171,9 @@ class VpnThread extends Thread {
         this.routingConfiguration = (RoutingConfiguration)routingConfiguration.clone();
         this.tunnelSpecification = cachedTunnel;
         this.startId = startId;
-        this.notificationBuilder = new Notification.Builder(ayiyaVpnService.getApplicationContext())
+        this.notificationBuilder = new NotificationCompat.Builder(ayiyaVpnService.getApplicationContext())
             .setSmallIcon(R.drawable.ic_launcher);
-    };
+    }
 
 
     @Override
@@ -204,26 +209,22 @@ class VpnThread extends Thread {
         } catch (AuthenticationFailedException e) {
             Log.e(TAG, "Authentication step failed", e);
             notifyUserOfError(R.string.vpnservice_authentication_failed, e);
-            postToast(ayiyaVpnService.getApplicationContext(), R.string.vpnservice_authentication_failed, Toast.LENGTH_LONG);
         } catch (ConnectionFailedException e) {
             Log.e(TAG, "This configuration will not work on this device", e);
             notifyUserOfError(R.string.vpnservice_invalid_configuration, e);
-            postToast(ayiyaVpnService.getApplicationContext(), R.string.vpnservice_invalid_configuration, Toast.LENGTH_LONG);
         } catch (IOException e) {
             Log.e(TAG, "IOException caught before reading in tunnel data", e);
             notifyUserOfError(R.string.vpnservice_io_during_startup, e);
-            postToast(ayiyaVpnService.getApplicationContext(), R.string.vpnservice_io_during_startup, Toast.LENGTH_LONG);
         } catch (InterruptedException e) {
             Log.i(TAG, "VpnThread interrupted outside of control loops", e);
         } catch (Throwable t) {
             Log.e(TAG, "Failed to run tunnel", t);
-            notifyUserOfError(R.string.vpnservice_unexpected_problem, t);
             // if this thread fails, the service per se is out of order
-            postToast(ayiyaVpnService.getApplicationContext(), R.string.vpnservice_unexpected_problem, Toast.LENGTH_LONG);
+            notifyUserOfError(R.string.vpnservice_unexpected_problem, t);
         }
         // if this thread fails, the service per se is out of order
         ayiyaVpnService.stopSelf(startId);
-        vpnStatus = new VpnStatusReport(); // back at zero
+        vpnStatus.clear(); // back at zero
         reportStatus();
     }
 
@@ -234,9 +235,6 @@ class VpnThread extends Thread {
      */
     private void notifyUserOfError(int resourceId, Throwable e) {
         notificationBuilder.setContentTitle(ayiyaVpnService.getString(resourceId));
-        if (e.getCause()!= null) {
-            e = e.getCause();
-        }
         notificationBuilder.setContentText(
                 String.valueOf(e.getLocalizedMessage()) + " ("+e.getClass()+")");
 
@@ -248,18 +246,25 @@ class VpnThread extends Thread {
                 settingsIntent,
                 PendingIntent.FLAG_ONE_SHOT);
         notificationBuilder.setContentIntent(resultPendingIntent);
+        notificationBuilder.setAutoCancel(true);
+
+        // provide the expanded layout
+        NotificationCompat.BigTextStyle bigTextStyle = new NotificationCompat.BigTextStyle();
+        bigTextStyle.setBigContentTitle(ayiyaVpnService.getString(resourceId) + ": " + e.getClass());
+        bigTextStyle.setSummaryText(e.getLocalizedMessage());
+        notificationBuilder.setStyle(bigTextStyle);
 
         NotificationManager notificationManager =
                 (NotificationManager) ayiyaVpnService.getSystemService(Context.NOTIFICATION_SERVICE);
         // mId allows you to update the notification later on.
-        notificationManager.notify(0, notificationBuilder.getNotification());
+        notificationManager.notify(notificationID, notificationBuilder.build());
     }
 
 
     /**
      * Run the tunnel as long as it should be running. This method ends via one of its declared
      * exceptions, or in case that this thread is interrupted.
-     * @param builder
+     * @param builder the VpnService.Builder that is used to re-crated the VPN Service
      * @throws ConnectionFailedException in case that the current configuration seems permanently defective.
 
      */
@@ -325,7 +330,7 @@ class VpnThread extends Thread {
                      */
                 } else {
                     Log.e(TAG, "Warning: couldn't ping pop via ipv6!");
-                };
+                }
 
                 vpnStatus.setActivity(R.string.vpnservice_activity_online);
 
@@ -538,7 +543,10 @@ class VpnThread extends Thread {
                             // TIC had new data - signal an IO problem to rebuild tunnel
                             throw new IOException("Packet receiving had timeout and TIC information changed");
                         } else {
-                            throw new ConnectionFailedException("This TIC tunnel doesn't receive data", null);
+                            if (!ayiya.isValidPacketReceived())
+                                throw new ConnectionFailedException("This TIC tunnel doesn't receive data", null);
+                            else
+                                throw new IOException("This TIC tunnel stopped working without known reason");
                         }
                     }
                 } else
@@ -675,7 +683,7 @@ class VpnThread extends Thread {
      * @throws ConnectionFailedException in case of a logical problem with the setup
      */
     private List<TicTunnel> expandSuitables(List<String> tunnelIds, Tic tic) throws IOException, ConnectionFailedException {
-        List<TicTunnel> retval = new ArrayList<TicTunnel>(tunnelIds.size());
+        List<TicTunnel> retval = new ArrayList<>(tunnelIds.size());
         for (String id: tunnelIds) {
             TicTunnel desc;
             try {
@@ -761,7 +769,6 @@ class VpnThread extends Thread {
                         int len = in.read (packet);
                         if (len > 0) {
                             out.write(packet, 0, len);
-                            Log.d(TAG, Thread.currentThread().getName() + " copied package of size: " + len);
                         } else {
                             Thread.sleep(100);
                         }
