@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Dr. Andreas Feldner.
+ * Copyright (c) 2015 Dr. Andreas Feldner.
  *
  *     This program is free software; you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -92,6 +92,8 @@ public class SettingsActivity extends PreferenceActivity {
         bindPreferenceSummaryToValue(findPreference("routes_default"));
         bindPreferenceSummaryToValue(findPreference("routes_specific"));
         bindPreferenceSummaryToValue(findPreference("routes_workaround"));
+        bindPreferenceSummaryToValue(findPreference("routes_setnameservers"));
+
         findPreference("routes_workaround").setEnabled(AyiyaVpnService.checkAndroidVersionForWorkaround());
         bindPreferenceSummaryToValue(findPreference("tic_username"));
         bindPreferenceSummaryToValue(findPreference("tic_password"));
@@ -233,6 +235,7 @@ public class SettingsActivity extends PreferenceActivity {
             bindPreferenceSummaryToValue(findPreference("routes_default"));
             bindPreferenceSummaryToValue(findPreference("routes_specific"));
             bindPreferenceSummaryToValue(findPreference("routes_workaround"));
+            bindPreferenceSummaryToValue(findPreference("routes_setnameservers"));
             findPreference("routes_workaround").setEnabled(AyiyaVpnService.checkAndroidVersionForWorkaround());
         }
     }

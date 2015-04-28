@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Dr. Andreas Feldner.
+ * Copyright (c) 2015 Dr. Andreas Feldner.
  *
  *     This program is free software; you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -28,16 +28,34 @@ public class RoutingConfiguration implements Cloneable {
      * a flag if the ipv6 default route should be set to the tunnel
      */
     private boolean setDefaultRoute;
+
     /**
      * a String that gives a different route specification if default route is not to be set.
      */
     private String specificRoute;
+
+    /**
+     * a boolean flag if we should try to reconfigure the device's routing.
+     */
     private boolean tryRoutingWorkaround;
 
-    public RoutingConfiguration(boolean setDefaultRoute, String specificRoute, boolean tryRoutingWorkaround) {
+    /**
+     * a boolean flag if we should set DNS servers.
+     */
+    private boolean setNameServers;
+
+    /**
+     * Initialize the RoutingConfiguration object.
+     * @param setDefaultRoute a flag if the default route should be set
+     * @param specificRoute a String giving a specific route
+     * @param tryRoutingWorkaround a flag if we should reprogram the device's routing
+     * @param setNameServers a flag if we should set Google name servers
+     */
+    public RoutingConfiguration(boolean setDefaultRoute, String specificRoute, boolean tryRoutingWorkaround, boolean setNameServers) {
         this.setDefaultRoute = setDefaultRoute;
         this.specificRoute = specificRoute;
         this.tryRoutingWorkaround = tryRoutingWorkaround;
+        this.setNameServers = setNameServers;
     }
 
     public boolean isSetDefaultRoute() {
@@ -64,6 +82,14 @@ public class RoutingConfiguration implements Cloneable {
         this.tryRoutingWorkaround = tryRoutingWorkaround;
     }
 
+    public boolean isSetNameServers() {
+        return setNameServers;
+    }
+
+    public void setSetNameServers(boolean setNameServers) {
+        this.setNameServers = setNameServers;
+    }
+
     @Override
     protected Object clone() {
         try {
@@ -72,4 +98,5 @@ public class RoutingConfiguration implements Cloneable {
             throw new IllegalStateException("Cloning failed", e);
         }
     }
+
 }

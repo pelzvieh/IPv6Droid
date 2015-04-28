@@ -90,6 +90,21 @@ class VpnThread extends Thread {
      */
     private static final int TIC_RECHECK_BLOCKED_MILLISECONDS = 5 * 60 * 1000; // 5 minutes
 
+    private static final Inet6Address[] GOOGLE_DNS = new Inet6Address[2];
+
+    {
+        try {
+            GOOGLE_DNS[0] = (Inet6Address)Inet6Address.getByAddress(
+                    new byte[]{0x20,0x01,0x48,0x60,0x48,0x60,0,0,0,0,0,0,0,0,(byte)0x88,(byte)0x88}
+            );
+            GOOGLE_DNS[1] = (Inet6Address)Inet6Address.getByAddress(
+                    new byte[]{0x20,0x01,0x48,0x60,0x48,0x60,0,0,0,0,0,0,0,0,(byte)0x88,(byte)0x44}
+            );
+        } catch (UnknownHostException e) {
+            Log.e(TAG, "Static initializer for Google DNS failed", e);
+        }
+    }
+
     /**
      * The start ID of the onStartCommand call that lead to this thread being constructed. Used
      * to stop the according service.
@@ -727,6 +742,13 @@ class VpnThread extends Thread {
             Log.e(TAG, "Could not add requested IPv6 route to builder", e);
             notifyUserOfError(R.string.vpnservice_route_not_added, e);
             postToast(ayiyaVpnService.getApplicationContext(), R.string.vpnservice_route_not_added, Toast.LENGTH_SHORT);
+        }
+
+        // add Google DNS server, if configured so
+        if (routingConfiguration.isSetNameServers()) {
+            for (Inet6Address dns : GOOGLE_DNS) {
+                builder.addDnsServer(dns);
+            }
         }
 
         // call method allowFamily on Builder object if it has one (required in Android 5 and later
