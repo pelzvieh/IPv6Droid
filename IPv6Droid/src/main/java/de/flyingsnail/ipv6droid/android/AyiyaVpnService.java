@@ -27,7 +27,9 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.VpnService;
+import android.os.Binder;
 import android.os.Build;
+import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
@@ -47,6 +49,8 @@ public class AyiyaVpnService extends VpnService {
     private static final String SESSION_NAME = AyiyaVpnService.class.getSimpleName();
 
     public static final String EXTRA_CACHED_TUNNEL = AyiyaVpnService.class.getName() + ".CACHED_TUNNEL";
+
+    public static final String STATISTICS_INTERFACE = AyiyaVpnService.class.getPackage().getName() + ".Statistics";
 
     // the thread doing the work
     private VpnThread thread;
@@ -138,6 +142,14 @@ public class AyiyaVpnService extends VpnService {
         return new Builder();
     }
 
+    @Override
+    public IBinder onBind(Intent intent) {
+        if (STATISTICS_INTERFACE.equals(intent.getAction())) {
+            return new StatisticsBinder();
+        } else
+            return super.onBind(intent);
+    }
+
     /** Inner class to handle stop requests */
     private class CommandReceiver extends BroadcastReceiver {
         private CommandReceiver() {}
@@ -190,4 +202,9 @@ public class AyiyaVpnService extends VpnService {
                 Build.VERSION.SDK_INT == Build.VERSION_CODES.KITKAT_WATCH);
     }
 
+    public class StatisticsBinder extends Binder {
+        public Statistics getStatistics() {
+            return thread.getStatistics();
+        }
+    }
 }

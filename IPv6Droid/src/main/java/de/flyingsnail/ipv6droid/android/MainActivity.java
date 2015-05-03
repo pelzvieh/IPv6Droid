@@ -21,6 +21,7 @@
 package de.flyingsnail.ipv6droid.android;
 
 import android.app.Activity;
+import android.app.FragmentTransaction;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -52,6 +53,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.statusdetail.StatisticsFragment;
 import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 
 /**
@@ -70,6 +72,9 @@ public class MainActivity extends Activity {
     private ListView tunnelListView;
     private TicTunnel selectedTunnel;
     private List<TicTunnel> availableTunnels;
+    //@todo maintaining the event list in an Activity is nonsense, as it would receive events only when visible
+    //private Deque<VpnStatusReport> lastEvents;
+    private final int EVENT_LENGTH=10;
 
     /**
      * The Action name for a vpn stop broadcast intent.
@@ -98,6 +103,8 @@ public class MainActivity extends Activity {
         flushTunnelLists();
         if (statusReceiver == null)
             statusReceiver = new StatusReceiver();
+        //if (lastEvents == null)
+        //    lastEvents = new LinkedBlockingDeque<>(EVENT_LENGTH);
 
         // setup the intent filter for status broadcasts
         // The filter's action is BROADCAST_ACTION
@@ -117,6 +124,14 @@ public class MainActivity extends Activity {
         loadPersistedTunnel();
         statusReceiver.updateUi();
         requestStatus();
+    }
+
+    @Override
+    protected void onDestroy() {
+        // switch off ui updates
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(statusReceiver);
+        statusReceiver = null;
+        super.onDestroy();
     }
 
     private void flushTunnelLists() {
@@ -299,6 +314,42 @@ public class MainActivity extends Activity {
         startVPN(clickedView);
     }
 
+    private void launchDetailsFragment() {
+        View detailsFrame = findViewById(R.id.statistics);
+        boolean dualPane = detailsFrame != null && detailsFrame.getVisibility() == View.VISIBLE;
+
+        if (dualPane) {
+            // Check what fragment is currently shown, replace if needed.
+            StatisticsFragment statistics = (StatisticsFragment)
+                    getFragmentManager().findFragmentById(R.id.statistics);
+            if (statistics == null) {
+                // Make new fragment to show this selection.
+                statistics = StatisticsFragment.newInstance();
+
+                // Execute a transaction, replacing any existing fragment
+                // with this one inside the frame.
+                FragmentTransaction ft = getFragmentManager().beginTransaction();
+                ft.replace(R.id.statistics, statistics);
+                ft.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE);
+                ft.commitAllowingStateLoss();
+            }
+        }
+    }
+
+    private void destroyDetailsFragment() {
+        // Check what fragment is currently shown, replace if needed.
+        StatisticsFragment statistics = (StatisticsFragment)
+                getFragmentManager().findFragmentById(R.id.statistics);
+        if (statistics != null) {
+            // Execute a transaction, replacing any existing fragment
+            // with this one inside the frame.
+            FragmentTransaction ft = getFragmentManager().beginTransaction();
+            ft.remove(statistics);
+            ft.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE);
+            ft.commitAllowingStateLoss();
+        }
+    }
+
     /** Inner class to handle status updates */
     private class StatusReceiver extends BroadcastReceiver {
         /** The last received status report - including a updatedTunnelList if that was read for that update */
@@ -319,9 +370,11 @@ public class MainActivity extends Activity {
                 switch (status) {
                     case Connected:
                         imageRes = R.drawable.transmitting;
+                        launchDetailsFragment();
                         break;
                     case Idle:
                         imageRes = R.drawable.off;
+                        destroyDetailsFragment();
                         break;
                     case Connecting:
                         imageRes = R.drawable.pending;
@@ -385,6 +438,10 @@ public class MainActivity extends Activity {
         @Override
         public void onReceive(Context context, Intent intent) {
             statusReport = (VpnStatusReport)intent.getSerializableExtra(VpnThread.EDATA_STATUS_REPORT);
+            /*if (lastEvents.size() >= EVENT_LENGTH)
+                lastEvents.pollLast();
+            lastEvents.push(statusReport);
+            */
             updateUi();
         }
     }

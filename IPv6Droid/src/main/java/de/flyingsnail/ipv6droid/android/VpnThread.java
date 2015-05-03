@@ -27,6 +27,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.RouteInfo;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.Handler;
@@ -47,7 +48,9 @@ import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.DatagramSocket;
+import java.net.Inet4Address;
 import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -105,6 +108,65 @@ class VpnThread extends Thread {
         }
     }
 
+    private class CopyThread extends Thread {
+        private long byteCount = 0l;
+        private long packetCount = 0l;
+        private InputStream in;
+        private OutputStream out;
+
+        public CopyThread(InputStream in, OutputStream out) {
+            super();
+            this.in = in;
+            this.out = out;
+        }
+
+        @Override
+        public void run() {
+            try {
+                Log.i(TAG, "Copy thread started");
+                // Allocate the buffer for a single packet.
+                byte[] packet = new byte[32767];
+
+                // @TODO there *must* be a suitable utility class for that...?
+                while (!Thread.currentThread().isInterrupted()) {
+                    int len = in.read (packet);
+                    if (len > 0) {
+                        out.write(packet, 0, len);
+                        // statistics
+                        byteCount += len;
+                        packetCount++;
+                    } else {
+                        Thread.sleep(100);
+                    }
+                }
+            } catch (Exception e) {
+                if (e instanceof InterruptedException) {
+                    Log.i(TAG, "Copy thread interrupted, will end gracefully");
+                } else {
+                    Log.e(TAG, "Copy thread got exception", e);
+                }
+            } finally {
+                try {
+                    in.close();
+                } catch (IOException e) {
+                    Log.e(TAG, "Copy thread could not gracefully close input", e);
+                }
+                try {
+                    out.close();
+                } catch (IOException e) {
+                    Log.e(TAG, "Copy thread could not gracefully close output", e);
+                }
+            }
+        }
+
+        public long getByteCount() {
+            return byteCount;
+        }
+        public long getPacketCount() {
+            return packetCount;
+        }
+    }
+
     /**
      * The start ID of the onStartCommand call that lead to this thread being constructed. Used
      * to stop the according service.
@@ -145,12 +207,12 @@ class VpnThread extends Thread {
     /**
      * The thread that copies from PoP to local.
      */
-    private Thread inThread = null;
+    private CopyThread inThread = null;
 
     /**
      * The thread that copies from local to PoP.
      */
-    private Thread outThread = null;
+    private CopyThread outThread = null;
 
     /**
      * The cached TicTunnel containing the previosly working configuration.
@@ -777,46 +839,8 @@ class VpnThread extends Thread {
      * @param out The stream to copy to.
      * @return The thread that does so until interrupted.
      */
-    private Thread startStreamCopy(final InputStream in, final OutputStream out) {
-        Thread thread = new Thread (new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    Log.i(TAG, "Copy thread started");
-                    // Allocate the buffer for a single packet.
-                    byte[] packet = new byte[32767];
-
-                    // @TODO there *must* be a suitable utility class for that...?
-                    while (!Thread.currentThread().isInterrupted()) {
-                        int len = in.read (packet);
-                        if (len > 0) {
-                            out.write(packet, 0, len);
-                        } else {
-                            Thread.sleep(100);
-                        }
-                    }
-                } catch (Exception e) {
-                    if (e instanceof InterruptedException) {
-                        Log.i(TAG, "Copy thread interrupted, will end gracefully");
-                    } else {
-                        Log.e(TAG, "Copy thread got exception", e);
-                    }
-                } finally {
-                    try {
-                        in.close();
-                    } catch (IOException e) {
-                        Log.e(TAG, "Copy thread could not gracefully close input", e);
-                    }
-                    try {
-                        out.close();
-                    } catch (IOException e) {
-                        Log.e(TAG, "Copy thread could not gracefully close output", e);
-                    }
-                }
-            }
-        }
-
-        );
+    private CopyThread startStreamCopy(final InputStream in, final OutputStream out) {
+        CopyThread thread = new CopyThread (in, out);
         thread.start();
         return thread;
     }
@@ -836,6 +860,33 @@ class VpnThread extends Thread {
                 .putExtra(EDATA_STATUS_REPORT, vpnStatus);
         // Broadcast locally
         LocalBroadcastManager.getInstance(ayiyaVpnService).sendBroadcast(statusBroadcast);
+    }
+
+    /**
+     * Read out current statistics values
+     * @return the Statistics object with current values
+     */
+    public Statistics getStatistics() {
+        Statistics stats = null;
+        try {
+            stats = new Statistics(
+                    outThread.getByteCount(),
+                    inThread.getByteCount(),
+                    outThread.getPacketCount(),
+                    inThread.getPacketCount(),
+                    (Inet4Address)tunnelSpecification.getIPv4Pop(), // @todo tunnel IPv4 address
+                    (Inet4Address)Inet4Address.getLocalHost(), // @todo my IPv4 address
+                    (Inet6Address)tunnelSpecification.getIpv6Pop(), // @todo tunnel IPv6 address
+                    (Inet6Address)tunnelSpecification.getIpv6Endpoint(), // @todo my IPv6 address
+                    tunnelSpecification.getMtu(), // @todo mtu
+                    new RouteInfo[0], // Routing table of the interface
+                    new ArrayList<InetAddress>(0)
+            );
+        } catch (UnknownHostException e) {
+            throw new IllegalStateException(e);
+        }
+        return stats;
+
     }
 
     /**

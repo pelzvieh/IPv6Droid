@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ~ Copyright (c) 2014 Dr. Andreas Feldner.
+  ~ Copyright (c) 2015 Dr. Andreas Feldner.
   ~
   ~     This program is free software; you can redistribute it and/or modify
   ~     it under the terms of the GNU General Public License as published by
@@ -37,4 +37,11 @@
     <string name="main_activity_please_start">Please start</string>
     <string name="routingbroken">IPv6 routing broken</string>
     <string name="routingfixed">IPv6 routing has been fixed</string>
+
+    <string name="statistics_bytes">Bytes</string>
+    <string name="statistics_packets">IP packets</string>
+    <string name="statistics_mtu">MTU</string>
+    <string name="robot">Robot</string>
+    <string name="headline_received">received</string>
+    <string name="headline_transmitted">transmitted</string>
 </resources>

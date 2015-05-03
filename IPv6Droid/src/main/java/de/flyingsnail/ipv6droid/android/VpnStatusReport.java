@@ -29,13 +29,14 @@ import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 /**
 * Created by pelzi on 05.09.13.
 */
-class VpnStatusReport implements Serializable {
+public class VpnStatusReport implements Serializable {
     private int progressPerCent;
     private Status status;
     private int activity;
     private TicTunnel activeTunnel;
     private boolean tunnelProvedWorking;
     private List<TicTunnel> ticTunnelList;
+    private Throwable cause;
 
     /**
      * Constructor setting defaults.
@@ -75,6 +76,10 @@ class VpnStatusReport implements Serializable {
         this.tunnelProvedWorking = tunnelProvedWorking;
     }
 
+    public void setCause(Throwable cause) {
+        this.cause = cause;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -109,18 +114,34 @@ class VpnStatusReport implements Serializable {
         return tunnelProvedWorking;
     }
 
+    /**
+     * Return the progress of creating the tunnel in percent (between 0 and 100)
+     * @return the progress
+     */
     public int getProgressPerCent() {
         return progressPerCent;
     }
 
+    /**
+     * Get the classified status of the tunnel.
+     * @return the Status
+     */
     public Status getStatus() {
         return status;
     }
 
+    /**
+     * Return a string ressource ID expanding to a human-readable description of the current activity.
+     * @return an int representing the ressource ID.
+     */
     public int getActivity() {
         return activity;
     }
 
+    /**
+     * Get the currently active (or build) tunnel
+     * @return the TicTunnel
+     */
     public TicTunnel getActiveTunnel() {
         return activeTunnel;
     }
@@ -129,8 +150,20 @@ class VpnStatusReport implements Serializable {
         this.ticTunnelList = ticTunnelList;
     }
 
+    /**
+     * Get the list of TicTunnels available to the user.
+     * @return a List<TicTunnel></TicTunnel>
+     */
     public List<TicTunnel> getTicTunnelList() {
         return ticTunnelList;
+    }
+
+    /**
+     * Get the cause of the current status. Only set if the status is disrupted in any way.
+     * @return the Throwable specifying the cause of disruption, or null if no disruption.
+     */
+    public Throwable getCause() {
+        return cause;
     }
 
     /**
@@ -138,5 +171,13 @@ class VpnStatusReport implements Serializable {
      */
     public enum Status {
         Idle, Connecting, Connected, Disturbed
+    }
+
+    @Override
+    public String toString() {
+        // @todo internationalize
+        return "changed to " + status.toString() + ", " +
+                (activeTunnel == null ? "no tunnel" : "tunnel " + activeTunnel.getTunnelName()) +
+                (cause == null ? "" : ", cause class " + cause.getClass().getName());
     }
 }
