@@ -25,6 +25,7 @@ import android.net.RouteInfo;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -40,10 +41,11 @@ public class Statistics {
     final Inet6Address brokerIPv6;
     final Inet6Address myIPv6;
     final int mtu;
-    final RouteInfo[] routing;
+    final List<RouteInfo> routing;
     final List<InetAddress> dnsSetting;
+    final private Date timestamp;
 
-    protected Statistics(long bytesTransmitted, long bytesReceived, long packetsTransmitted, long packetsReceived, Inet4Address brokerIPv4, Inet4Address myIPv4, Inet6Address brokerIPv6, Inet6Address myIPv6, int mtu, RouteInfo[] routing, List<InetAddress> dnsSetting) {
+    protected Statistics(long bytesTransmitted, long bytesReceived, long packetsTransmitted, long packetsReceived, Inet4Address brokerIPv4, Inet4Address myIPv4, Inet6Address brokerIPv6, Inet6Address myIPv6, int mtu, List<RouteInfo> routing, List<InetAddress> dnsSetting) {
         this.bytesTransmitted = bytesTransmitted;
         this.bytesReceived = bytesReceived;
         this.packetsTransmitted = packetsTransmitted;
@@ -55,6 +57,7 @@ public class Statistics {
         this.mtu = mtu;
         this.routing = routing;
         this.dnsSetting = dnsSetting;
+        timestamp = new Date();
     }
 
     public long getBytesTransmitted() {
@@ -93,11 +96,13 @@ public class Statistics {
         return mtu;
     }
 
-    public RouteInfo[] getRouting() {
+    public List<RouteInfo> getRouting() {
         return routing;
     }
 
     public List<InetAddress> getDnsSetting() {
         return dnsSetting;
     }
+
+    public Date getTimestamp() { return timestamp; }
 }

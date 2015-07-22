@@ -34,6 +34,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import java.text.DateFormat;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -59,13 +61,16 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
     private TextView mtuView;
     private TextView packetsReceivedView;
     private TextView packetsTransmittedView;
-    private static ScheduledThreadPoolExecutor executor;
-    private Updater updater;
-    private Handler uiHandler;
+    private TextView brokerIPv4View;
+    private TextView brokerIPv6View;
+    private TextView myIPv4View;
+    private TextView myIPv6View;
+    private TextView routesView;
+    private TextView timestampView;
+    private ScheduledThreadPoolExecutor executor;
+    private DateFormat timestampFormatter;
+    private Future<?> updaterFuture;
 
-    {
-        executor = new ScheduledThreadPoolExecutor(1);
-    }
     /**
      * Use this factory method to create a new instance of
      * this fragment using the provided parameters.
@@ -78,16 +83,20 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
     }
 
     public StatisticsFragment() {
+        updaterFuture = null;
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         Log.d(TAG, "onCreate started");
         super.onCreate(savedInstanceState);
+        // create scheduled executor
+        executor = new ScheduledThreadPoolExecutor(1);
         // bind to AyiyaVpnService for statistics
         Intent intent = new Intent(getActivity(), AyiyaVpnService.class);
         intent.setAction(AyiyaVpnService.STATISTICS_INTERFACE);
         getActivity().getApplicationContext().bindService(intent, this, 0);
+        timestampFormatter = android.text.format.DateFormat.getTimeFormat(getActivity());
         Log.i(TAG, "Creation successful");
     }
 
@@ -95,7 +104,12 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
     public void onDestroy() {
         Log.d(TAG, "onDestroy started");
         getActivity().getApplicationContext().unbindService(this);
+        if (updaterFuture != null) {
+            updaterFuture.cancel(true);
+            updaterFuture = null;
+        }
         executor.shutdownNow();
+        executor = null;
         super.onDestroy();
         Log.i(TAG, "Destroyed");
     }
@@ -112,6 +126,12 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
         packetsReceivedView = (TextView)myView.findViewById(R.id.statistics_packets_received);
         packetsTransmittedView = (TextView)myView.findViewById(R.id.statistics_packets_transmitted);
         mtuView = (TextView)myView.findViewById(R.id.statistics_mtu);
+        brokerIPv4View = (TextView)myView.findViewById(R.id.statistics_brokeripv4);
+        brokerIPv6View = (TextView)myView.findViewById(R.id.statistics_brokeripv6);
+        myIPv4View = (TextView)myView.findViewById(R.id.statistics_myipv4);
+        myIPv6View = (TextView)myView.findViewById(R.id.statistics_myipv6);
+        routesView = (TextView)myView.findViewById(R.id.statistics_routes);
+        timestampView = (TextView)myView.findViewById(R.id.statistics_timestamp);
         Log.i(TAG, "Successfully created view");
         return myView;
     }
@@ -124,11 +144,16 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
         // create the UI Handler
         Handler handler = new RedrawHandler();
 
-        // create updater Runnable
-        updater = new Updater(handler);
-        // schedule for execution
+        // cancel an existing updater, should not happen
+        if (updaterFuture != null) {
+            Log.e(StatisticsFragment.TAG, "updaterFuture existing in onStart method, should never happen. Trying to cancel");
+            if (updaterFuture.cancel(true))
+                Log.i(StatisticsFragment.TAG, "succeeded to cancel previous updater");
+        }
+        updaterFuture = null;
+        // schedule an updater for execution, keeping the "Future" object returned (needed for cancellation)
         try {
-            executor.scheduleWithFixedDelay(updater, 0, 1l, TimeUnit.SECONDS);
+            updaterFuture = executor.scheduleWithFixedDelay(new Updater(handler), 0, 1l, TimeUnit.SECONDS);
         } catch (Exception e) {
             Log.e(TAG, "Could not schedule statistics updates");
             getView().setVisibility(View.INVISIBLE);
@@ -138,10 +163,10 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
 
     @Override
     public void onStop() {
-        Log.d(TAG, "onStop started");
-        if (updater != null) {
-            executor.remove(updater);
-            updater = null;
+        Log.d(TAG, "onStop");
+        if (updaterFuture != null) {
+            if (!updaterFuture.cancel(true))
+                Log.e(StatisticsFragment.TAG, "Failed to cancel updater job");
         }
         super.onStop();
         Log.i(TAG, "Gracefully stopped");
@@ -192,7 +217,7 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
         public void handleMessage(Message inputMessage) {
             View myView = getView();
             if (myView == null)
-                return; // happens during reconstruction of view hirarchiy, e.g. when device orientation changed
+                return; // happens during reconstruction of view hierarchy, e.g. when device orientation changed
             Log.d(TAG, "Redrawing Statistics");
 
             Statistics stats = (Statistics)inputMessage.obj;
@@ -210,6 +235,26 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
                         String.valueOf(stats.getPacketsReceived()));
                 mtuView.setText(
                         String.valueOf(stats.getMtu())
+                );
+                brokerIPv4View.setText(
+                        String.valueOf(stats.getBrokerIPv4())
+                );
+                brokerIPv6View.setText(
+                        String.valueOf(stats.getBrokerIPv6())
+                );
+                myIPv4View.setText(
+                        String.valueOf(stats.getMyIPv4())
+                );
+                myIPv6View.setText(
+                        String.valueOf(stats.getMyIPv6())
+                );
+                routesView.setText(
+                        stats.getRouting() == null ?
+                                "--" :
+                                String.valueOf(stats.getRouting())
+                );
+                timestampView.setText(
+                        timestampFormatter.format(stats.getTimestamp())
                 );
             }
         }

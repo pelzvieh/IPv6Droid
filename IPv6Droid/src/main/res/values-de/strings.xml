@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ~ Copyright (c) 2014 Dr. Andreas Feldner.
+  ~ Copyright (c) 2015 Dr. Andreas Feldner.
   ~
   ~     This program is free software; you can redistribute it and/or modify
   ~     it under the terms of the GNU General Public License as published by
@@ -38,5 +38,17 @@
     <string name="main_activity_please_start">Bitte starten</string>
     <string name="routingbroken">IPv6-Routing scheint defekt zu sein</string>
     <string name="routingfixed">IPv6-Routing durch Workaround behoben</string>
+
+    <string name="statistics_bytes">Bytes</string>
+    <string name="statistics_packets">IP-Pakete</string>
+    <string name="statistics_mtu">Max. Paketgröße</string>
+    <string name="statistics_routes">Routen</string>
+    <string name="statistics_ipv4">IPv4-Adressen</string>
+    <string name="statistics_ipv6">IPv6-Adressen</string>
+
+    <string name="headline_received">von Provider</string>
+    <string name="headline_transmitted">von Gerät</string>
+    <string name="action_show_statistics">Statistiken</string>
+
 
 </resources>

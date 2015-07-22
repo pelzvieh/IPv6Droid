@@ -29,11 +29,6 @@
           android:icon="@drawable/ic_action_disconnect"
           android:title="@string/action_disconnect"
           android:showAsAction="ifRoom" />
-    <!-- Show statistics, should always be in the overflow -->
-    <item android:id="@+id/action_show_statistics"
-        android:title="@string/action_show_statistics"
-        android:orderInCategory="50"
-        android:showAsAction="never" />
     <!-- Reload tunnel specs, should always be in the overflow -->
     <item android:id="@+id/action_tic_reload"
         android:title="@string/action_tic_reload"

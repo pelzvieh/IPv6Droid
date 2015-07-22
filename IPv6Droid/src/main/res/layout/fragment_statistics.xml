@@ -38,7 +38,8 @@
             android:textStyle="bold"
             android:layout_column="1"
             android:layout_gravity="right"
-            android:paddingLeft="10dp" />
+            android:paddingLeft="10dp"
+            />
 
         <TextView
             android:layout_width="wrap_content"
@@ -93,6 +94,51 @@
 
     <TableRow>
         <TextView
+            android:text="@string/statistics_ipv4"
+            android:layout_column="0"
+            android:id="@+id/statistics_ipv4"
+            android:layout_gravity="left" />
+
+        <TextView
+            android:layout_column="1"
+            android:id="@+id/statistics_myipv4"
+            android:text="-"
+            android:layout_gravity="right" />
+
+        <TextView
+            android:layout_column="2"
+            android:id="@+id/statistics_brokeripv4"
+            android:text="-"
+            android:layout_gravity="right" />
+    </TableRow>
+
+    <TableRow>
+        <TextView
+            android:text="@string/statistics_ipv6"
+            android:layout_column="0"
+            android:id="@+id/statistics_ipv6"
+            android:layout_gravity="left" />
+
+        <TextView
+            android:layout_column="1"
+            android:layout_span="2"
+            android:id="@+id/statistics_myipv6"
+            android:text="[::]"
+            android:paddingLeft="10dp"
+            android:layout_gravity="left" />
+    </TableRow>
+
+    <TableRow>
+        <TextView
+            android:layout_column="1"
+            android:layout_span="2"
+            android:id="@+id/statistics_brokeripv6"
+            android:text="[..]"
+            android:layout_gravity="right" />
+    </TableRow>
+
+    <TableRow>
+        <TextView
             android:layout_column="0"
             android:text="@string/statistics_mtu"
             android:layout_gravity="left" />
@@ -101,6 +147,34 @@
             android:layout_column="1"
             android:layout_span="2"
             android:id="@+id/statistics_mtu"
+            android:text="-"
+            android:layout_gravity="right" />
+
+    </TableRow>
+    <TableRow>
+        <TextView
+            android:layout_column="0"
+            android:text="@string/statistics_routes"
+            android:layout_gravity="left" />
+
+        <TextView
+            android:layout_column="1"
+            android:layout_span="2"
+            android:id="@+id/statistics_routes"
+            android:text="-"
+            android:layout_gravity="right" />
+
+    </TableRow>
+    <TableRow>
+        <TextView
+            android:layout_column="0"
+            android:text="@string/statistics_timestamp"
+            android:layout_gravity="left" />
+
+        <TextView
+            android:layout_column="1"
+            android:layout_span="2"
+            android:id="@+id/statistics_timestamp"
             android:text="-"
             android:layout_gravity="right" />
 

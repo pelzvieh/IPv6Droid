@@ -20,12 +20,14 @@
 
 package de.flyingsnail.ipv6droid.android;
 
+import android.annotation.TargetApi;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
+import android.net.Network;
 import android.net.NetworkInfo;
 import android.net.RouteInfo;
 import android.net.VpnService;
@@ -53,6 +55,7 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -94,6 +97,7 @@ class VpnThread extends Thread {
     private static final int TIC_RECHECK_BLOCKED_MILLISECONDS = 5 * 60 * 1000; // 5 minutes
 
     private static final Inet6Address[] GOOGLE_DNS = new Inet6Address[2];
+    private Inet4Address localIp = null;
 
     {
         try {
@@ -393,6 +397,14 @@ class VpnThread extends Thread {
                 InputStream popIn = ayiya.getInputStream();
                 OutputStream popOut = ayiya.getOutputStream();
 
+                // update network info
+                try {
+                    localIp = (Inet4Address) popSocket.getLocalAddress();
+                } catch (ClassCastException e) {
+                    Log.e(VpnThread.TAG, "local address is not Inet4Address", e);
+                    // affects only statistics display
+                }
+
                 // start the copying threads
                 inThread = startStreamCopy (localIn, popOut);
                 inThread.setName("AYIYA from local to POP");
@@ -415,7 +427,8 @@ class VpnThread extends Thread {
                 monitoredHeartbeatLoop(ayiya);
 
             } catch (IOException e) {
-                Log.i (TAG, "Tunnel connection broke down, closing and reconnecting ayiya", e);
+                Log.i(TAG, "Tunnel connection broke down, closing and reconnecting ayiya", e);
+                localIp = null;
                 vpnStatus.setProgressPerCent(50);
                 vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
                 vpnStatus.setActivity(R.string.vpnservice_activity_reconnect);
@@ -428,6 +441,7 @@ class VpnThread extends Thread {
             } catch (InterruptedException e) {
                 caughtInterruptedException = true;
             } finally {
+                localIp = null;
                 if (inThread != null && inThread.isAlive())
                     inThread.interrupt();
                 if (outThread != null && outThread.isAlive())
@@ -556,10 +570,12 @@ class VpnThread extends Thread {
         }
     }
 
+    private ConnectivityManager getConnectivityManager() {
+        return (ConnectivityManager)ayiyaVpnService.getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+    }
+
     private boolean isDeviceConnected() {
-        ConnectivityManager cm =
-                (ConnectivityManager)ayiyaVpnService.getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo ni = cm.getActiveNetworkInfo();
+        NetworkInfo ni = getConnectivityManager().getActiveNetworkInfo();
         return ni != null && ni.isConnected();
     }
 
@@ -863,28 +879,53 @@ class VpnThread extends Thread {
     }
 
     /**
+     * Read route infos of the currently active network. Weird code, but the best I could imagine
+     * out of the ConnectivityManager API.
+     */
+    @TargetApi(21)
+    private ArrayList<RouteInfo> getNetworkDetails () {
+        ArrayList<RouteInfo> routeInfos = new ArrayList<>(10);
+        if (Build.VERSION.SDK_INT >= 21) {
+            Log.d(VpnThread.TAG, "getNetworkDetails trying to read routing");
+            ConnectivityManager cm = getConnectivityManager();
+            NetworkInfo activeNetworkInfo = cm.getActiveNetworkInfo();
+            if (activeNetworkInfo != null) {
+                List<Network> networks = Arrays.asList(cm.getAllNetworks());
+                Network activeNetwork = null;
+                for (Network n : networks) {
+                    NetworkInfo ni = cm.getNetworkInfo(n);
+                    if (ni.getType() == (activeNetworkInfo.getType()))
+                        activeNetwork = n;
+                }
+                if (activeNetwork != null && activeNetworkInfo.isConnected()) {
+                    routeInfos.addAll(cm.getLinkProperties(activeNetwork).getRoutes());
+                }
+            }
+        }
+        return routeInfos;
+    }
+
+    /**
      * Read out current statistics values
      * @return the Statistics object with current values
      */
     public Statistics getStatistics() {
         Statistics stats = null;
-        try {
-            stats = new Statistics(
-                    outThread.getByteCount(),
-                    inThread.getByteCount(),
-                    outThread.getPacketCount(),
-                    inThread.getPacketCount(),
-                    (Inet4Address)tunnelSpecification.getIPv4Pop(), // @todo tunnel IPv4 address
-                    (Inet4Address)Inet4Address.getLocalHost(), // @todo my IPv4 address
-                    (Inet6Address)tunnelSpecification.getIpv6Pop(), // @todo tunnel IPv6 address
-                    (Inet6Address)tunnelSpecification.getIpv6Endpoint(), // @todo my IPv6 address
-                    tunnelSpecification.getMtu(), // @todo mtu
-                    new RouteInfo[0], // Routing table of the interface
-                    new ArrayList<InetAddress>(0)
-            );
-        } catch (UnknownHostException e) {
-            throw new IllegalStateException(e);
-        }
+        List<RouteInfo> routeInfos = getNetworkDetails(); // no-op if run below API level 21
+
+        stats = new Statistics(
+                outThread.getByteCount(),
+                inThread.getByteCount(),
+                outThread.getPacketCount(),
+                inThread.getPacketCount(),
+                tunnelSpecification.getIPv4Pop(),
+                localIp,
+                tunnelSpecification.getIpv6Pop(),
+                tunnelSpecification.getIpv6Endpoint(),
+                tunnelSpecification.getMtu(),
+                routeInfos, // Routing table of the interface
+                new ArrayList<InetAddress>(0)
+        );
         return stats;
 
     }
@@ -894,8 +935,10 @@ class VpnThread extends Thread {
      * @param intent the intent that was broadcast to flag the status change. Not currently used.
      */
     public void onConnectivityChange(Intent intent) {
-        synchronized (vpnStatus) {
-            ((Object)vpnStatus).notifyAll();
+        if (!intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false)) {
+            synchronized (vpnStatus) {
+                ((Object) vpnStatus).notifyAll();
+            }
         }
     }
 }

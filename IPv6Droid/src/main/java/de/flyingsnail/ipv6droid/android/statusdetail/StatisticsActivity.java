@@ -18,38 +18,19 @@
  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  */
 
+package de.flyingsnail.ipv6droid.android.statusdetail;
 
+import android.app.Activity;
+import android.os.Bundle;
 
+import de.flyingsnail.ipv6droid.R;
 
+public class StatisticsActivity extends Activity {
 
-
-
-
-
-buildscript {
-    repositories {
-        mavenCentral()
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_statistics);
     }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:1.0.0'
-    }
-}
-apply plugin: 'android'
 
-repositories {
-    mavenCentral()
-}
-
-android {
-    compileSdkVersion 21
-    buildToolsVersion '20.0.0'
-
-    defaultConfig {
-        minSdkVersion 14
-        targetSdkVersion 14
-    }
-}
-
-dependencies {
-    compile 'com.android.support:support-v13:18.0.+'
 }

@@ -21,7 +21,6 @@
 package de.flyingsnail.ipv6droid.android;
 
 import android.app.Activity;
-import android.app.FragmentTransaction;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -53,7 +52,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import de.flyingsnail.ipv6droid.R;
-import de.flyingsnail.ipv6droid.android.statusdetail.StatisticsFragment;
+import de.flyingsnail.ipv6droid.android.statusdetail.StatisticsActivity;
 import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 
 /**
@@ -64,6 +63,7 @@ public class MainActivity extends Activity {
     private static final String TAG = MainActivity.class.getName();
     private static final int REQUEST_START_VPN = 1;
     private static final int REQUEST_SETTINGS = 2;
+    private static final int REQUEST_STATISTICS = 3;
     private static final String FILE_LAST_TUNNEL = "last_tunnel";
     private TextView activity;
     private ProgressBar progress;
@@ -203,6 +203,15 @@ public class MainActivity extends Activity {
     }
 
     /**
+     * Start the detached statistics view
+     */
+    public void openStatistics () {
+        // Start system-managed intent for VPN
+        Intent settingsIntent = new Intent(this, StatisticsActivity.class);
+        startActivityForResult(settingsIntent, REQUEST_STATISTICS);
+    }
+
+    /**
      * Stop the VPN service/thread.
      */
     public void stopVPN () {
@@ -297,6 +306,10 @@ public class MainActivity extends Activity {
                 forceTunnelReload(item.getActionView());
                 return true;
 
+            case R.id.action_show_statistics:
+                openStatistics();
+                return true;
+
             default:
                 return false;
         }
@@ -312,42 +325,6 @@ public class MainActivity extends Activity {
     private void forceTunnelReload(View clickedView) {
         flushTunnelLists();
         startVPN(clickedView);
-    }
-
-    private void launchDetailsFragment() {
-        View detailsFrame = findViewById(R.id.statistics);
-        boolean dualPane = detailsFrame != null && detailsFrame.getVisibility() == View.VISIBLE;
-
-        if (dualPane) {
-            // Check what fragment is currently shown, replace if needed.
-            StatisticsFragment statistics = (StatisticsFragment)
-                    getFragmentManager().findFragmentById(R.id.statistics);
-            if (statistics == null) {
-                // Make new fragment to show this selection.
-                statistics = StatisticsFragment.newInstance();
-
-                // Execute a transaction, replacing any existing fragment
-                // with this one inside the frame.
-                FragmentTransaction ft = getFragmentManager().beginTransaction();
-                ft.replace(R.id.statistics, statistics);
-                ft.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE);
-                ft.commitAllowingStateLoss();
-            }
-        }
-    }
-
-    private void destroyDetailsFragment() {
-        // Check what fragment is currently shown, replace if needed.
-        StatisticsFragment statistics = (StatisticsFragment)
-                getFragmentManager().findFragmentById(R.id.statistics);
-        if (statistics != null) {
-            // Execute a transaction, replacing any existing fragment
-            // with this one inside the frame.
-            FragmentTransaction ft = getFragmentManager().beginTransaction();
-            ft.remove(statistics);
-            ft.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE);
-            ft.commitAllowingStateLoss();
-        }
     }
 
     /** Inner class to handle status updates */
@@ -370,11 +347,9 @@ public class MainActivity extends Activity {
                 switch (status) {
                     case Connected:
                         imageRes = R.drawable.transmitting;
-                        launchDetailsFragment();
                         break;
                     case Idle:
                         imageRes = R.drawable.off;
-                        destroyDetailsFragment();
                         break;
                     case Connecting:
                         imageRes = R.drawable.pending;
