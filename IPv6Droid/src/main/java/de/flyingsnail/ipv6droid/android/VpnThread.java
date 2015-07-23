@@ -99,7 +99,7 @@ class VpnThread extends Thread {
     private static final Inet6Address[] GOOGLE_DNS = new Inet6Address[2];
     private Inet4Address localIp = null;
 
-    {
+    static {
         try {
             GOOGLE_DNS[0] = (Inet6Address)Inet6Address.getByAddress(
                     new byte[]{0x20,0x01,0x48,0x60,0x48,0x60,0,0,0,0,0,0,0,0,(byte)0x88,(byte)0x88}
@@ -406,10 +406,10 @@ class VpnThread extends Thread {
                 }
 
                 // start the copying threads
-                inThread = startStreamCopy (localIn, popOut);
-                inThread.setName("AYIYA from local to POP");
-                outThread = startStreamCopy (popIn, localOut);
-                outThread.setName("AYIYA from POP to local");
+                outThread = startStreamCopy (localIn, popOut);
+                outThread.setName("AYIYA from local to POP");
+                inThread = startStreamCopy (popIn, localOut);
+                inThread.setName("AYIYA from POP to local");
 
                 // now do a ping on IPv6 level. This should involve receiving one packet
                 if (tunnelSpecification.getIpv6Pop().isReachable(10000)) {
@@ -565,7 +565,7 @@ class VpnThread extends Thread {
             vpnStatus.setActivity(R.string.vpnservice_activity_reconnect);
             reportStatus();
             synchronized (vpnStatus) {
-                ((Object)vpnStatus).wait();
+                vpnStatus.wait();
             }
         }
     }
@@ -776,7 +776,7 @@ class VpnThread extends Thread {
      * @throws ConnectionFailedException in case of a logical problem with the setup
      */
     private List<TicTunnel> expandSuitables(List<String> tunnelIds, Tic tic) throws IOException, ConnectionFailedException {
-        List<TicTunnel> retval = new ArrayList<>(tunnelIds.size());
+        List<TicTunnel> retval = new ArrayList<TicTunnel>(tunnelIds.size());
         for (String id: tunnelIds) {
             TicTunnel desc;
             try {
@@ -790,6 +790,20 @@ class VpnThread extends Thread {
             }
         }
         return retval;
+    }
+
+    /**
+     * Allow inet v4 traffic in general, as it would be disabled by default when setting up an v6
+     * VPN, but only on Android 5.0 and later. The respective method is only available in API 21
+     * and later.
+     * Method is separate from configureBuilderFromTunnelSpecification only to safely apply the
+     * TargetApi annotation and concentrate API specific code at one place.
+     */
+    @TargetApi(21)
+    private void allowInet6Family(VpnService.Builder builder) {
+        if (Build.VERSION.SDK_INT >= 21) {
+            builder.allowFamily(OsConstants.AF_INET);
+        }
     }
 
     /**
@@ -829,17 +843,8 @@ class VpnThread extends Thread {
             }
         }
 
-        // call method allowFamily on Builder object if it has one (required in Android 5 and later
-        try {
-            Method familyAllower = builder.getClass().getMethod("allowFamily", int.class);
-            familyAllower.invoke(builder, OsConstants.AF_INET);
-        } catch (NoSuchMethodException e) {
-            Log.i(TAG, "method allowFamily does not exist - should Android 4.x");
-        } catch (InvocationTargetException e) {
-            Log.i(TAG, "invocation of allowFamily failed");
-        } catch (IllegalAccessException e) {
-            Log.i(TAG, "method allowFamily not public");
-        }
+        // call method allowFamily on Builder object on API 21 and later (required in Android 5 and later)
+        allowInet6Family(builder);
 
         // register an intent to call up main activity from system managed dialog.
         Intent configureIntent = new Intent("android.intent.action.MAIN");
@@ -884,7 +889,7 @@ class VpnThread extends Thread {
      */
     @TargetApi(21)
     private ArrayList<RouteInfo> getNetworkDetails () {
-        ArrayList<RouteInfo> routeInfos = new ArrayList<>(10);
+        ArrayList<RouteInfo> routeInfos = new ArrayList<RouteInfo>(10);
         if (Build.VERSION.SDK_INT >= 21) {
             Log.d(VpnThread.TAG, "getNetworkDetails trying to read routing");
             ConnectivityManager cm = getConnectivityManager();
@@ -910,7 +915,7 @@ class VpnThread extends Thread {
      * @return the Statistics object with current values
      */
     public Statistics getStatistics() {
-        Statistics stats = null;
+        Statistics stats;
         List<RouteInfo> routeInfos = getNetworkDetails(); // no-op if run below API level 21
 
         stats = new Statistics(
@@ -937,7 +942,7 @@ class VpnThread extends Thread {
     public void onConnectivityChange(Intent intent) {
         if (!intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false)) {
             synchronized (vpnStatus) {
-                ((Object) vpnStatus).notifyAll();
+                vpnStatus.notifyAll();
             }
         }
     }

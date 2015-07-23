@@ -41,7 +41,7 @@
 
     <string name="statistics_bytes">Bytes</string>
     <string name="statistics_packets">IP-Pakete</string>
-    <string name="statistics_mtu">Max. Paketgröße</string>
+    <string name="statistics_mtu">Paketgröße</string>
     <string name="statistics_routes">Routen</string>
     <string name="statistics_ipv4">IPv4-Adressen</string>
     <string name="statistics_ipv6">IPv6-Adressen</string>

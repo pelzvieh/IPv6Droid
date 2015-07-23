@@ -40,7 +40,8 @@
         <fragment
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            class="de.flyingsnail.ipv6droid.android.statusdetail.StatisticsFragment" />
+            class="de.flyingsnail.ipv6droid.android.statusdetail.StatisticsFragment"
+            tools:layout="@layout/fragment_statistics" />
     </FrameLayout>
 
     <ProgressBar
