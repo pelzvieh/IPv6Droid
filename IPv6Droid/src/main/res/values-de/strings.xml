@@ -45,10 +45,11 @@
     <string name="statistics_routes">Routen</string>
     <string name="statistics_ipv4">IPv4-Adressen</string>
     <string name="statistics_ipv6">IPv6-Adressen</string>
-
+    <string name="robot">Roboter</string>
     <string name="headline_received">von Provider</string>
     <string name="headline_transmitted">von Gerät</string>
     <string name="action_show_statistics">Statistiken</string>
-
+    <string name="title_activity_statistics">Statistik</string>
+    <string name="statistics_timestamp">Stand von</string>
 
 </resources>

@@ -317,7 +317,7 @@ public class MainActivity extends Activity {
 
     private void openHelp() {
         Intent helpIntent = new Intent(Intent.ACTION_VIEW);
-        helpIntent.setDataAndType(Uri.parse("https://sourceforge.net/p/ipv6droid/wiki/Home/"), "text/html");
+        helpIntent.setDataAndType(Uri.parse("https://github.com/pelzvieh/IPv6Droid/wiki"), "text/html");
         helpIntent.addCategory(Intent.CATEGORY_BROWSABLE);
         startActivity(helpIntent);
     }
