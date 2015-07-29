@@ -145,6 +145,7 @@ public class AyiyaVpnService extends VpnService {
     @Override
     public IBinder onBind(Intent intent) {
         if (STATISTICS_INTERFACE.equals(intent.getAction())) {
+            Log.i(AyiyaVpnService.TAG, "Bind request to statistics interface received");
             return new StatisticsBinder();
         } else
             return super.onBind(intent);

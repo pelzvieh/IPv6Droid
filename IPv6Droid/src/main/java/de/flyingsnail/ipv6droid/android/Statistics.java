@@ -105,4 +105,43 @@ public class Statistics {
     }
 
     public Date getTimestamp() { return timestamp; }
+
+    @Override
+    public int hashCode() {
+        int result = (int) (bytesTransmitted ^ (bytesTransmitted >>> 32));
+        result = 31 * result + (int) (bytesReceived ^ (bytesReceived >>> 32));
+        result = 31 * result + (int) (packetsTransmitted ^ (packetsTransmitted >>> 32));
+        result = 31 * result + (int) (packetsReceived ^ (packetsReceived >>> 32));
+        result = 31 * result + (brokerIPv4 != null ? brokerIPv4.hashCode() : 0);
+        result = 31 * result + (myIPv4 != null ? myIPv4.hashCode() : 0);
+        result = 31 * result + (brokerIPv6 != null ? brokerIPv6.hashCode() : 0);
+        result = 31 * result + (myIPv6 != null ? myIPv6.hashCode() : 0);
+        result = 31 * result + mtu;
+        result = 31 * result + (routing != null ? routing.hashCode() : 0);
+        result = 31 * result + (dnsSetting != null ? dnsSetting.hashCode() : 0);
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Statistics)) return false;
+
+        Statistics that = (Statistics) o;
+
+        if (bytesTransmitted != that.bytesTransmitted) return false;
+        if (bytesReceived != that.bytesReceived) return false;
+        if (packetsTransmitted != that.packetsTransmitted) return false;
+        if (packetsReceived != that.packetsReceived) return false;
+        if (mtu != that.mtu) return false;
+        if (brokerIPv4 != null ? !brokerIPv4.equals(that.brokerIPv4) : that.brokerIPv4 != null)
+            return false;
+        if (myIPv4 != null ? !myIPv4.equals(that.myIPv4) : that.myIPv4 != null) return false;
+        if (brokerIPv6 != null ? !brokerIPv6.equals(that.brokerIPv6) : that.brokerIPv6 != null)
+            return false;
+        if (myIPv6 != null ? !myIPv6.equals(that.myIPv6) : that.myIPv6 != null) return false;
+        if (routing != null ? !routing.equals(that.routing) : that.routing != null) return false;
+        return !(dnsSetting != null ? !dnsSetting.equals(that.dnsSetting) : that.dnsSetting != null);
+
+    }
 }

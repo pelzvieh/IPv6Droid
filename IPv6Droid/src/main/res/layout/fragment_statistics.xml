@@ -86,7 +86,7 @@
         <TextView
             android:layout_column="1"
             android:id="@+id/statistics_packets_transmitted"
-            android:text="0"
+            android:text="-"
             android:textIsSelectable="true"
             android:layout_gravity="right" />
 
@@ -94,7 +94,7 @@
             android:layout_column="2"
             android:id="@+id/statistics_packets_received"
             android:paddingLeft="10dp"
-            android:text="0"
+            android:text="-"
             android:textIsSelectable="true"
             android:layout_gravity="right" />
     </TableRow>
@@ -109,7 +109,7 @@
         <TextView
             android:layout_column="1"
             android:id="@+id/statistics_myipv4"
-            android:text="/123.123.123.123"
+            android:text="-"
             android:textIsSelectable="true"
             android:layout_gravity="right"
             android:paddingLeft="10dp" />
@@ -117,7 +117,7 @@
         <TextView
             android:layout_column="2"
             android:id="@+id/statistics_brokeripv4"
-            android:text="/123.123.123.123"
+            android:text="-"
             android:textIsSelectable="true"
             android:layout_gravity="right"
             android:paddingLeft="10dp"
@@ -135,7 +135,7 @@
             android:layout_column="1"
             android:layout_span="2"
             android:id="@+id/statistics_myipv6"
-            android:text="[::]"
+            android:text="-"
             android:textIsSelectable="true"
             android:paddingLeft="10dp"
             android:layout_gravity="left" />
@@ -146,7 +146,7 @@
             android:layout_column="1"
             android:layout_span="2"
             android:id="@+id/statistics_brokeripv6"
-            android:text="[..]"
+            android:text="-"
             android:textIsSelectable="true"
             android:layout_gravity="right" />
     </TableRow>

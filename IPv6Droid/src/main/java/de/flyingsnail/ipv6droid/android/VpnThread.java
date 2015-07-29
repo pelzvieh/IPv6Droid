@@ -623,10 +623,12 @@ class VpnThread extends Thread {
                    no new packets for more than heartbeat interval? Might be device sleep!
                    but if not pingable, probably broken.
                    In the latter case we give it another heartbeat interval time to recover. */
-                if (!ayiya.isValidPacketReceived() // no valid packet after one heartbeat is annoying
+                if (isDeviceConnected() &&
+                        (!ayiya.isValidPacketReceived() // no valid packet after one heartbeat is annoying
                         || (checkExpiry (ayiya.getLastPacketReceivedTime(),
                                          tunnelSpecification.getHeartbeatInterval())
                             && !tunnelSpecification.getIpv6Pop().isReachable(10000))
+                        )
                    ) {
                     if (!timeoutSuspected)
                         timeoutSuspected = true;

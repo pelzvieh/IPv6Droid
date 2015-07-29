@@ -280,7 +280,9 @@ public class Tic {
         out.newLine();
         out.flush();
         String answer = in.readLine();
-        if (answer == null || !answer.startsWith("2"))
+        if (answer == null)
+            throw new IOException ("Unexpected end of stream at TIC protocol");
+        if (!answer.startsWith("2"))
             throw new ConnectionFailedException ("No success with challenge response " + answer, null);
         return answer.substring(4); // strip the 3 digit response code and following space
     }
@@ -294,6 +296,8 @@ public class Tic {
         assert (in != null);
         // fetch the welcome
         String welcome = in.readLine();
+        if (welcome == null)
+            throw new IOException ("Unexpected end of stream at TIC protocol step welcome");
         if (!welcome.startsWith("2"))
             throw new ConnectionFailedException ("No success code on welcome: " + welcome, null);
         Log.i(TAG, "TIC accepted our welcome");

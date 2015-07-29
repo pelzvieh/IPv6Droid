@@ -93,17 +93,26 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
         // create scheduled executor
         executor = new ScheduledThreadPoolExecutor(1);
         // bind to AyiyaVpnService for statistics
-        Intent intent = new Intent(getActivity(), AyiyaVpnService.class);
-        intent.setAction(AyiyaVpnService.STATISTICS_INTERFACE);
-        getActivity().getApplicationContext().bindService(intent, this, 0);
+        bindToStatistics();
         timestampFormatter = android.text.format.DateFormat.getTimeFormat(getActivity());
         Log.i(TAG, "Creation successful");
+    }
+
+    /**
+     * request to bind to the statistics interface of the AyiyaVpnService.
+     */
+    private void bindToStatistics() {
+        Intent intent = new Intent(getActivity(), AyiyaVpnService.class);
+        intent.setAction(AyiyaVpnService.STATISTICS_INTERFACE);
+        if (!getActivity().getApplicationContext().bindService(intent, this, 0))
+            Log.e(StatisticsFragment.TAG, "Bind request to statistics interface failed");
     }
 
     @Override
     public void onDestroy() {
         Log.d(TAG, "onDestroy started");
         getActivity().getApplicationContext().unbindService(this);
+
         if (updaterFuture != null) {
             updaterFuture.cancel(true);
             updaterFuture = null;
@@ -189,6 +198,8 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
      */
     private class Updater implements Runnable {
         private Handler handler;
+        private Statistics oldstats = null;
+
         public Updater (Handler handler) {
             this.handler = handler;
         }
@@ -200,9 +211,16 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
                 Statistics stats = null;
                 if (statisticsBinder != null) {
                     stats = statisticsBinder.getStatistics();
+                } else {
+                    bindToStatistics();
                 }
-                Message redrawMessage = handler.obtainMessage(0, stats);
-                redrawMessage.sendToTarget();
+                // if the statistics differ, send a redraw message
+                if (stats != oldstats // this checks if not both are null
+                        && (stats == null || oldstats == null || !stats.equals(oldstats))) {
+                    oldstats = stats;
+                    Message redrawMessage = handler.obtainMessage(0, stats);
+                    redrawMessage.sendToTarget();
+                }
             } catch (Exception e) {
                 Log.e(TAG, "Updating statistics failed", e);
             }
@@ -225,40 +243,34 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
                 myView.setVisibility(View.INVISIBLE);
             } else {
                 myView.setVisibility(View.VISIBLE);
-                bytesTransmittedView.setText(
-                        String.valueOf(stats.getBytesTransmitted()));
-                bytesReceivedView.setText(
-                        String.valueOf(stats.getBytesReceived()));
-                packetsTransmittedView.setText(
-                        String.valueOf(stats.getPacketsTransmitted()));
-                packetsReceivedView.setText(
-                        String.valueOf(stats.getPacketsReceived()));
-                mtuView.setText(
-                        String.valueOf(stats.getMtu())
-                );
-                brokerIPv4View.setText(
-                        String.valueOf(stats.getBrokerIPv4())
-                );
-                brokerIPv6View.setText(
-                        String.valueOf(stats.getBrokerIPv6())
-                );
-                myIPv4View.setText(
-                        String.valueOf(stats.getMyIPv4())
-                );
-                myIPv6View.setText(
-                        String.valueOf(stats.getMyIPv6())
-                );
-                routesView.setText(
-                        stats.getRouting() == null ?
-                                "--" :
-                                String.valueOf(stats.getRouting())
-                );
-                timestampView.setText(
-                        timestampFormatter.format(stats.getTimestamp())
-                );
+                updateTextView(bytesTransmittedView, stats.getBytesTransmitted());
+                updateTextView(bytesReceivedView, stats.getBytesReceived());
+                updateTextView(packetsTransmittedView, stats.getPacketsTransmitted());
+                updateTextView(packetsReceivedView, stats.getPacketsReceived());
+                updateTextView(mtuView, stats.getMtu());
+                updateTextView(brokerIPv4View, stats.getBrokerIPv4());
+                updateTextView(brokerIPv6View, stats.getBrokerIPv6());
+                updateTextView(myIPv4View, stats.getMyIPv4());
+                updateTextView(myIPv6View, stats.getMyIPv6());
+                updateTextView(routesView, stats.getRouting());
+                updateTextView(timestampView, timestampFormatter.format(stats.getTimestamp()));
             }
         }
 
+        /**
+         * Helper method to update a TextView's text only if the text changed. Reason is that text
+         * selection by the user is cancelled by TextView.setText.
+         * @param textView the TextView to update
+         * @param newValue the String that should be set, but could be the same as the current text
+         * @return boolean, true if the text was different from the existing and the View was updated.
+         */
+        private boolean updateTextView (TextView textView, Object newValue) {
+            String newString = (newValue == null) ? "" : String.valueOf(newValue);
+            if (!newString.equals(textView.getText().toString())) {
+                textView.setTextKeepState(newString);
+                return true;
+            }
+            return false;
+        }
     }
-
 }
