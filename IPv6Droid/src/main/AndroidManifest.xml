@@ -22,7 +22,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="de.flyingsnail.ipv6droid"
     android:versionCode="20"
-    android:versionName="1.15b" >
+    android:versionName="1.16" >
 
     <uses-sdk
         android:minSdkVersion="14"
