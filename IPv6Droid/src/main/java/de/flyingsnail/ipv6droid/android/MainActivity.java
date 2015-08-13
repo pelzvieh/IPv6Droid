@@ -65,6 +65,7 @@ public class MainActivity extends Activity {
     private static final int REQUEST_SETTINGS = 2;
     private static final int REQUEST_STATISTICS = 3;
     private static final String FILE_LAST_TUNNEL = "last_tunnel";
+    public static final String EXTRA_AUTOSTART = "AUTOSTART";
     private TextView activity;
     private ProgressBar progress;
     private ImageView status;
@@ -86,6 +87,7 @@ public class MainActivity extends Activity {
     public static final String BC_STATUS_UPDATE = MainActivity.class.getName() + ".STATUS_REQUEST";
     private StatusReceiver statusReceiver;
     private MenuItem refreshTunnelMenuItem;
+    private boolean autostart = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -114,6 +116,7 @@ public class MainActivity extends Activity {
         LocalBroadcastManager.getInstance(this).registerReceiver(statusReceiver,
                 statusIntentFilter);
 
+        autostart = myPreferences.getBoolean("autostart", false);
         // check login configuration and start Settings if not yet set.
         if (myPreferences.getString("tic_username", "").isEmpty() ||
                 myPreferences.getString("tic_password", "").isEmpty() ||
@@ -124,6 +127,17 @@ public class MainActivity extends Activity {
         loadPersistedTunnel();
         statusReceiver.updateUi();
         requestStatus();
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        Intent intent = getIntent();
+        boolean onBoot = intent.getBooleanExtra(MainActivity.EXTRA_AUTOSTART, false);
+        if (onBoot && autostart) {
+            startVPN(null);
+            finish(); // close this Activity, as it was opened automatically at boot
+        }
     }
 
     @Override

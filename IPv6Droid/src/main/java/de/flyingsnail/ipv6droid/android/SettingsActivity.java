@@ -98,6 +98,7 @@ public class SettingsActivity extends PreferenceActivity {
         bindPreferenceSummaryToValue(findPreference("tic_username"));
         bindPreferenceSummaryToValue(findPreference("tic_password"));
         bindPreferenceSummaryToValue(findPreference("tic_host"));
+        bindPreferenceSummaryToValue(findPreference("autostart"));
     }
 
     /** {@inheritDoc} */
@@ -214,6 +215,7 @@ public class SettingsActivity extends PreferenceActivity {
             bindPreferenceSummaryToValue(findPreference("tic_username"));
             bindPreferenceSummaryToValue(findPreference("tic_password"));
             bindPreferenceSummaryToValue(findPreference("tic_host"));
+            bindPreferenceSummaryToValue(findPreference("autostart"));
         }
     }
 

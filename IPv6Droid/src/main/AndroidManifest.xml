@@ -17,12 +17,12 @@
   ~     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
   ~
   ~ Contact information and current version at http://www.flying-snail.de/IPv6Droid
-  -->
+-->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="de.flyingsnail.ipv6droid"
-    android:versionCode="20"
-    android:versionName="1.16" >
+    android:versionCode="21"
+    android:versionName="1.17a" >
 
     <uses-sdk
         android:minSdkVersion="14"
@@ -30,6 +30,7 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:allowBackup="true"
@@ -69,6 +70,18 @@
             android:name=".android.statusdetail.StatisticsActivity"
             android:label="@string/title_activity_statistics" >
         </activity>
+
+        <receiver
+            android:name=".android.BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>

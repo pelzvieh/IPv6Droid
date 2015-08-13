@@ -19,7 +19,7 @@
   -->
 
 <resources>
-        <string name="title_activity_settings">Settings</string>
+    <string name="title_activity_settings">Settings</string>
 
     <!-- Strings related to Settings -->
 
@@ -29,6 +29,7 @@
     <string name="pref_title_password">Password</string>
     <string name="pref_title_host">TIC host</string>
     <string name="pref_default_host"></string>
+    <string name="pref_autostart">Start Tunnel at Boot</string>
 
     <!-- Routes settings -->
     <string name="pref_header_routes">Route settings</string>

@@ -52,6 +52,11 @@
             android:singleLine="true"
             android:maxLines="1" />
 
+    <CheckBoxPreference
+        android:key="autostart"
+        android:title="@string/pref_autostart"
+        android:defaultValue="false" />
+
     <!-- NOTE: Hide buttons to simplify the UI. Users can touch outside the dialog to
          dismiss it. -->
     <!-- NOTE: ListPreference's summary should be set to its value by the activity code. -->
