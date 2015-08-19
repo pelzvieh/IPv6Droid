@@ -59,7 +59,6 @@ public class AyiyaVpnService extends VpnService {
     private final ConnectivityReceiver connectivityReceiver = new ConnectivityReceiver();
     private final CommandReceiver commandReceiver = new CommandReceiver();
 
-
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "received start command");
@@ -95,6 +94,14 @@ public class AyiyaVpnService extends VpnService {
         }
         unregisterGlobalConnectivityReceiver();
         unregisterLocalCommandReceiver();
+    }
+
+    @Override
+    public void onRevoke() {
+        if (thread != null && !thread.isInterrupted()) {
+            thread.interrupt();
+        }
+        super.onRevoke();
     }
 
     /**
@@ -168,7 +175,9 @@ public class AyiyaVpnService extends VpnService {
         }
     }
 
-    /** Inner class to handle connectivity changes */
+    /**
+     * Inner class to handle connectivity changes
+     */
     public class ConnectivityReceiver extends BroadcastReceiver {
         private ConnectivityReceiver() {}
 

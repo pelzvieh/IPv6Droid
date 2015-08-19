@@ -51,5 +51,6 @@
     <string name="action_show_statistics">Statistiken</string>
     <string name="title_activity_statistics">Statistik</string>
     <string name="statistics_timestamp">Stand von</string>
+    <string name="copythreadexception">Kopierablauf ist auf einen Fehler gelaufen</string>
 
 </resources>

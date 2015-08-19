@@ -47,13 +47,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
+import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -112,6 +112,15 @@ class VpnThread extends Thread {
         }
     }
 
+    /**
+     * The routing information of current network setting.
+     */
+    private List<RouteInfo> routeInfos;
+
+    /**
+     * A helper class that basically allows to run a thread that copies packets from an input
+     * to an output stream.
+     */
     private class CopyThread extends Thread {
         private long byteCount = 0l;
         private long packetCount = 0l;
@@ -130,6 +139,7 @@ class VpnThread extends Thread {
                 Log.i(TAG, "Copy thread started");
                 // Allocate the buffer for a single packet.
                 byte[] packet = new byte[32767];
+                int recvZero = 0;
 
                 // @TODO there *must* be a suitable utility class for that...?
                 while (!Thread.currentThread().isInterrupted()) {
@@ -139,15 +149,23 @@ class VpnThread extends Thread {
                         // statistics
                         byteCount += len;
                         packetCount++;
+                        recvZero = 0;
                     } else {
-                        Thread.sleep(100);
+                        recvZero++;
+                        if (recvZero == 10000) {
+                            notifyUserOfError(R.string.copythreadexception, new IllegalStateException(
+                                    Thread.currentThread().getName() + ": received 0 byte packages"
+                            ));
+                        }
+                        Thread.sleep(100 + ((recvZero < 10000) ? recvZero : 10000)); // wait minimum 0.1, maximum 10 seconds
                     }
                 }
             } catch (Exception e) {
-                if (e instanceof InterruptedException) {
+                if (e instanceof InterruptedException || e instanceof SocketException) {
                     Log.i(TAG, "Copy thread interrupted, will end gracefully");
                 } else {
                     Log.e(TAG, "Copy thread got exception", e);
+                    notifyUserOfError(R.string.copythreadexception, e);
                 }
             } finally {
                 try {
@@ -254,6 +272,7 @@ class VpnThread extends Thread {
         this.startId = startId;
         this.notificationBuilder = new NotificationCompat.Builder(ayiyaVpnService.getApplicationContext())
             .setSmallIcon(R.drawable.ic_launcher);
+        this.routeInfos = getNetworkDetails();
     }
 
 
@@ -406,10 +425,8 @@ class VpnThread extends Thread {
                 }
 
                 // start the copying threads
-                outThread = startStreamCopy (localIn, popOut);
-                outThread.setName("AYIYA from local to POP");
-                inThread = startStreamCopy (popIn, localOut);
-                inThread.setName("AYIYA from POP to local");
+                outThread = startStreamCopy (localIn, popOut, "AYIYA from local to POP");
+                inThread = startStreamCopy (popIn, localOut, "AYIYA from POP to local");
 
                 // now do a ping on IPv6 level. This should involve receiving one packet
                 if (tunnelSpecification.getIpv6Pop().isReachable(10000)) {
@@ -795,15 +812,22 @@ class VpnThread extends Thread {
     }
 
     /**
-     * Allow inet v4 traffic in general, as it would be disabled by default when setting up an v6
-     * VPN, but only on Android 5.0 and later. The respective method is only available in API 21
+     * <ul>
+     * <li>Allow inet v4 traffic in general, as it would be disabled by default when setting up an v6
+     * VPN, but only on Android 5.0 and later.</li>
+     * <li>Configure builder to generate a blocking socket.</li>
+     * <li>Allow applications to intentively bypass the VPN.</li>
+     * </ul>
+     * The respective methods are only available in API 21
      * and later.
      * Method is separate from configureBuilderFromTunnelSpecification only to safely apply the
      * TargetApi annotation and concentrate API specific code at one place.
      */
     @TargetApi(21)
-    private void allowInet6Family(VpnService.Builder builder) {
+    private void configureNewSettings(VpnService.Builder builder) {
         if (Build.VERSION.SDK_INT >= 21) {
+            builder.setBlocking(true);
+            builder.allowBypass();
             builder.allowFamily(OsConstants.AF_INET);
         }
     }
@@ -846,7 +870,7 @@ class VpnThread extends Thread {
         }
 
         // call method allowFamily on Builder object on API 21 and later (required in Android 5 and later)
-        allowInet6Family(builder);
+        configureNewSettings(builder);
 
         // register an intent to call up main activity from system managed dialog.
         Intent configureIntent = new Intent("android.intent.action.MAIN");
@@ -860,14 +884,22 @@ class VpnThread extends Thread {
      * Create and run a thread that copies from in to out until interrupted.
      * @param in The stream to copy from.
      * @param out The stream to copy to.
+     * @param threadName
      * @return The thread that does so until interrupted.
      */
-    private CopyThread startStreamCopy(final InputStream in, final OutputStream out) {
+    private CopyThread startStreamCopy(final InputStream in, final OutputStream out, String threadName) {
         CopyThread thread = new CopyThread (in, out);
+        thread.setName(threadName);
         thread.start();
         return thread;
     }
 
+    /**
+     * Generate an Android Toast
+     * @param ctx the Context of the app
+     * @param resId the ressource ID of the string to post
+     * @param duration constant coding the duration
+     */
     private void postToast (final Context ctx, final int resId, final int duration) {
         handler.post(new Runnable() {
             @Override
@@ -877,7 +909,9 @@ class VpnThread extends Thread {
         });
     }
 
-
+    /**
+     * Broadcast the status.
+     */
     void reportStatus() {
         Intent statusBroadcast = new Intent(BC_STATUS)
                 .putExtra(EDATA_STATUS_REPORT, vpnStatus);
@@ -917,8 +951,8 @@ class VpnThread extends Thread {
      * @return the Statistics object with current values
      */
     public Statistics getStatistics() {
+        Log.d(VpnThread.TAG, "getStatistics() called");
         Statistics stats;
-        List<RouteInfo> routeInfos = getNetworkDetails(); // no-op if run below API level 21
 
         stats = new Statistics(
                 outThread.getByteCount(),
@@ -934,7 +968,6 @@ class VpnThread extends Thread {
                 new ArrayList<InetAddress>(0)
         );
         return stats;
-
     }
 
     /**
@@ -946,6 +979,7 @@ class VpnThread extends Thread {
             synchronized (vpnStatus) {
                 vpnStatus.notifyAll();
             }
+            routeInfos = getNetworkDetails();
         }
     }
 }
