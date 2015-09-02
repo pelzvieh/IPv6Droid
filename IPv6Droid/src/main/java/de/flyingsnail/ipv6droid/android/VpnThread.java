@@ -53,12 +53,20 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.nio.channels.SocketChannel;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.SelectableChannel;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 import java.util.StringTokenizer;
 
 import de.flyingsnail.ipv6droid.R;
@@ -118,19 +126,30 @@ class VpnThread extends Thread {
     private List<RouteInfo> routeInfos;
 
     /**
-     * A helper class that basically allows to run a thread that copies packets from an input
-     * to an output stream.
+     * A helper class that basically allows to run a thread that copies packets from local to pop
+     * and vice versa.
      */
     private class CopyThread extends Thread {
         private long byteCount = 0l;
         private long packetCount = 0l;
-        private InputStream in;
-        private OutputStream out;
+        private SelectableChannel localIn;
+        private WritableByteChannel localOut;
+        private SelectableChannel popIn;
+        private WritableByteChannel popOut;
+        private Selector selector;
 
-        public CopyThread(InputStream in, OutputStream out) {
-            super();
-            this.in = in;
-            this.out = out;
+        public CopyThread(ReadableByteChannel localIn, WritableByteChannel popOut, ReadableByteChannel popIn, WritableByteChannel localOut) throws IOException {
+            this.localIn = (SelectableChannel)localIn;
+            this.popOut = popOut;
+            this.popIn = (SelectableChannel)popIn;
+            this.localOut = localOut;
+            selector = Selector.open();
+            registerChannels();
+        }
+
+        private void registerChannels() throws ClosedChannelException {
+            localIn.register(selector, SelectionKey.OP_READ).attach(popOut);
+            popIn.register(selector, SelectionKey.OP_READ).attach(popOut);
         }
 
         @Override
@@ -138,23 +157,31 @@ class VpnThread extends Thread {
             try {
                 Log.i(TAG, "Copy thread started");
                 // Allocate the buffer for a single packet.
-                byte[] packet = new byte[32767];
+                ByteBuffer buffer = ByteBuffer.allocateDirect(32767);
                 int recvZero = 0;
 
                 // @TODO there *must* be a suitable utility class for that...?
-                while (!Thread.currentThread().isInterrupted()) {
-                    int len = in.read (packet);
-                    if (len > 0) {
-                        out.write(packet, 0, len);
-                        // statistics
-                        byteCount += len;
-                        packetCount++;
+                while (selector.isOpen() && localIn.isOpen() && popIn.isOpen() && !Thread.currentThread().isInterrupted()) {
+                    int channels = selector.select();
+                    if (channels > 0) {
+                        Set<SelectionKey> selected = selector.selectedKeys();
+                        for (SelectionKey key: selected) {
+                            ReadableByteChannel channel = (ReadableByteChannel)key.channel();
+                            WritableByteChannel out = (WritableByteChannel)key.attachment();
+                            channel.read(buffer);
+                            buffer.flip();
+                            // statistics
+                            byteCount += buffer.limit();
+                            packetCount++;
+                            out.write(buffer);
+                            buffer.clear();
+                        }
                         recvZero = 0;
                     } else {
                         recvZero++;
-                        if (recvZero == 10000) {
+                        if (recvZero == 100) {
                             notifyUserOfError(R.string.copythreadexception, new IllegalStateException(
-                                    Thread.currentThread().getName() + ": received 0 byte packages"
+                                    Thread.currentThread().getName() + ": received 0 selections from select"
                             ));
                         }
                         Thread.sleep(100 + ((recvZero < 10000) ? recvZero : 10000)); // wait minimum 0.1, maximum 10 seconds
@@ -169,14 +196,29 @@ class VpnThread extends Thread {
                 }
             } finally {
                 try {
-                    in.close();
+                    popIn.close();
                 } catch (IOException e) {
-                    Log.e(TAG, "Copy thread could not gracefully close input", e);
+                    Log.e(TAG, "Copy thread could not gracefully close pop input", e);
                 }
                 try {
-                    out.close();
+                    popOut.close();
                 } catch (IOException e) {
-                    Log.e(TAG, "Copy thread could not gracefully close output", e);
+                    Log.e(TAG, "Copy thread could not gracefully close pop output", e);
+                }
+                try {
+                    localIn.close();
+                } catch (IOException e) {
+                    Log.e(TAG, "Copy thread could not gracefully close local input", e);
+                }
+                try {
+                    localOut.close();
+                } catch (IOException e) {
+                    Log.e(TAG, "Copy thread could not gracefully close local output", e);
+                }
+                try {
+                    selector.close();
+                } catch (IOException e) {
+                    Log.e(TAG, "Copy thread could not gracefully close selector", e);
                 }
             }
         }
@@ -227,14 +269,9 @@ class VpnThread extends Thread {
     private ParcelFileDescriptor vpnFD;
 
     /**
-     * The thread that copies from PoP to local.
+     * The thread that copies from PoP to local and vice versa.
      */
-    private CopyThread inThread = null;
-
-    /**
-     * The thread that copies from local to PoP.
-     */
-    private CopyThread outThread = null;
+    private CopyThread copyThread = null;
 
     /**
      * The cached TicTunnel containing the previosly working configuration.
@@ -366,7 +403,6 @@ class VpnThread extends Thread {
      * exceptions, or in case that this thread is interrupted.
      * @param builder the VpnService.Builder that is used to re-crated the VPN Service
      * @throws ConnectionFailedException in case that the current configuration seems permanently defective.
-
      */
     private void refreshTunnelLoop(VpnService.Builder builder) throws ConnectionFailedException {
         // Prepare the tunnel to PoP
@@ -383,10 +419,12 @@ class VpnThread extends Thread {
                 vpnStatus.setProgressPerCent(50);
 
                 // Packets to be sent are queued in this input stream.
-                FileInputStream localIn = new FileInputStream(vpnFD.getFileDescriptor());
+                FileInputStream localInStream = new FileInputStream(vpnFD.getFileDescriptor());
+                ReadableByteChannel localIn = localInStream.getChannel();
 
                 // Packets received need to be written to this output stream.
-                FileOutputStream localOut = new FileOutputStream(vpnFD.getFileDescriptor());
+                FileOutputStream localOutStream = new FileOutputStream(vpnFD.getFileDescriptor());
+                WritableByteChannel localOut = Channels.newChannel(localOutStream);
 
                 // due to issue #... which doesn't appear to get fixed upstream, check local health
                 if (routingConfiguration.isTryRoutingWorkaround() && !checkRouting()) {
@@ -413,8 +451,10 @@ class VpnThread extends Thread {
                 // Initialize the input and output streams from the ayiya socket
                 DatagramSocket popSocket = ayiya.getSocket();
                 ayiyaVpnService.protect(popSocket);
-                InputStream popIn = ayiya.getInputStream();
-                OutputStream popOut = ayiya.getOutputStream();
+                InputStream popInStream = ayiya.getInputStream();
+                ReadableByteChannel popIn = Channels.newChannel(popInStream);
+                OutputStream popOutStream = ayiya.getOutputStream();
+                WritableByteChannel popOut = Channels.newChannel(popOutStream);
 
                 // update network info
                 try {
@@ -425,8 +465,9 @@ class VpnThread extends Thread {
                 }
 
                 // start the copying threads
-                outThread = startStreamCopy (localIn, popOut, "AYIYA from local to POP");
-                inThread = startStreamCopy (popIn, localOut, "AYIYA from POP to local");
+                copyThread = new CopyThread (localIn, popOut, popIn, localOut);
+                copyThread.setName("2-way copy thread pop_local");
+                copyThread.start();
 
                 // now do a ping on IPv6 level. This should involve receiving one packet
                 if (tunnelSpecification.getIpv6Pop().isReachable(10000)) {
@@ -459,10 +500,8 @@ class VpnThread extends Thread {
                 caughtInterruptedException = true;
             } finally {
                 localIp = null;
-                if (inThread != null && inThread.isAlive())
-                    inThread.interrupt();
-                if (outThread != null && outThread.isAlive())
-                    outThread.interrupt();
+                if (copyThread != null && copyThread.isAlive())
+                    copyThread.interrupt();
                 ayiya.close();
                 try {
                     if (vpnFD != null)
@@ -612,7 +651,7 @@ class VpnThread extends Thread {
      */
     private void monitoredHeartbeatLoop(Ayiya ayiya) throws InterruptedException, IOException, ConnectionFailedException {
         boolean timeoutSuspected = false;
-        while (!Thread.currentThread().isInterrupted() && inThread.isAlive() && outThread.isAlive()) {
+        while (!Thread.currentThread().isInterrupted() && copyThread.isAlive()) {
             if (ayiya.isValidPacketReceived()) {
                 // major status update, just once per session
                 vpnStatus.setTunnelProvedWorking(true);
@@ -627,8 +666,8 @@ class VpnThread extends Thread {
             // in case of network changes, this socket breaks immediately, so
             // inThread crashes on external network changes even if no transfer
             // is active.
-            inThread.join(tunnelSpecification.getHeartbeatInterval()*1000/2);
-            if (inThread.isAlive()) {
+            copyThread.join(tunnelSpecification.getHeartbeatInterval()*1000/2);
+            if (copyThread.isAlive()) {
                 try {
                     ayiya.beat();
                 } catch (TunnelBrokenException e) {
@@ -881,20 +920,6 @@ class VpnThread extends Thread {
     }
 
     /**
-     * Create and run a thread that copies from in to out until interrupted.
-     * @param in The stream to copy from.
-     * @param out The stream to copy to.
-     * @param threadName
-     * @return The thread that does so until interrupted.
-     */
-    private CopyThread startStreamCopy(final InputStream in, final OutputStream out, String threadName) {
-        CopyThread thread = new CopyThread (in, out);
-        thread.setName(threadName);
-        thread.start();
-        return thread;
-    }
-
-    /**
      * Generate an Android Toast
      * @param ctx the Context of the app
      * @param resId the ressource ID of the string to post
@@ -935,7 +960,7 @@ class VpnThread extends Thread {
                 Network activeNetwork = null;
                 for (Network n : networks) {
                     NetworkInfo ni = cm.getNetworkInfo(n);
-                    if (ni.getType() == (activeNetworkInfo.getType()))
+                    if (ni != null && ni.getType() == activeNetworkInfo.getType())
                         activeNetwork = n;
                 }
                 if (activeNetwork != null && activeNetworkInfo.isConnected()) {
@@ -955,10 +980,10 @@ class VpnThread extends Thread {
         Statistics stats;
 
         stats = new Statistics(
-                outThread.getByteCount(),
-                inThread.getByteCount(),
-                outThread.getPacketCount(),
-                inThread.getPacketCount(),
+                copyThread.getByteCount(), // @todo extend statistics creation in copyThread
+                copyThread.getByteCount(),
+                copyThread.getPacketCount(),
+                copyThread.getPacketCount(),
                 tunnelSpecification.getIPv4Pop(),
                 localIp,
                 tunnelSpecification.getIpv6Pop(),
