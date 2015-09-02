@@ -89,6 +89,7 @@ public class AyiyaVpnService extends VpnService {
 
     @Override
     public void onDestroy() {
+        Log.i(TAG, "Prepare destruction of VpnService");
         if (thread != null && !thread.isInterrupted()) {
             thread.interrupt();
         }
@@ -98,6 +99,7 @@ public class AyiyaVpnService extends VpnService {
 
     @Override
     public void onRevoke() {
+        Log.i(TAG, "VPN usage rights are being revoked - closing tunnel thread");
         if (thread != null && !thread.isInterrupted()) {
             thread.interrupt();
         }
