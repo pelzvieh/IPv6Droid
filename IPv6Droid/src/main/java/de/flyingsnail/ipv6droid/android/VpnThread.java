@@ -53,7 +53,6 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -116,78 +115,6 @@ class VpnThread extends Thread {
      * The routing information of current network setting.
      */
     private List<RouteInfo> routeInfos;
-
-    /**
-     * A helper class that basically allows to run a thread that copies packets from an input
-     * to an output stream.
-     */
-    private class CopyThread extends Thread {
-        private long byteCount = 0l;
-        private long packetCount = 0l;
-        private InputStream in;
-        private OutputStream out;
-
-        public CopyThread(InputStream in, OutputStream out) {
-            super();
-            this.in = in;
-            this.out = out;
-        }
-
-        @Override
-        public void run() {
-            try {
-                Log.i(TAG, "Copy thread started");
-                // Allocate the buffer for a single packet.
-                byte[] packet = new byte[32767];
-                int recvZero = 0;
-
-                // @TODO there *must* be a suitable utility class for that...?
-                while (!Thread.currentThread().isInterrupted()) {
-                    int len = in.read (packet);
-                    if (len > 0) {
-                        out.write(packet, 0, len);
-                        // statistics
-                        byteCount += len;
-                        packetCount++;
-                        recvZero = 0;
-                    } else {
-                        recvZero++;
-                        if (recvZero == 10000) {
-                            notifyUserOfError(R.string.copythreadexception, new IllegalStateException(
-                                    Thread.currentThread().getName() + ": received 0 byte packages"
-                            ));
-                        }
-                        Thread.sleep(100 + ((recvZero < 10000) ? recvZero : 10000)); // wait minimum 0.1, maximum 10 seconds
-                    }
-                }
-            } catch (Exception e) {
-                if (e instanceof InterruptedException || e instanceof SocketException) {
-                    Log.i(TAG, "Copy thread interrupted, will end gracefully");
-                } else {
-                    Log.e(TAG, "Copy thread got exception", e);
-                    notifyUserOfError(R.string.copythreadexception, e);
-                }
-            } finally {
-                try {
-                    in.close();
-                } catch (IOException e) {
-                    Log.e(TAG, "Copy thread could not gracefully close input", e);
-                }
-                try {
-                    out.close();
-                } catch (IOException e) {
-                    Log.e(TAG, "Copy thread could not gracefully close output", e);
-                }
-            }
-        }
-
-        public long getByteCount() {
-            return byteCount;
-        }
-        public long getPacketCount() {
-            return packetCount;
-        }
-    }
 
     /**
      * The start ID of the onStartCommand call that lead to this thread being constructed. Used
@@ -691,58 +618,6 @@ class VpnThread extends Thread {
             throw new ConnectionFailedException("Unable to read version name", e);
         }
 
-/*
-        //@todo move test code to test class
-        List<TicTunnel> availableTunnels = new ArrayList<TicTunnel>(3);
-        final TicTunnel t1 = new TicTunnel("1");
-        t1.setAdminState("active");
-        t1.setHeartbeatInterval(1000);
-        t1.setIpv4Endpoint("192.168.1.1");
-        t1.setIPv4Pop("192.168.1.2");
-        t1.setIpv6Pop("2001::1");
-        t1.setMtu(1000);
-        t1.setPassword("abcdef");
-        t1.setPopName("test");
-        t1.setPrefixLength(64);
-        t1.setTunnelId("TEST-1");
-        t1.setTunnelName("The first test tunnel");
-        t1.setType("ayiya");
-        t1.setUserState("active");
-        availableTunnels.add(t1);
-        final TicTunnel t2 = new TicTunnel ("2");
-        t2.setAdminState("active");
-        t2.setHeartbeatInterval(1000);
-        t2.setIpv4Endpoint("192.168.1.1");
-        t2.setIPv4Pop("192.168.1.2");
-        t2.setIpv6Pop("2001::1");
-        t2.setMtu(1000);
-        t2.setPassword("abcdef");
-        t2.setPopName("test");
-        t2.setPrefixLength(64);
-        t2.setTunnelId("TEST-2");
-        t2.setTunnelName("The 2nd test tunnel");
-        t2.setType("ayiya");
-        t2.setUserState("active");
-        availableTunnels.add(t2);
-        final TicTunnel t3 = new TicTunnel ("3");
-        t3.setAdminState("active");
-        t3.setHeartbeatInterval(1000);
-        t3.setIpv4Endpoint("192.168.1.1");
-        t3.setIPv4Pop("192.168.1.2");
-        t3.setIpv6Pop("2001::1");
-        t3.setMtu(1000);
-        t3.setPassword("abcdef");
-        t3.setPopName("test");
-        t3.setPrefixLength(64);
-        t3.setTunnelId("TEST-3");
-        t3.setTunnelName("The 3rd test tunnel");
-        t3.setType("ayiya");
-        t3.setUserState("active");
-        availableTunnels.add(t3);
-        tunnelChanged=true;
-        vpnStatus.setTicTunnelList(availableTunnels);
-        tunnelSpecification = t2;
-*/
         // Initialize new Tic object
         Tic tic = new Tic(ticConfig, contextInfo);
         try {
@@ -884,7 +759,7 @@ class VpnThread extends Thread {
      * Create and run a thread that copies from in to out until interrupted.
      * @param in The stream to copy from.
      * @param out The stream to copy to.
-     * @param threadName
+     * @param threadName a String giving the name of the Thread (as shown in some logs and debuggers)
      * @return The thread that does so until interrupted.
      */
     private CopyThread startStreamCopy(final InputStream in, final OutputStream out, String threadName) {
@@ -952,6 +827,9 @@ class VpnThread extends Thread {
      */
     public Statistics getStatistics() {
         Log.d(VpnThread.TAG, "getStatistics() called");
+        if (!isTunnelUp()) {
+            throw new IllegalStateException("Attempt to get Statistics on a non-running tunnel");
+        }
         Statistics stats;
 
         stats = new Statistics(
@@ -982,4 +860,85 @@ class VpnThread extends Thread {
             routeInfos = getNetworkDetails();
         }
     }
+
+    /**
+     * Query if the tunnel is currently running
+     * @return true if the tunnel is running
+     */
+    public boolean isTunnelUp() {
+        return (vpnStatus != null) && (vpnStatus.getStatus().equals(VpnStatusReport.Status.Connected));
+    }
+
+    /**
+     * A helper class that basically allows to run a thread that copies packets from an input
+     * to an output stream.
+     */
+    private class CopyThread extends Thread {
+        private long byteCount = 0l;
+        private long packetCount = 0l;
+        private InputStream in;
+        private OutputStream out;
+
+        public CopyThread(InputStream in, OutputStream out) {
+            super();
+            this.in = in;
+            this.out = out;
+        }
+
+        @Override
+        public void run() {
+            try {
+                Log.i(TAG, "Copy thread started");
+                // Allocate the buffer for a single packet.
+                byte[] packet = new byte[32767];
+                int recvZero = 0;
+
+                // @TODO there *must* be a suitable utility class for that...?
+                while (!Thread.currentThread().isInterrupted()) {
+                    int len = in.read (packet);
+                    if (len > 0) {
+                        out.write(packet, 0, len);
+                        // statistics
+                        byteCount += len;
+                        packetCount++;
+                        recvZero = 0;
+                    } else {
+                        recvZero++;
+                        if (recvZero == 10000) {
+                            notifyUserOfError(R.string.copythreadexception, new IllegalStateException(
+                                    Thread.currentThread().getName() + ": received 0 byte packages"
+                            ));
+                        }
+                        Thread.sleep(100 + ((recvZero < 10000) ? recvZero : 10000)); // wait minimum 0.1, maximum 10 seconds
+                    }
+                }
+            } catch (Exception e) {
+                if (e instanceof InterruptedException || e instanceof SocketException) {
+                    Log.i(TAG, "Copy thread interrupted, will end gracefully");
+                } else {
+                    Log.e(TAG, "Copy thread got exception", e);
+                    notifyUserOfError(R.string.copythreadexception, e);
+                }
+            } finally {
+                try {
+                    in.close();
+                } catch (IOException e) {
+                    Log.e(TAG, "Copy thread could not gracefully close input", e);
+                }
+                try {
+                    out.close();
+                } catch (IOException e) {
+                    Log.e(TAG, "Copy thread could not gracefully close output", e);
+                }
+            }
+        }
+
+        public long getByteCount() {
+            return byteCount;
+        }
+        public long getPacketCount() {
+            return packetCount;
+        }
+    }
+
 }

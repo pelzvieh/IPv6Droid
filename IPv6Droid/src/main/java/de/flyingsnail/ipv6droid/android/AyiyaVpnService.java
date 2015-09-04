@@ -215,8 +215,12 @@ public class AyiyaVpnService extends VpnService {
     }
 
     public class StatisticsBinder extends Binder {
+        /**
+         * Get statistics from the tunnel refreshing thread.
+         * @return the Statistics, or null
+         */
         public Statistics getStatistics() {
-            return thread.getStatistics();
+            return (thread == null || !thread.isTunnelUp()) ? null : thread.getStatistics();
         }
     }
 }
