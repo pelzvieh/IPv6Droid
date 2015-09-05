@@ -93,7 +93,7 @@ class VpnThread extends Thread {
     /**
      * Time that we must wait before contacting TIC again. This applies to cached tunnels even!
      */
-    private static final int TIC_RECHECK_BLOCKED_MILLISECONDS = 5 * 60 * 1000; // 5 minutes
+    private static final int TIC_RECHECK_BLOCKED_MILLISECONDS = 60 * 60 * 1000; // 60 minutes
 
     private static final Inet6Address[] GOOGLE_DNS = new Inet6Address[2];
     private Inet4Address localIp = null;
@@ -174,6 +174,12 @@ class VpnThread extends Thread {
      * waiting for connectivity changes and the thread announcing such a change.
      */
     private final VpnStatusReport vpnStatus;
+
+
+    /**
+     * A flag that is set if the tunnel should close down.
+     */
+    private boolean closeTunnel;
 
     /**
      * The constructor setting all required fields.
@@ -289,6 +295,17 @@ class VpnThread extends Thread {
 
 
     /**
+     * Request the tunnel control loop (running in a different thread) to stop.
+     */
+    protected void requestTunnelClose() {
+        closeTunnel = true;
+        if (inThread != null)
+            inThread.stopCopy();
+        if (outThread != null)
+            outThread.stopCopy();
+    }
+
+    /**
      * Run the tunnel as long as it should be running. This method ends via one of its declared
      * exceptions, or in case that this thread is interrupted.
      * @param builder the VpnService.Builder that is used to re-crated the VPN Service
@@ -298,11 +315,13 @@ class VpnThread extends Thread {
     private void refreshTunnelLoop(VpnService.Builder builder) throws ConnectionFailedException {
         // Prepare the tunnel to PoP
         Ayiya ayiya = new Ayiya (tunnelSpecification);
-        boolean caughtInterruptedException = false;
+        closeTunnel = false;
 
-        while (!(Thread.currentThread().isInterrupted() || caughtInterruptedException)) {
-            Log.i(TAG, "Building new local TUN and new AYIYA object");
+        while (!closeTunnel) {
             try {
+                if (Thread.currentThread().interrupted())
+                    throw new InterruptedException("Tunnel loop has interrupted status set");
+                Log.i(TAG, "Building new local TUN and new AYIYA object");
                 // setup local tun and routing
                 vpnFD = builder.establish();
 
@@ -380,16 +399,19 @@ class VpnThread extends Thread {
                 try {
                     waitOnConnectivity();
                 } catch (InterruptedException e1) {
-                    caughtInterruptedException = true;
+                    Log.i(VpnThread.TAG, "refresh tunnel loop received interrupt while waiting on connectivity");
                 }
             } catch (InterruptedException e) {
-                caughtInterruptedException = true;
+                Log.i(VpnThread.TAG, "refresh tunnel loop received interrupt", e);
+            } catch (RuntimeException e) {
+                notifyUserOfError(R.string.unexpected_runtime_exception, e);
+                throw e;
             } finally {
                 localIp = null;
-                if (inThread != null && inThread.isAlive())
-                    inThread.interrupt();
-                if (outThread != null && outThread.isAlive())
-                    outThread.interrupt();
+                if (inThread != null)
+                    inThread.stopCopy();
+                if (outThread != null)
+                    outThread.stopCopy();
                 ayiya.close();
                 try {
                     if (vpnFD != null)
@@ -539,7 +561,7 @@ class VpnThread extends Thread {
      */
     private void monitoredHeartbeatLoop(Ayiya ayiya) throws InterruptedException, IOException, ConnectionFailedException {
         boolean timeoutSuspected = false;
-        while (!Thread.currentThread().isInterrupted() && inThread.isAlive() && outThread.isAlive()) {
+        while (!closeTunnel && inThread.isAlive() && outThread.isAlive()) {
             if (ayiya.isValidPacketReceived()) {
                 // major status update, just once per session
                 vpnStatus.setTunnelProvedWorking(true);
@@ -554,7 +576,7 @@ class VpnThread extends Thread {
             // in case of network changes, this socket breaks immediately, so
             // inThread crashes on external network changes even if no transfer
             // is active.
-            inThread.join(tunnelSpecification.getHeartbeatInterval()*1000/2);
+            inThread.join(tunnelSpecification.getHeartbeatInterval() * 1000 / 2);
             if (inThread.isAlive()) {
                 try {
                     ayiya.beat();
@@ -578,7 +600,14 @@ class VpnThread extends Thread {
                         timeoutSuspected = true;
                     else if (new Date().getTime() - tunnelSpecification.getCreationDate().getTime()
                             > TIC_RECHECK_BLOCKED_MILLISECONDS) {
-                        if (readTunnelFromTIC()) {
+                        boolean tunnelChanged = false;
+                        try {
+                            tunnelChanged = readTunnelFromTIC();
+                        } catch (IOException ioe) {
+                            Log.i (VpnThread.TAG, "TIC and Ayiya both disturbed - assuming network problems", ioe);
+                            continue;
+                        }
+                        if (tunnelChanged) {
                             // TIC had new data - signal an IO problem to rebuild tunnel
                             throw new IOException("Packet receiving had timeout and TIC information changed");
                         } else {
@@ -878,11 +907,21 @@ class VpnThread extends Thread {
         private long packetCount = 0l;
         private InputStream in;
         private OutputStream out;
+        private boolean stopCopy;
 
         public CopyThread(InputStream in, OutputStream out) {
             super();
             this.in = in;
             this.out = out;
+        }
+
+        /**
+         * Signal that this thread should end now.
+         */
+        public void stopCopy() {
+            stopCopy = true;
+            if (this.isAlive())
+                this.interrupt();
         }
 
         @Override
@@ -892,9 +931,10 @@ class VpnThread extends Thread {
                 // Allocate the buffer for a single packet.
                 byte[] packet = new byte[32767];
                 int recvZero = 0;
+                stopCopy = false;
 
                 // @TODO there *must* be a suitable utility class for that...?
-                while (!Thread.currentThread().isInterrupted()) {
+                while (!stopCopy) {
                     int len = in.read (packet);
                     if (len > 0) {
                         out.write(packet, 0, len);
@@ -913,10 +953,10 @@ class VpnThread extends Thread {
                     }
                 }
             } catch (Exception e) {
-                if (e instanceof InterruptedException || e instanceof SocketException) {
-                    Log.i(TAG, "Copy thread interrupted, will end gracefully");
+                if (e instanceof InterruptedException || e instanceof SocketException || e instanceof IOException) {
+                    Log.i(TAG, "Copy thread " + getName() + " ran into expected Exception, will end gracefully");
                 } else {
-                    Log.e(TAG, "Copy thread got exception", e);
+                    Log.e(TAG, "Copy thread " + getName() + " got exception", e);
                     notifyUserOfError(R.string.copythreadexception, e);
                 }
             } finally {

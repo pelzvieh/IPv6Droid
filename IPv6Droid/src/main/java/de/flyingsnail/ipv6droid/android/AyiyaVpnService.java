@@ -90,8 +90,8 @@ public class AyiyaVpnService extends VpnService {
     @Override
     public void onDestroy() {
         Log.i(TAG, "Prepare destruction of VpnService");
-        if (thread != null && !thread.isInterrupted()) {
-            thread.interrupt();
+        if (thread != null && thread.isAlive()) {
+            thread.requestTunnelClose();
         }
         unregisterGlobalConnectivityReceiver();
         unregisterLocalCommandReceiver();
@@ -100,8 +100,8 @@ public class AyiyaVpnService extends VpnService {
     @Override
     public void onRevoke() {
         Log.i(TAG, "VPN usage rights are being revoked - closing tunnel thread");
-        if (thread != null && !thread.isInterrupted()) {
-            thread.interrupt();
+        if (thread != null && thread.isAlive()) {
+            thread.requestTunnelClose();
         }
         super.onRevoke();
     }
@@ -169,7 +169,7 @@ public class AyiyaVpnService extends VpnService {
             String action = intent.getAction();
             if (action.equals(MainActivity.BC_STOP)) {
                 Log.i(TAG, "Received explicit stop brodcast, will stop VPN Tread");
-                thread.interrupt();
+                thread.requestTunnelClose();
             } else if (action.equals(MainActivity.BC_STATUS_UPDATE)) {
                 Log.i(TAG, "Someone requested a status report, will have one send");
                 thread.reportStatus();
