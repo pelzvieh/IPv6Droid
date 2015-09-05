@@ -231,8 +231,10 @@ class VpnThread extends Thread {
 
             // build vpn device on local machine
             VpnService.Builder builder = ayiyaVpnService.createBuilder();
-            configureBuilderFromTunnelSpecification(builder, tunnelSpecification);
-            refreshTunnelLoop(builder);
+            configureBuilderFromTunnelSpecification(builder, tunnelSpecification, false);
+            VpnService.Builder builderNotRouted = ayiyaVpnService.createBuilder();
+            configureBuilderFromTunnelSpecification(builderNotRouted, tunnelSpecification, true);
+            refreshTunnelLoop(builder, builderNotRouted);
 
             // important status change
             vpnStatus.setProgressPerCent(0);
@@ -309,10 +311,11 @@ class VpnThread extends Thread {
      * Run the tunnel as long as it should be running. This method ends via one of its declared
      * exceptions, or in case that this thread is interrupted.
      * @param builder the VpnService.Builder that is used to re-crated the VPN Service
+     * @param builderNotRouted
      * @throws ConnectionFailedException in case that the current configuration seems permanently defective.
 
      */
-    private void refreshTunnelLoop(VpnService.Builder builder) throws ConnectionFailedException {
+    private void refreshTunnelLoop(VpnService.Builder builder, VpnService.Builder builderNotRouted) throws ConnectionFailedException {
         // Prepare the tunnel to PoP
         Ayiya ayiya = new Ayiya (tunnelSpecification);
         closeTunnel = false;
@@ -322,8 +325,14 @@ class VpnThread extends Thread {
                 if (Thread.currentThread().interrupted())
                     throw new InterruptedException("Tunnel loop has interrupted status set");
                 Log.i(TAG, "Building new local TUN and new AYIYA object");
-                // setup local tun and routing
-                vpnFD = builder.establish();
+
+                // check current routing information for existing IPv6 default route
+                // then setup local tun and routing
+                if (ipv6DefaultExists()) {
+                    vpnFD = builderNotRouted.establish();
+                } else {
+                    vpnFD = builder.establish();
+                }
 
                 vpnStatus.setActivity(R.string.vpnservice_activity_localnet);
                 vpnStatus.setProgressPerCent(50);
@@ -423,6 +432,21 @@ class VpnThread extends Thread {
             }
         }
         Log.i(TAG, "Tunnel thread received interrupt, closing tunnel");
+    }
+
+    /**
+     * Check for existing IPv6 connectivity. We're using the routing info of the operating system.
+     * @return true if there's existing IPv6 connectivity
+     */
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    private boolean ipv6DefaultExists() {
+        if (Build.VERSION.SDK_INT >= 21) {
+            for (RouteInfo routeInfo : routeInfos) {
+                if (routeInfo.isDefaultRoute() && routeInfo.getGateway() instanceof Inet6Address)
+                    return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -742,34 +766,37 @@ class VpnThread extends Thread {
      * @param tunnelSpecification the TicTunnel specification of the tunnel to set up.
      */
     private void configureBuilderFromTunnelSpecification(VpnService.Builder builder,
-                                                   TicTunnel tunnelSpecification) {
+                                                         TicTunnel tunnelSpecification,
+                                                         boolean suppressRouting) {
         builder.setMtu(tunnelSpecification.getMtu());
         builder.setSession(tunnelSpecification.getPopName());
         builder.addAddress(tunnelSpecification.getIpv6Endpoint(), tunnelSpecification.getPrefixLength());
-        try {
-            if (routingConfiguration.isSetDefaultRoute())
-                builder.addRoute(Inet6Address.getByName("::"), 0);
-            else {
-                String routeDefinition = routingConfiguration.getSpecificRoute();
-                StringTokenizer tok = new StringTokenizer(routeDefinition, "/");
-                if (!tok.hasMoreTokens())
-                    throw new UnknownHostException("Empty string as route");
-                Inet6Address address = (Inet6Address) Inet6Address.getByName(tok.nextToken());
-                int prefixLen = 128;
-                if (tok.hasMoreTokens())
-                    prefixLen = Integer.parseInt(tok.nextToken());
-                builder.addRoute(address, prefixLen);
+        if (!suppressRouting) {
+            try {
+                if (routingConfiguration.isSetDefaultRoute())
+                    builder.addRoute(Inet6Address.getByName("::"), 0);
+                else {
+                    String routeDefinition = routingConfiguration.getSpecificRoute();
+                    StringTokenizer tok = new StringTokenizer(routeDefinition, "/");
+                    if (!tok.hasMoreTokens())
+                        throw new UnknownHostException("Empty string as route");
+                    Inet6Address address = (Inet6Address) Inet6Address.getByName(tok.nextToken());
+                    int prefixLen = 128;
+                    if (tok.hasMoreTokens())
+                        prefixLen = Integer.parseInt(tok.nextToken());
+                    builder.addRoute(address, prefixLen);
+                }
+            } catch (UnknownHostException e) {
+                Log.e(TAG, "Could not add requested IPv6 route to builder", e);
+                notifyUserOfError(R.string.vpnservice_route_not_added, e);
+                postToast(ayiyaVpnService.getApplicationContext(), R.string.vpnservice_route_not_added, Toast.LENGTH_SHORT);
             }
-        } catch (UnknownHostException e) {
-            Log.e(TAG, "Could not add requested IPv6 route to builder", e);
-            notifyUserOfError(R.string.vpnservice_route_not_added, e);
-            postToast(ayiyaVpnService.getApplicationContext(), R.string.vpnservice_route_not_added, Toast.LENGTH_SHORT);
-        }
 
-        // add Google DNS server, if configured so
-        if (routingConfiguration.isSetNameServers()) {
-            for (Inet6Address dns : GOOGLE_DNS) {
-                builder.addDnsServer(dns);
+            // add Google DNS server, if configured so
+            if (routingConfiguration.isSetNameServers()) {
+                for (Inet6Address dns : GOOGLE_DNS) {
+                    builder.addDnsServer(dns);
+                }
             }
         }
 
