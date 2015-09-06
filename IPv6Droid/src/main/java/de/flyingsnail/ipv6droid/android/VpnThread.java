@@ -182,6 +182,11 @@ class VpnThread extends Thread {
     private boolean closeTunnel;
 
     /**
+     * A flag that is set if routes are set to the VPN tunnel.
+     */
+    private boolean tunnelRouted;
+
+    /**
      * The constructor setting all required fields.
      * @param ayiyaVpnService the Service that created this thread
      * @param cachedTunnel the previously working tunnel spec, or null if none
@@ -310,10 +315,9 @@ class VpnThread extends Thread {
     /**
      * Run the tunnel as long as it should be running. This method ends via one of its declared
      * exceptions, or in case that this thread is interrupted.
-     * @param builder the VpnService.Builder that is used to re-crated the VPN Service
-     * @param builderNotRouted
+     * @param builder the VpnService.Builder that is used to re-created the VPN Service in environments w/o IPv6
+     * @param builderNotRouted the VpnService.Builder that is used in environments with IPv6
      * @throws ConnectionFailedException in case that the current configuration seems permanently defective.
-
      */
     private void refreshTunnelLoop(VpnService.Builder builder, VpnService.Builder builderNotRouted) throws ConnectionFailedException {
         // Prepare the tunnel to PoP
@@ -329,9 +333,13 @@ class VpnThread extends Thread {
                 // check current routing information for existing IPv6 default route
                 // then setup local tun and routing
                 if (ipv6DefaultExists()) {
+                    Log.i(TAG, "Detected existing IPv6, not setting routes to tunnel");
                     vpnFD = builderNotRouted.establish();
+                    tunnelRouted = false;
                 } else {
+                    Log.i(TAG, "No IPv6 detected, setting routes to tunnel");
                     vpnFD = builder.establish();
+                    tunnelRouted = true;
                 }
 
                 vpnStatus.setActivity(R.string.vpnservice_activity_localnet);
@@ -441,9 +449,16 @@ class VpnThread extends Thread {
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private boolean ipv6DefaultExists() {
         if (Build.VERSION.SDK_INT >= 21) {
+            Log.d(TAG, "Checking if we have an IPv6 default route on current network");
+
             for (RouteInfo routeInfo : routeInfos) {
-                if (routeInfo.isDefaultRoute() && routeInfo.getGateway() instanceof Inet6Address)
+                if (Log.isLoggable(TAG, Log.DEBUG))
+                    Log.d(TAG, "Checking if route is an IPv6 default route: " + routeInfo);
+                // @todo strictly speaking, we shouldn't check for default route, but for the configured route of the tunnel
+                if (routeInfo.isDefaultRoute() && routeInfo.getGateway() instanceof Inet6Address) {
+                    Log.i(TAG, "Identified a valid IPv6 default route existing: " + routeInfo);
                     return true;
+                }
             }
         }
         return false;
@@ -457,6 +472,7 @@ class VpnThread extends Thread {
      */
     private boolean checkRouting() {
         try {
+            Log.d(TAG, "about to check routing configuration after Builder.establish");
             Process routeChecker = Runtime.getRuntime().exec(
                     new String[]{"/system/bin/ip", "-f", "inet6", "route", "show", "default"});
             BufferedReader reader = new BufferedReader (
@@ -472,19 +488,24 @@ class VpnThread extends Thread {
             } catch (InterruptedException e) {
                 // we got interrupted, so we kill our process
                 routeChecker.destroy();
+                Log.i(TAG, "route checker command interrupted", e);
             }
             int exitValue = 0;
             try {
                 exitValue = routeChecker.exitValue();
             } catch (IllegalStateException ise) {
                 // command still running. Hmmm.
+                Log.wtf(TAG, "routeChecker still running after waitFor/destroy", ise);
             }
             if (output == null || exitValue != 0) {
                 Log.e(TAG, "error checking route: " + errors);
                 return false; // default route is not set on ipv6
-            } else
+            } else {
+                Log.i(TAG, "Routing checked and found to be OK");
                 return true;
+            }
         } catch (IOException e) {
+            Log.e(TAG, "Routing could not be checked", e);
             return false; // we cannot even check :-(
         }
     }
@@ -494,6 +515,7 @@ class VpnThread extends Thread {
      */
     private void fixRouting() {
         try {
+            Log.d(TAG, "Starting attempt to fix routing");
             Process routeAdder = Runtime.getRuntime().exec(
                     new String[]{
                             "/system/xbin/su", "-c",
@@ -512,6 +534,7 @@ class VpnThread extends Thread {
                 Log.e(TAG, "Command to set default route created error message: " + errors);
                 throw new IllegalStateException("Error adding default route");
             }
+            Log.i(TAG, "Added IPv6 default route to dev tun0");
 
             Process filterCleaner = Runtime.getRuntime().exec(
                     new String[]{
@@ -899,7 +922,8 @@ class VpnThread extends Thread {
                 tunnelSpecification.getIpv6Endpoint(),
                 tunnelSpecification.getMtu(),
                 routeInfos, // Routing table of the interface
-                new ArrayList<InetAddress>(0)
+                new ArrayList<InetAddress>(0),
+                tunnelRouted
         );
         return stats;
     }

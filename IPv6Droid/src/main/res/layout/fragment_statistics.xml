@@ -179,7 +179,6 @@
             android:text="-"
             android:textIsSelectable="true"
             android:layout_gravity="right" />
-
     </TableRow>
     <TableRow>
         <TextView
@@ -193,6 +192,18 @@
             android:id="@+id/statistics_timestamp"
             android:text="-"
             android:layout_gravity="right" />
+    </TableRow>
+    <TableRow>
+        <TextView
+            android:layout_column="0"
+            android:text="@string/statistics_isrouted"
+            android:layout_gravity="left" />
 
+        <TextView
+            android:layout_column="1"
+            android:layout_span="1"
+            android:id="@+id/statistics_isrouted"
+            android:text="-"
+            android:layout_gravity="right" />
     </TableRow>
 </TableLayout>

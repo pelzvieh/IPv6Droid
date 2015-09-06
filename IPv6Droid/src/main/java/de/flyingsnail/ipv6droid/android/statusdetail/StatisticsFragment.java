@@ -67,6 +67,7 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
     private TextView myIPv6View;
     private TextView routesView;
     private TextView timestampView;
+    private TextView isRoutedView;
     private ScheduledThreadPoolExecutor executor;
     private DateFormat timestampFormatter;
     private Future<?> updaterFuture;
@@ -140,6 +141,7 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
         myIPv4View = (TextView)myView.findViewById(R.id.statistics_myipv4);
         myIPv6View = (TextView)myView.findViewById(R.id.statistics_myipv6);
         routesView = (TextView)myView.findViewById(R.id.statistics_routes);
+        isRoutedView = (TextView)myView.findViewById(R.id.statistics_isrouted);
         timestampView = (TextView)myView.findViewById(R.id.statistics_timestamp);
         Log.i(TAG, "Successfully created view");
         return myView;
@@ -254,6 +256,10 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
                 updateTextView(myIPv6View, stats.getMyIPv6());
                 updateTextView(routesView, stats.getRouting());
                 updateTextView(timestampView, timestampFormatter.format(stats.getTimestamp()));
+                updateTextView(isRoutedView, getString(
+                        stats.isTunnelRouted() ?
+                                R.string.statistics_isrouted_yes :
+                                R.string.statistics_isrouted_no));
             }
         }
 

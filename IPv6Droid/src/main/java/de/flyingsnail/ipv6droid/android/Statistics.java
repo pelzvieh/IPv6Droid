@@ -44,8 +44,9 @@ public class Statistics {
     final List<RouteInfo> routing;
     final List<InetAddress> dnsSetting;
     final private Date timestamp;
+    final private boolean tunnelRouted;
 
-    protected Statistics(long bytesTransmitted, long bytesReceived, long packetsTransmitted, long packetsReceived, Inet4Address brokerIPv4, Inet4Address myIPv4, Inet6Address brokerIPv6, Inet6Address myIPv6, int mtu, List<RouteInfo> routing, List<InetAddress> dnsSetting) {
+    protected Statistics(long bytesTransmitted, long bytesReceived, long packetsTransmitted, long packetsReceived, Inet4Address brokerIPv4, Inet4Address myIPv4, Inet6Address brokerIPv6, Inet6Address myIPv6, int mtu, List<RouteInfo> routing, List<InetAddress> dnsSetting, boolean tunnelRouted) {
         this.bytesTransmitted = bytesTransmitted;
         this.bytesReceived = bytesReceived;
         this.packetsTransmitted = packetsTransmitted;
@@ -57,6 +58,7 @@ public class Statistics {
         this.mtu = mtu;
         this.routing = routing;
         this.dnsSetting = dnsSetting;
+        this.tunnelRouted = tunnelRouted;
         timestamp = new Date();
     }
 
@@ -106,20 +108,8 @@ public class Statistics {
 
     public Date getTimestamp() { return timestamp; }
 
-    @Override
-    public int hashCode() {
-        int result = (int) (bytesTransmitted ^ (bytesTransmitted >>> 32));
-        result = 31 * result + (int) (bytesReceived ^ (bytesReceived >>> 32));
-        result = 31 * result + (int) (packetsTransmitted ^ (packetsTransmitted >>> 32));
-        result = 31 * result + (int) (packetsReceived ^ (packetsReceived >>> 32));
-        result = 31 * result + (brokerIPv4 != null ? brokerIPv4.hashCode() : 0);
-        result = 31 * result + (myIPv4 != null ? myIPv4.hashCode() : 0);
-        result = 31 * result + (brokerIPv6 != null ? brokerIPv6.hashCode() : 0);
-        result = 31 * result + (myIPv6 != null ? myIPv6.hashCode() : 0);
-        result = 31 * result + mtu;
-        result = 31 * result + (routing != null ? routing.hashCode() : 0);
-        result = 31 * result + (dnsSetting != null ? dnsSetting.hashCode() : 0);
-        return result;
+    public boolean isTunnelRouted() {
+        return tunnelRouted;
     }
 
     @Override
@@ -134,14 +124,30 @@ public class Statistics {
         if (packetsTransmitted != that.packetsTransmitted) return false;
         if (packetsReceived != that.packetsReceived) return false;
         if (mtu != that.mtu) return false;
-        if (brokerIPv4 != null ? !brokerIPv4.equals(that.brokerIPv4) : that.brokerIPv4 != null)
-            return false;
-        if (myIPv4 != null ? !myIPv4.equals(that.myIPv4) : that.myIPv4 != null) return false;
-        if (brokerIPv6 != null ? !brokerIPv6.equals(that.brokerIPv6) : that.brokerIPv6 != null)
-            return false;
-        if (myIPv6 != null ? !myIPv6.equals(that.myIPv6) : that.myIPv6 != null) return false;
+        if (tunnelRouted != that.tunnelRouted) return false;
+        if (!brokerIPv4.equals(that.brokerIPv4)) return false;
+        if (!myIPv4.equals(that.myIPv4)) return false;
+        if (!brokerIPv6.equals(that.brokerIPv6)) return false;
+        if (!myIPv6.equals(that.myIPv6)) return false;
         if (routing != null ? !routing.equals(that.routing) : that.routing != null) return false;
         return !(dnsSetting != null ? !dnsSetting.equals(that.dnsSetting) : that.dnsSetting != null);
 
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (int) (bytesTransmitted ^ (bytesTransmitted >>> 32));
+        result = 31 * result + (int) (bytesReceived ^ (bytesReceived >>> 32));
+        result = 31 * result + (int) (packetsTransmitted ^ (packetsTransmitted >>> 32));
+        result = 31 * result + (int) (packetsReceived ^ (packetsReceived >>> 32));
+        result = 31 * result + brokerIPv4.hashCode();
+        result = 31 * result + myIPv4.hashCode();
+        result = 31 * result + brokerIPv6.hashCode();
+        result = 31 * result + myIPv6.hashCode();
+        result = 31 * result + mtu;
+        result = 31 * result + (routing != null ? routing.hashCode() : 0);
+        result = 31 * result + (dnsSetting != null ? dnsSetting.hashCode() : 0);
+        result = 31 * result + (tunnelRouted ? 1 : 0);
+        return result;
     }
 }

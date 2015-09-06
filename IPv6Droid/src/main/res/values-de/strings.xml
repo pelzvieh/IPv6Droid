@@ -52,6 +52,8 @@
     <string name="title_activity_statistics">Statistik</string>
     <string name="statistics_timestamp">Stand von</string>
     <string name="copythreadexception">Kopierablauf ist auf einen Fehler gelaufen</string>
-    <string name="unexpected_runtime_exception">Unexpected problem, tunnel aborting</string>
-
+    <string name="unexpected_runtime_exception">Unerwartetes Problem, Tunnel bricht ab</string>
+    <string name="statistics_isrouted">Tunnel geroutet</string>
+    <string name="statistics_isrouted_yes">ja</string>
+    <string name="statistics_isrouted_no">nein</string>
 </resources>
