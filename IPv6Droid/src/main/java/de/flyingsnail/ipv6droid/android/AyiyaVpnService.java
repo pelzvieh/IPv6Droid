@@ -20,6 +20,8 @@
 
 package de.flyingsnail.ipv6droid.android;
 
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -31,6 +33,7 @@ import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
+import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
@@ -59,8 +62,30 @@ public class AyiyaVpnService extends VpnService {
     private final ConnectivityReceiver connectivityReceiver = new ConnectivityReceiver();
     private final CommandReceiver commandReceiver = new CommandReceiver();
 
+    /**
+     * A pre-constructed notification builder for building user notifications.
+     */
+    private NotificationCompat.Builder notificationBuilder;
+
+    /**
+     * We're only ever displaying one notification, this is its ID.
+     */
+    private final int notificationID = 0xdeadbeef;
+
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        this.notificationBuilder = new NotificationCompat.Builder(getApplicationContext())
+                .setSmallIcon(R.drawable.ic_launcher);
+
+    }
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        // instantiate a notification builder
+
+
         Log.d(TAG, "received start command");
         if (thread == null || !thread.isAlive()) {
             // Build the configuration object from the saved shared preferences.
@@ -158,6 +183,38 @@ public class AyiyaVpnService extends VpnService {
             return new StatisticsBinder();
         } else
             return super.onBind(intent);
+    }
+
+    /**
+     * Generate a user notification with the supplied expection's cause as detail message.
+     * @param resourceId the string resource supplying the notification title
+     * @param e the Exception the cause of which is to be displayed
+     */
+    protected void notifyUserOfError(int resourceId, Throwable e) {
+        notificationBuilder.setContentTitle(getString(resourceId));
+        notificationBuilder.setContentText(
+                String.valueOf(e.getLocalizedMessage()) + " ("+e.getClass()+")");
+
+        Intent settingsIntent = new Intent(getApplicationContext(), SettingsActivity.class);
+        // the following code is adopted directly from developer.android.com
+        PendingIntent resultPendingIntent = PendingIntent.getActivity(
+                getApplicationContext(),
+                0,
+                settingsIntent,
+                PendingIntent.FLAG_ONE_SHOT);
+        notificationBuilder.setContentIntent(resultPendingIntent);
+        notificationBuilder.setAutoCancel(true);
+
+        // provide the expanded layout
+        NotificationCompat.BigTextStyle bigTextStyle = new NotificationCompat.BigTextStyle();
+        bigTextStyle.setBigContentTitle(getString(resourceId) + ": " + e.getClass());
+        bigTextStyle.setSummaryText(e.getLocalizedMessage());
+        notificationBuilder.setStyle(bigTextStyle);
+
+        NotificationManager notificationManager =
+                (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        // mId allows you to update the notification later on.
+        notificationManager.notify(notificationID, notificationBuilder.build());
     }
 
     /** Inner class to handle stop requests */

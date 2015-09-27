@@ -100,6 +100,7 @@ public class Ayiya {
     private int invalidPacketCounter = 0;
 
     private Date lastPacketReceivedTime = new Date();
+    private Date lastPacketSentTime = new Date();
 
     /**
      * Yield the time when the last packet was <b>received</b>. This gives an indication if the
@@ -108,6 +109,15 @@ public class Ayiya {
      */
     public Date getLastPacketReceivedTime() {
         return lastPacketReceivedTime;
+    }
+
+    /**
+     * Yield the time when the last packet was <b>sent</b>. This gives an indication if we should
+     * send an heartbeat packet.
+     * @return a Date denoting the time of last packet sent.
+     */
+    public Date getLastPacketSentTime() {
+        return lastPacketSentTime;
     }
 
 
@@ -247,7 +257,7 @@ public class Ayiya {
      */
     public void beat() throws IOException, TunnelBrokenException {
         if (socket == null)
-            throw new IllegalStateException("beat() called on unconnected Ayiya");
+            throw new IOException("beat() called on unconnected Ayiya");
         if (!socket.isConnected())
             throw new TunnelBrokenException("Socket to PoP is not connected", null);
         byte[] ayiyaPacket;
@@ -259,6 +269,7 @@ public class Ayiya {
         }
         DatagramPacket dgPacket = new DatagramPacket(ayiyaPacket, ayiyaPacket.length, socket.getRemoteSocketAddress());
         socket.send(dgPacket);
+        lastPacketSentTime = new Date();
     }
 
     /**
@@ -468,6 +479,7 @@ public class Ayiya {
         assert(checkValidity(ayiyaPacket, 0, ayiyaPacket.length));
         DatagramPacket dgPacket = new DatagramPacket(ayiyaPacket, ayiyaPacket.length, socket.getRemoteSocketAddress());
         socket.send(dgPacket);
+        lastPacketSentTime = new Date();
     }
 
     private class AyiyaInputStream extends InputStream {

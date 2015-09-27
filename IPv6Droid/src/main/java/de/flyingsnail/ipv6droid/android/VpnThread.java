@@ -21,7 +21,6 @@
 package de.flyingsnail.ipv6droid.android;
 
 import android.annotation.TargetApi;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -30,11 +29,11 @@ import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkInfo;
 import android.net.RouteInfo;
+import android.net.TrafficStats;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.Handler;
 import android.os.ParcelFileDescriptor;
-import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.system.OsConstants;
 import android.util.Log;
@@ -51,7 +50,6 @@ import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
-import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -123,16 +121,6 @@ class VpnThread extends Thread {
     private final int startId;
 
     /**
-     * A pre-constructed notification builder for building user notifications.
-     */
-    private final NotificationCompat.Builder notificationBuilder;
-
-    /**
-     * We're only ever displaying one notification, this is its ID.
-     */
-    private final int notificationID = 0xdeadbeef;
-
-    /**
      * The service that created this thread.
      */
     private AyiyaVpnService ayiyaVpnService;
@@ -187,6 +175,21 @@ class VpnThread extends Thread {
     private boolean tunnelRouted;
 
     /**
+     * An int used to tag socket traffic initiated from the parent thread
+     */
+    private final int TAG_PARENT_THREAD=0x01;
+    /**
+     * An int used to tag socket traffic initiated from the copy thread PoP->Local
+     */
+    private final int TAG_INCOMING_THREAD=0x02;
+    /**
+     * An int used to tag socket traffic initiated from the copy thread Local->PoP
+     */
+    private final int TAG_OUTGOING_THREAD=0x03;
+    private ConnectivityManager connectivityManager;
+    private Context applicationContext;
+
+    /**
      * The constructor setting all required fields.
      * @param ayiyaVpnService the Service that created this thread
      * @param cachedTunnel the previously working tunnel spec, or null if none
@@ -208,8 +211,11 @@ class VpnThread extends Thread {
         this.routingConfiguration = (RoutingConfiguration)routingConfiguration.clone();
         this.tunnelSpecification = cachedTunnel;
         this.startId = startId;
-        this.notificationBuilder = new NotificationCompat.Builder(ayiyaVpnService.getApplicationContext())
-            .setSmallIcon(R.drawable.ic_launcher);
+        // extract the application context
+        this.applicationContext = ayiyaVpnService.getApplicationContext();
+        // resolve system service "ConnectivityManager"
+        connectivityManager = (ConnectivityManager)applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+        // initialise routing info
         this.routeInfos = getNetworkDetails();
     }
 
@@ -217,7 +223,8 @@ class VpnThread extends Thread {
     @Override
     public void run() {
         try {
-            handler = new Handler(ayiyaVpnService.getApplicationContext().getMainLooper());
+            TrafficStats.setThreadStatsTag(TAG_PARENT_THREAD);
+            handler = new Handler(applicationContext.getMainLooper());
 
             vpnStatus.setProgressPerCent(5);
             vpnStatus.setStatus(VpnStatusReport.Status.Connecting);
@@ -248,56 +255,24 @@ class VpnThread extends Thread {
             reportStatus();
         } catch (AuthenticationFailedException e) {
             Log.e(TAG, "Authentication step failed", e);
-            notifyUserOfError(R.string.vpnservice_authentication_failed, e);
+            ayiyaVpnService.notifyUserOfError(R.string.vpnservice_authentication_failed, e);
         } catch (ConnectionFailedException e) {
             Log.e(TAG, "This configuration will not work on this device", e);
-            notifyUserOfError(R.string.vpnservice_invalid_configuration, e);
+            ayiyaVpnService.notifyUserOfError(R.string.vpnservice_invalid_configuration, e);
         } catch (IOException e) {
             Log.e(TAG, "IOException caught before reading in tunnel data", e);
-            notifyUserOfError(R.string.vpnservice_io_during_startup, e);
+            ayiyaVpnService.notifyUserOfError(R.string.vpnservice_io_during_startup, e);
         } catch (InterruptedException e) {
             Log.i(TAG, "VpnThread interrupted outside of control loops", e);
         } catch (Throwable t) {
             Log.e(TAG, "Failed to run tunnel", t);
             // if this thread fails, the service per se is out of order
-            notifyUserOfError(R.string.vpnservice_unexpected_problem, t);
+            ayiyaVpnService.notifyUserOfError(R.string.vpnservice_unexpected_problem, t);
         }
         // if this thread fails, the service per se is out of order
         ayiyaVpnService.stopSelf(startId);
         vpnStatus.clear(); // back at zero
         reportStatus();
-    }
-
-    /**
-     * Generate a user notification with the supplied expection's cause as detail message.
-     * @param resourceId the string resource supplying the notification title
-     * @param e the Exception the cause of which is to be displayed
-     */
-    private void notifyUserOfError(int resourceId, Throwable e) {
-        notificationBuilder.setContentTitle(ayiyaVpnService.getString(resourceId));
-        notificationBuilder.setContentText(
-                String.valueOf(e.getLocalizedMessage()) + " ("+e.getClass()+")");
-
-        Intent settingsIntent = new Intent(ayiyaVpnService.getApplicationContext(), SettingsActivity.class);
-        // the following code is adopted directly from developer.android.com
-        PendingIntent resultPendingIntent = PendingIntent.getActivity(
-                ayiyaVpnService.getApplicationContext(),
-                0,
-                settingsIntent,
-                PendingIntent.FLAG_ONE_SHOT);
-        notificationBuilder.setContentIntent(resultPendingIntent);
-        notificationBuilder.setAutoCancel(true);
-
-        // provide the expanded layout
-        NotificationCompat.BigTextStyle bigTextStyle = new NotificationCompat.BigTextStyle();
-        bigTextStyle.setBigContentTitle(ayiyaVpnService.getString(resourceId) + ": " + e.getClass());
-        bigTextStyle.setSummaryText(e.getLocalizedMessage());
-        notificationBuilder.setStyle(bigTextStyle);
-
-        NotificationManager notificationManager =
-                (NotificationManager) ayiyaVpnService.getSystemService(Context.NOTIFICATION_SERVICE);
-        // mId allows you to update the notification later on.
-        notificationManager.notify(notificationID, notificationBuilder.build());
     }
 
 
@@ -354,15 +329,15 @@ class VpnThread extends Thread {
                 // due to issue #... which doesn't appear to get fixed upstream, check local health
                 if (routingConfiguration.isTryRoutingWorkaround() && !checkRouting()) {
                     Log.e(TAG, "Routing broken on this device, no default route is set for IPv6");
-                    postToast(ayiyaVpnService.getApplicationContext(), R.string.routingbroken, Toast.LENGTH_LONG);
+                    postToast(applicationContext, R.string.routingbroken, Toast.LENGTH_LONG);
                     try {
                         fixRouting();
                         if (checkRouting()) {
                             Log.i(TAG, "VPNService routing was broken on this device, but could be fixed by the workaround");
-                            postToast(ayiyaVpnService.getApplicationContext(), R.string.routingfixed, Toast.LENGTH_LONG);
+                            postToast(applicationContext, R.string.routingfixed, Toast.LENGTH_LONG);
                         }
                     } catch (RuntimeException re) {
-                        notifyUserOfError(R.string.routingbroken, re);
+                        ayiyaVpnService.notifyUserOfError(R.string.routingbroken, re);
                         Log.e(TAG, "Error fixing routing", re);
                     }
                 }
@@ -388,12 +363,12 @@ class VpnThread extends Thread {
                 }
 
                 // start the copying threads
-                outThread = startStreamCopy (localIn, popOut, "AYIYA from local to POP");
-                inThread = startStreamCopy (popIn, localOut, "AYIYA from POP to local");
+                outThread = new CopyThread (localIn, popOut, ayiyaVpnService, "AYIYA from local to POP", TAG_OUTGOING_THREAD, 0);
+                inThread = new CopyThread (popIn, localOut, ayiyaVpnService, "AYIYA from POP to local", TAG_INCOMING_THREAD, 0);
 
                 // now do a ping on IPv6 level. This should involve receiving one packet
                 if (tunnelSpecification.getIpv6Pop().isReachable(10000)) {
-                    postToast(ayiyaVpnService.getApplicationContext(), R.string.vpnservice_tunnel_up, Toast.LENGTH_SHORT);
+                    postToast(applicationContext, R.string.vpnservice_tunnel_up, Toast.LENGTH_SHORT);
                     /* by laws of logic, a successful ping on IPv6 *must* already have set the flag
                        validPacketReceived in the Ayiya instance.
                      */
@@ -421,7 +396,7 @@ class VpnThread extends Thread {
             } catch (InterruptedException e) {
                 Log.i(VpnThread.TAG, "refresh tunnel loop received interrupt", e);
             } catch (RuntimeException e) {
-                notifyUserOfError(R.string.unexpected_runtime_exception, e);
+                ayiyaVpnService.notifyUserOfError(R.string.unexpected_runtime_exception, e);
                 throw e;
             } finally {
                 localIp = null;
@@ -436,7 +411,7 @@ class VpnThread extends Thread {
                 } catch (Exception e) {
                     Log.e(TAG, "Cannot close local socket", e);
                 }
-                postToast(ayiyaVpnService.getApplicationContext(), R.string.vpnservice_tunnel_down, Toast.LENGTH_SHORT);
+                postToast(applicationContext, R.string.vpnservice_tunnel_down, Toast.LENGTH_SHORT);
             }
         }
         Log.i(TAG, "Tunnel thread received interrupt, closing tunnel");
@@ -452,8 +427,8 @@ class VpnThread extends Thread {
             Log.d(TAG, "Checking if we have an IPv6 default route on current network");
 
             for (RouteInfo routeInfo : routeInfos) {
-                if (Log.isLoggable(TAG, Log.DEBUG))
-                    Log.d(TAG, "Checking if route is an IPv6 default route: " + routeInfo);
+                // isLoggable would be useful here, but checks for an (outdated?) convention of TAG shorter than 23 chars
+                Log.d(TAG, "Checking if route is an IPv6 default route: " + routeInfo);
                 // @todo strictly speaking, we shouldn't check for default route, but for the configured route of the tunnel
                 if (routeInfo.isDefaultRoute() && routeInfo.getGateway() instanceof Inet6Address) {
                     Log.i(TAG, "Identified a valid IPv6 default route existing: " + routeInfo);
@@ -584,12 +559,25 @@ class VpnThread extends Thread {
     }
 
     private ConnectivityManager getConnectivityManager() {
-        return (ConnectivityManager)ayiyaVpnService.getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+        return connectivityManager;
     }
 
+    /**
+     * Check if we're on network
+     * @return true if we're online
+     */
     private boolean isDeviceConnected() {
         NetworkInfo ni = getConnectivityManager().getActiveNetworkInfo();
         return ni != null && ni.isConnected();
+    }
+
+    /**
+     * Check if we're on mobile network
+     * @return true if we're on a mobile network currently
+     */
+    private boolean isNetworkMobile() {
+        NetworkInfo ni = getConnectivityManager().getActiveNetworkInfo();
+        return ni != null && ni.getType() == ConnectivityManager.TYPE_MOBILE;
     }
 
     /**
@@ -608,6 +596,12 @@ class VpnThread extends Thread {
      */
     private void monitoredHeartbeatLoop(Ayiya ayiya) throws InterruptedException, IOException, ConnectionFailedException {
         boolean timeoutSuspected = false;
+        long lastPacketDelta = 0l;
+        long heartbeatInterval = tunnelSpecification.getHeartbeatInterval() * 1000;
+        if (heartbeatInterval < 300000l && isNetworkMobile()) {
+            Log.i(TAG, "Lifting heartbeat interval to 300 secs");
+            heartbeatInterval = 300000l;
+        }
         while (!closeTunnel && inThread.isAlive() && outThread.isAlive()) {
             if (ayiya.isValidPacketReceived()) {
                 // major status update, just once per session
@@ -618,15 +612,18 @@ class VpnThread extends Thread {
 
             reportStatus();
 
-            // wait for half the heartbeat interval or until inThread dies.
+            // wait for the heartbeat interval or until inThread dies.
             // Note: the inThread is reading from the network socket to the POP
             // in case of network changes, this socket breaks immediately, so
             // inThread crashes on external network changes even if no transfer
             // is active.
-            inThread.join(tunnelSpecification.getHeartbeatInterval() * 1000 / 2);
-            if (inThread.isAlive()) {
+            inThread.join(heartbeatInterval - lastPacketDelta);
+            lastPacketDelta = new Date().getTime() - ayiya.getLastPacketSentTime().getTime();
+            if (inThread.isAlive() && outThread.isAlive() &&  lastPacketDelta >= heartbeatInterval - 100) {
                 try {
+                    Log.i(TAG, "Sending heartbeat");
                     ayiya.beat();
+                    lastPacketDelta = 0l;
                 } catch (TunnelBrokenException e) {
                     throw new IOException ("Ayiya object claims it is broken", e);
                 }
@@ -811,8 +808,8 @@ class VpnThread extends Thread {
                 }
             } catch (UnknownHostException e) {
                 Log.e(TAG, "Could not add requested IPv6 route to builder", e);
-                notifyUserOfError(R.string.vpnservice_route_not_added, e);
-                postToast(ayiyaVpnService.getApplicationContext(), R.string.vpnservice_route_not_added, Toast.LENGTH_SHORT);
+                ayiyaVpnService.notifyUserOfError(R.string.vpnservice_route_not_added, e);
+                postToast(applicationContext, R.string.vpnservice_route_not_added, Toast.LENGTH_SHORT);
             }
 
             // add Google DNS server, if configured so
@@ -828,24 +825,10 @@ class VpnThread extends Thread {
 
         // register an intent to call up main activity from system managed dialog.
         Intent configureIntent = new Intent("android.intent.action.MAIN");
-        configureIntent.setClass(ayiyaVpnService.getApplicationContext(), MainActivity.class);
+        configureIntent.setClass(applicationContext, MainActivity.class);
         configureIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        builder.setConfigureIntent(PendingIntent.getActivity(ayiyaVpnService.getApplicationContext(), 0, configureIntent, 0));
+        builder.setConfigureIntent(PendingIntent.getActivity(applicationContext, 0, configureIntent, 0));
         Log.i(TAG, "Builder is configured");
-    }
-
-    /**
-     * Create and run a thread that copies from in to out until interrupted.
-     * @param in The stream to copy from.
-     * @param out The stream to copy to.
-     * @param threadName a String giving the name of the Thread (as shown in some logs and debuggers)
-     * @return The thread that does so until interrupted.
-     */
-    private CopyThread startStreamCopy(final InputStream in, final OutputStream out, String threadName) {
-        CopyThread thread = new CopyThread (in, out);
-        thread.setName(threadName);
-        thread.start();
-        return thread;
     }
 
     /**
@@ -947,89 +930,6 @@ class VpnThread extends Thread {
      */
     public boolean isTunnelUp() {
         return (vpnStatus != null) && (vpnStatus.getStatus().equals(VpnStatusReport.Status.Connected));
-    }
-
-    /**
-     * A helper class that basically allows to run a thread that copies packets from an input
-     * to an output stream.
-     */
-    private class CopyThread extends Thread {
-        private long byteCount = 0l;
-        private long packetCount = 0l;
-        private InputStream in;
-        private OutputStream out;
-        private boolean stopCopy;
-
-        public CopyThread(InputStream in, OutputStream out) {
-            super();
-            this.in = in;
-            this.out = out;
-        }
-
-        /**
-         * Signal that this thread should end now.
-         */
-        public void stopCopy() {
-            stopCopy = true;
-            if (this.isAlive())
-                this.interrupt();
-        }
-
-        @Override
-        public void run() {
-            try {
-                Log.i(TAG, "Copy thread started");
-                // Allocate the buffer for a single packet.
-                byte[] packet = new byte[32767];
-                int recvZero = 0;
-                stopCopy = false;
-
-                // @TODO there *must* be a suitable utility class for that...?
-                while (!stopCopy) {
-                    int len = in.read (packet);
-                    if (len > 0) {
-                        out.write(packet, 0, len);
-                        // statistics
-                        byteCount += len;
-                        packetCount++;
-                        recvZero = 0;
-                    } else {
-                        recvZero++;
-                        if (recvZero == 10000) {
-                            notifyUserOfError(R.string.copythreadexception, new IllegalStateException(
-                                    Thread.currentThread().getName() + ": received 0 byte packages"
-                            ));
-                        }
-                        Thread.sleep(100 + ((recvZero < 10000) ? recvZero : 10000)); // wait minimum 0.1, maximum 10 seconds
-                    }
-                }
-            } catch (Exception e) {
-                if (e instanceof InterruptedException || e instanceof SocketException || e instanceof IOException) {
-                    Log.i(TAG, "Copy thread " + getName() + " ran into expected Exception, will end gracefully");
-                } else {
-                    Log.e(TAG, "Copy thread " + getName() + " got exception", e);
-                    notifyUserOfError(R.string.copythreadexception, e);
-                }
-            } finally {
-                try {
-                    in.close();
-                } catch (IOException e) {
-                    Log.e(TAG, "Copy thread could not gracefully close input", e);
-                }
-                try {
-                    out.close();
-                } catch (IOException e) {
-                    Log.e(TAG, "Copy thread could not gracefully close output", e);
-                }
-            }
-        }
-
-        public long getByteCount() {
-            return byteCount;
-        }
-        public long getPacketCount() {
-            return packetCount;
-        }
     }
 
 }
