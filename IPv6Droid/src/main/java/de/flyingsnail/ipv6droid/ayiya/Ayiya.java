@@ -120,6 +120,23 @@ public class Ayiya {
         return lastPacketSentTime;
     }
 
+    /**
+     * Check if this object is in a functional state
+     * @return a boolean, true if socket is still connected
+     */
+    public boolean isAlive() {
+        if (socket != null && socket.isConnected()) {
+            try {
+                beat();
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
 
     /**
      * The representation of our identity. This code supports INTEGER only.

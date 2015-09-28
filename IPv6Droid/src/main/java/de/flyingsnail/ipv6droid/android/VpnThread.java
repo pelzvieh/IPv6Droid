@@ -188,6 +188,7 @@ class VpnThread extends Thread {
     private final int TAG_OUTGOING_THREAD=0x03;
     private ConnectivityManager connectivityManager;
     private Context applicationContext;
+    private Ayiya ayiya;
 
     /**
      * The constructor setting all required fields.
@@ -280,11 +281,34 @@ class VpnThread extends Thread {
      * Request the tunnel control loop (running in a different thread) to stop.
      */
     protected void requestTunnelClose() {
+        Log.i(TAG, "Shutting down");
         closeTunnel = true;
+        cleanAll();
+        setName(getName() + " (shutting down)");
+        interrupt();
+    }
+
+    /**
+     * Request copy threads to close, close sockets.
+     */
+    private void cleanAll() {
         if (inThread != null)
             inThread.stopCopy();
         if (outThread != null)
             outThread.stopCopy();
+        if (ayiya != null) {
+            try {
+                ayiya.close();
+            } catch (Exception e) {
+                Log.e(TAG, "Cannot close ayiya object", e);
+            }
+        }
+        try {
+            if (vpnFD != null)
+                vpnFD.close();
+        } catch (Exception e) {
+            Log.e(TAG, "Cannot close local socket", e);
+        }
     }
 
     /**
@@ -296,7 +320,7 @@ class VpnThread extends Thread {
      */
     private void refreshTunnelLoop(VpnService.Builder builder, VpnService.Builder builderNotRouted) throws ConnectionFailedException {
         // Prepare the tunnel to PoP
-        Ayiya ayiya = new Ayiya (tunnelSpecification);
+        ayiya = new Ayiya(tunnelSpecification);
         closeTunnel = false;
 
         while (!closeTunnel) {
@@ -365,6 +389,8 @@ class VpnThread extends Thread {
                 // start the copying threads
                 outThread = new CopyThread (localIn, popOut, ayiyaVpnService, "AYIYA from local to POP", TAG_OUTGOING_THREAD, 0);
                 inThread = new CopyThread (popIn, localOut, ayiyaVpnService, "AYIYA from POP to local", TAG_INCOMING_THREAD, 0);
+                outThread.start();
+                inThread.start();
 
                 // now do a ping on IPv6 level. This should involve receiving one packet
                 if (tunnelSpecification.getIpv6Pop().isReachable(10000)) {
@@ -399,22 +425,12 @@ class VpnThread extends Thread {
                 ayiyaVpnService.notifyUserOfError(R.string.unexpected_runtime_exception, e);
                 throw e;
             } finally {
+                cleanAll();
                 localIp = null;
-                if (inThread != null)
-                    inThread.stopCopy();
-                if (outThread != null)
-                    outThread.stopCopy();
-                ayiya.close();
-                try {
-                    if (vpnFD != null)
-                        vpnFD.close();
-                } catch (Exception e) {
-                    Log.e(TAG, "Cannot close local socket", e);
-                }
                 postToast(applicationContext, R.string.vpnservice_tunnel_down, Toast.LENGTH_SHORT);
             }
         }
-        Log.i(TAG, "Tunnel thread received interrupt, closing tunnel");
+        Log.i(TAG, "Tunnel thread gracefully shut down");
     }
 
     /**
@@ -619,7 +635,7 @@ class VpnThread extends Thread {
             // is active.
             inThread.join(heartbeatInterval - lastPacketDelta);
             lastPacketDelta = new Date().getTime() - ayiya.getLastPacketSentTime().getTime();
-            if (inThread.isAlive() && outThread.isAlive() &&  lastPacketDelta >= heartbeatInterval - 100) {
+            if (inThread.isAlive() && outThread.isAlive() && lastPacketDelta >= heartbeatInterval - 100) {
                 try {
                     Log.i(TAG, "Sending heartbeat");
                     ayiya.beat();
@@ -916,11 +932,20 @@ class VpnThread extends Thread {
      * @param intent the intent that was broadcast to flag the status change. Not currently used.
      */
     public void onConnectivityChange(Intent intent) {
+        Log.i(TAG, "Connectivity changed");
         if (!intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false)) {
             synchronized (vpnStatus) {
                 vpnStatus.notifyAll();
             }
             routeInfos = getNetworkDetails();
+        }
+        // check if our sockets are still valid
+        if (ayiya != null && inThread != null && inThread.isAlive()) {
+            if (!ayiya.isAlive()) {
+                Log.i(TAG, "ayiya object no longer functional after connectivity change");
+                inThread.stopCopy();
+                interrupt();
+            }
         }
     }
 

@@ -126,7 +126,7 @@ public class Statistics {
         if (mtu != that.mtu) return false;
         if (tunnelRouted != that.tunnelRouted) return false;
         if (!brokerIPv4.equals(that.brokerIPv4)) return false;
-        if (!myIPv4.equals(that.myIPv4)) return false;
+        if (myIPv4 != null ? !myIPv4.equals(that.myIPv4) : that.myIPv4 != null) return false;
         if (!brokerIPv6.equals(that.brokerIPv6)) return false;
         if (!myIPv6.equals(that.myIPv6)) return false;
         if (routing != null ? !routing.equals(that.routing) : that.routing != null) return false;
