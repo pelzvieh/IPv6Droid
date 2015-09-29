@@ -117,6 +117,7 @@ public class AyiyaVpnService extends VpnService {
         Log.i(TAG, "Prepare destruction of VpnService");
         if (thread != null && thread.isAlive()) {
             thread.requestTunnelClose();
+            notifyUserOfError(R.string.ayiyavpnservice_destroyed, new Exception());
         }
         unregisterGlobalConnectivityReceiver();
         unregisterLocalCommandReceiver();
@@ -127,6 +128,7 @@ public class AyiyaVpnService extends VpnService {
         Log.i(TAG, "VPN usage rights are being revoked - closing tunnel thread");
         if (thread != null && thread.isAlive()) {
             thread.requestTunnelClose();
+            notifyUserOfError(R.string.ayiyavpnservice_revoked, new Exception());
         }
         super.onRevoke();
     }

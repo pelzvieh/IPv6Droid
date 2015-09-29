@@ -650,12 +650,11 @@ class VpnThread extends Thread {
                    but if not pingable, probably broken.
                    In the latter case we give it another heartbeat interval time to recover. */
                 if (isDeviceConnected() &&
-                        (!ayiya.isValidPacketReceived() // no valid packet after one heartbeat is annoying
-                        || (checkExpiry (ayiya.getLastPacketReceivedTime(),
-                                         tunnelSpecification.getHeartbeatInterval())
-                            && !tunnelSpecification.getIpv6Pop().isReachable(10000))
-                        )
-                   ) {
+                        !ayiya.isValidPacketReceived() && // if the tunnel worked in a session, don't worry if it pauses - it's 100% network problems
+                        checkExpiry (ayiya.getLastPacketReceivedTime(),
+                                tunnelSpecification.getHeartbeatInterval()) &&
+                        !tunnelSpecification.getIpv6Pop().isReachable(10000)
+                        ) {
                     if (!timeoutSuspected)
                         timeoutSuspected = true;
                     else if (new Date().getTime() - tunnelSpecification.getCreationDate().getTime()
@@ -671,10 +670,7 @@ class VpnThread extends Thread {
                             // TIC had new data - signal an IO problem to rebuild tunnel
                             throw new IOException("Packet receiving had timeout and TIC information changed");
                         } else {
-                            if (!ayiya.isValidPacketReceived())
-                                throw new ConnectionFailedException("This TIC tunnel doesn't receive data", null);
-                            else
-                                throw new IOException("This TIC tunnel stopped working without known reason");
+                            throw new ConnectionFailedException("This TIC tunnel doesn't receive data", null);
                         }
                     }
                 } else

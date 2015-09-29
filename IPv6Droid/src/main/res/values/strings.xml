@@ -53,6 +53,8 @@
     <string name="statistics_timestamp">Last updated</string>
     <string name="copythreadexception">Copy thread ran into an exception</string>
     <string name="unexpected_runtime_exception">Unexpected problem, tunnel aborting</string>
+    <string name="ayiyavpnservice_destroyed">"AyiyaVpnService getting destroyed"</string>
+    <string name="ayiyavpnservice_revoked">"AyiyaVpnService's permission to run a VPN is revoked"</string>
     <string name="statistics_isrouted">Routes set to tunnel</string>
     <string name="statistics_isrouted_yes">yes</string>
     <string name="statistics_isrouted_no">no</string>

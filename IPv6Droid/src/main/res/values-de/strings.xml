@@ -53,6 +53,8 @@
     <string name="statistics_timestamp">Stand von</string>
     <string name="copythreadexception">Kopierablauf ist auf einen Fehler gelaufen</string>
     <string name="unexpected_runtime_exception">Unerwartetes Problem, Tunnel bricht ab</string>
+    <string name="ayiyavpnservice_destroyed">"AyiyaVpnService wird zerstört"</string>
+    <string name="ayiyavpnservice_revoked">"AyiyaVpnServices Genehmigung zum VPN-Betrieb zurückgezogen"</string>
     <string name="statistics_isrouted">Tunnel geroutet</string>
     <string name="statistics_isrouted_yes">ja</string>
     <string name="statistics_isrouted_no">nein</string>
