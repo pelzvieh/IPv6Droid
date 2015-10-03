@@ -186,8 +186,17 @@ class VpnThread extends Thread {
      * An int used to tag socket traffic initiated from the copy thread Local->PoP
      */
     private final int TAG_OUTGOING_THREAD=0x03;
+    /**
+     * The system service ConnectivityManager
+     */
     private ConnectivityManager connectivityManager;
+    /**
+     * Our app's Context
+     */
     private Context applicationContext;
+    /**
+     * The tunnel protocol object
+     */
     private Ayiya ayiya;
 
     /**
@@ -325,12 +334,17 @@ class VpnThread extends Thread {
 
         while (!closeTunnel) {
             try {
-                if (Thread.currentThread().interrupted())
+                if (interrupted())
                     throw new InterruptedException("Tunnel loop has interrupted status set");
-                Log.i(TAG, "Building new local TUN and new AYIYA object");
+
+                // ensure we're online
+                vpnStatus.setActivity(R.string.vpnservice_activity_reconnect);
+                reportStatus();
+                waitOnConnectivity();
 
                 // check current routing information for existing IPv6 default route
                 // then setup local tun and routing
+                Log.i(TAG, "Building new local TUN and new AYIYA object");
                 if (ipv6DefaultExists()) {
                     Log.i(TAG, "Detected existing IPv6, not setting routes to tunnel");
                     vpnFD = builderNotRouted.establish();
@@ -350,7 +364,7 @@ class VpnThread extends Thread {
                 // Packets received need to be written to this output stream.
                 FileOutputStream localOut = new FileOutputStream(vpnFD.getFileDescriptor());
 
-                // due to issue #... which doesn't appear to get fixed upstream, check local health
+                // due to kitkat issue, check local health
                 if (routingConfiguration.isTryRoutingWorkaround() && !checkRouting()) {
                     Log.e(TAG, "Routing broken on this device, no default route is set for IPv6");
                     postToast(applicationContext, R.string.routingbroken, Toast.LENGTH_LONG);
@@ -409,16 +423,9 @@ class VpnThread extends Thread {
 
             } catch (IOException e) {
                 Log.i(TAG, "Tunnel connection broke down, closing and reconnecting ayiya", e);
-                localIp = null;
                 vpnStatus.setProgressPerCent(50);
                 vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
-                vpnStatus.setActivity(R.string.vpnservice_activity_reconnect);
                 reportStatus();
-                try {
-                    waitOnConnectivity();
-                } catch (InterruptedException e1) {
-                    Log.i(VpnThread.TAG, "refresh tunnel loop received interrupt while waiting on connectivity");
-                }
             } catch (InterruptedException e) {
                 Log.i(VpnThread.TAG, "refresh tunnel loop received interrupt", e);
             } catch (RuntimeException e) {
@@ -456,8 +463,7 @@ class VpnThread extends Thread {
     }
 
     /**
-     *     Android 4.4 has introduced a bug with VPN routing. The android developers appear very
-     *     pleased with their broken idea and unwilling to fix in any forseeable future.
+     *     Android 4.4 has introduced a bug with VPN routing.
      *     This methods tries to check if our device suffers from this problem.
      *     @return true if routing is OK
      */
@@ -628,7 +634,7 @@ class VpnThread extends Thread {
 
             reportStatus();
 
-            // wait for the heartbeat interval or until inThread dies.
+            // wait for the heartbeat interval to finish or until inThread dies.
             // Note: the inThread is reading from the network socket to the POP
             // in case of network changes, this socket breaks immediately, so
             // inThread crashes on external network changes even if no transfer
@@ -776,7 +782,7 @@ class VpnThread extends Thread {
      * <li>Allow inet v4 traffic in general, as it would be disabled by default when setting up an v6
      * VPN, but only on Android 5.0 and later.</li>
      * <li>Configure builder to generate a blocking socket.</li>
-     * <li>Allow applications to intentively bypass the VPN.</li>
+     * <li>Allow applications to intentionally bypass the VPN.</li>
      * </ul>
      * The respective methods are only available in API 21
      * and later.
