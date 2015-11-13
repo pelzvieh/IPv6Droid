@@ -110,7 +110,7 @@ public class MainActivity extends Activity {
 
         // setup the intent filter for status broadcasts
         // The filter's action is BROADCAST_ACTION
-        IntentFilter statusIntentFilter = new IntentFilter(VpnThread.BC_STATUS);
+        IntentFilter statusIntentFilter = new IntentFilter(VpnStatusReport.BC_STATUS);
 
         // Registers the StatusReceiver and its intent filter
         LocalBroadcastManager.getInstance(this).registerReceiver(statusReceiver,
@@ -344,7 +344,7 @@ public class MainActivity extends Activity {
     /** Inner class to handle status updates */
     private class StatusReceiver extends BroadcastReceiver {
         /** The last received status report - including a updatedTunnelList if that was read for that update */
-        private VpnStatusReport statusReport = new VpnStatusReport();
+        private VpnStatusReport statusReport = new VpnStatusReport(null);
 
         private StatusReceiver() {
             updateUi();
@@ -426,7 +426,7 @@ public class MainActivity extends Activity {
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            statusReport = (VpnStatusReport)intent.getSerializableExtra(VpnThread.EDATA_STATUS_REPORT);
+            statusReport = (VpnStatusReport)intent.getSerializableExtra(VpnStatusReport.EDATA_STATUS_REPORT);
             /*if (lastEvents.size() >= EVENT_LENGTH)
                 lastEvents.pollLast();
             lastEvents.push(statusReport);

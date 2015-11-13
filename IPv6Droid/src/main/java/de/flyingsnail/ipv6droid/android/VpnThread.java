@@ -34,7 +34,6 @@ import android.net.VpnService;
 import android.os.Build;
 import android.os.Handler;
 import android.os.ParcelFileDescriptor;
-import android.support.v4.content.LocalBroadcastManager;
 import android.system.OsConstants;
 import android.util.Log;
 import android.widget.Toast;
@@ -73,16 +72,6 @@ import de.flyingsnail.ipv6droid.ayiya.TunnelNotAcceptedException;
  * a copy thread for each direction.
  */
 class VpnThread extends Thread {
-    /**
-     * The Action name for a status broadcast intent.
-     */
-    public static final String BC_STATUS = AyiyaVpnService.class.getName() + ".STATUS";
-
-    /**
-     * The extended data name for the status in a status broadcast intent.
-     */
-    public static final String EDATA_STATUS_REPORT = AyiyaVpnService.class.getName() + ".STATUS_REPORT";
-
     /**
      * The tag for logging.
      */
@@ -215,8 +204,8 @@ class VpnThread extends Thread {
               String sessionName,
               int startId) {
         setName(sessionName);
-        this.vpnStatus = new VpnStatusReport();
         this.ayiyaVpnService = ayiyaVpnService;
+        this.vpnStatus = new VpnStatusReport(ayiyaVpnService);
         this.ticConfig = (TicConfiguration)config.clone();
         this.routingConfiguration = (RoutingConfiguration)routingConfiguration.clone();
         this.tunnelSpecification = cachedTunnel;
@@ -239,7 +228,7 @@ class VpnThread extends Thread {
             vpnStatus.setProgressPerCent(5);
             vpnStatus.setStatus(VpnStatusReport.Status.Connecting);
             vpnStatus.setActivity(R.string.vpnservice_activity_wait);
-            reportStatus();
+
             waitOnConnectivity();
 
             if (tunnelSpecification == null) {
@@ -249,7 +238,6 @@ class VpnThread extends Thread {
             }
             vpnStatus.setActiveTunnel(tunnelSpecification);
             vpnStatus.setProgressPerCent(25);
-            reportStatus();
 
             // build vpn device on local machine
             VpnService.Builder builder = ayiyaVpnService.createBuilder();
@@ -262,7 +250,6 @@ class VpnThread extends Thread {
             vpnStatus.setProgressPerCent(0);
             vpnStatus.setStatus(VpnStatusReport.Status.Idle);
             vpnStatus.setActivity(R.string.vpnservice_activity_closing);
-            reportStatus();
         } catch (AuthenticationFailedException e) {
             Log.e(TAG, "Authentication step failed", e);
             ayiyaVpnService.notifyUserOfError(R.string.vpnservice_authentication_failed, e);
@@ -282,7 +269,6 @@ class VpnThread extends Thread {
         // if this thread fails, the service per se is out of order
         ayiyaVpnService.stopSelf(startId);
         vpnStatus.clear(); // back at zero
-        reportStatus();
     }
 
 
@@ -332,6 +318,7 @@ class VpnThread extends Thread {
         ayiya = new Ayiya(tunnelSpecification);
         closeTunnel = false;
 
+        Date lastStartAttempt = new Date(0l);
         while (!closeTunnel) {
             try {
                 if (interrupted())
@@ -339,8 +326,13 @@ class VpnThread extends Thread {
 
                 // ensure we're online
                 vpnStatus.setActivity(R.string.vpnservice_activity_reconnect);
-                reportStatus();
                 waitOnConnectivity();
+
+                // @todo timestamp base mechanims to prevent busy looping through e.g. IOException
+                Date now = new Date();
+                long lastIterationRun = now.getTime() - lastStartAttempt.getTime();
+                if (lastIterationRun < 1000l)
+                    Thread.sleep(1000l - lastIterationRun);
 
                 // check current routing information for existing IPv6 default route
                 // then setup local tun and routing
@@ -384,7 +376,6 @@ class VpnThread extends Thread {
                 ayiya.connect();
                 vpnStatus.setProgressPerCent(75);
                 vpnStatus.setActivity(R.string.vpnservice_activity_ping_pop);
-                reportStatus();
 
                 // Initialize the input and output streams from the ayiya socket
                 DatagramSocket popSocket = ayiya.getSocket();
@@ -401,8 +392,8 @@ class VpnThread extends Thread {
                 }
 
                 // start the copying threads
-                outThread = new CopyThread (localIn, popOut, ayiyaVpnService, "AYIYA from local to POP", TAG_OUTGOING_THREAD, 0);
-                inThread = new CopyThread (popIn, localOut, ayiyaVpnService, "AYIYA from POP to local", TAG_INCOMING_THREAD, 0);
+                outThread = new CopyThread (localIn, popOut, ayiyaVpnService, this, "AYIYA from local to POP", TAG_OUTGOING_THREAD, 0);
+                inThread = new CopyThread (popIn, localOut, ayiyaVpnService, this, "AYIYA from POP to local", TAG_INCOMING_THREAD, 0);
                 outThread.start();
                 inThread.start();
 
@@ -425,7 +416,6 @@ class VpnThread extends Thread {
                 Log.i(TAG, "Tunnel connection broke down, closing and reconnecting ayiya", e);
                 vpnStatus.setProgressPerCent(50);
                 vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
-                reportStatus();
             } catch (InterruptedException e) {
                 Log.i(VpnThread.TAG, "refresh tunnel loop received interrupt", e);
             } catch (RuntimeException e) {
@@ -573,11 +563,19 @@ class VpnThread extends Thread {
         while (!isDeviceConnected()) {
             vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
             vpnStatus.setActivity(R.string.vpnservice_activity_reconnect);
-            reportStatus();
             synchronized (vpnStatus) {
                 vpnStatus.wait();
             }
         }
+    }
+
+    /**
+     * Request a status update broadcast w/o a change. Simply delegates to the respective method
+     * of the status object.
+     */
+    public void reportStatus() {
+        if (vpnStatus != null)
+            vpnStatus.reportStatus();
     }
 
     private ConnectivityManager getConnectivityManager() {
@@ -625,15 +623,6 @@ class VpnThread extends Thread {
             heartbeatInterval = 300000l;
         }
         while (!closeTunnel && inThread.isAlive() && outThread.isAlive()) {
-            if (ayiya.isValidPacketReceived()) {
-                // major status update, just once per session
-                vpnStatus.setTunnelProvedWorking(true);
-                vpnStatus.setStatus(VpnStatusReport.Status.Connected);
-                vpnStatus.setProgressPerCent(100);
-            }
-
-            reportStatus();
-
             // wait for the heartbeat interval to finish or until inThread dies.
             // Note: the inThread is reading from the network socket to the POP
             // in case of network changes, this socket breaks immediately, so
@@ -689,6 +678,17 @@ class VpnThread extends Thread {
     }
 
     /**
+     * Method called by the inbound copy thread if the first packet was transmitted.
+     */
+    protected void notifyFirstPacketReceived() {
+        if (ayiya.isValidPacketReceived()) {
+            // major status update, just once per session
+            vpnStatus.setTunnelProvedWorking(true);
+            vpnStatus.setStatus(VpnStatusReport.Status.Connected);
+            vpnStatus.setProgressPerCent(100);
+        }
+    }
+    /**
      * Read tunnel information via the TIC protocol. Return true if anything changed on the current
      * tunnel.
      * @return true if something changed
@@ -715,7 +715,6 @@ class VpnThread extends Thread {
             // some status reporting...
             vpnStatus.setActivity(R.string.vpnservice_activity_query_tic);
             vpnStatus.setStatus(VpnStatusReport.Status.Connecting);
-            reportStatus();
 
             tic.connect();
             List<String> tunnelIds = tic.listTunnels();
@@ -724,7 +723,6 @@ class VpnThread extends Thread {
             if (!availableTunnels.contains(tunnelSpecification)) {
                 tunnelChanged = true;
                 vpnStatus.setTicTunnelList(availableTunnels);
-                reportStatus();
                 if (availableTunnels.isEmpty())
                     throw new ConnectionFailedException("No suitable tunnels found", null);
                 else if (availableTunnels.size()>1)
@@ -862,16 +860,6 @@ class VpnThread extends Thread {
                 Toast.makeText(ctx, resId, duration).show();
             }
         });
-    }
-
-    /**
-     * Broadcast the status.
-     */
-    void reportStatus() {
-        Intent statusBroadcast = new Intent(BC_STATUS)
-                .putExtra(EDATA_STATUS_REPORT, vpnStatus);
-        // Broadcast locally
-        LocalBroadcastManager.getInstance(ayiyaVpnService).sendBroadcast(statusBroadcast);
     }
 
     /**

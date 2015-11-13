@@ -30,6 +30,8 @@ class CopyThread extends Thread {
     private final int networkTag;
     // instance of the service controlling this thread
     private AyiyaVpnService ayiyaVpnService;
+    // instance of the Thread controlling the copy threads.
+    private VpnThread vpnThread;
     // The time to wait for additional packets until sending them out
     private final long packetBundlingPeriod;
     // The maximum size of packet buffer
@@ -46,6 +48,7 @@ class CopyThread extends Thread {
      * @param in The stream to copy from.
      * @param out The stream to copy to.
      * @param ayiyaVpnService the service instance of the active AyiyaVpnService that controls this thread.
+     * @param vpnThread the VpnThread controlling the copy threads.
      * @param threadName a String giving the name of the Thread (as shown in some logs and debuggers)
      * @param networkTag an int representing the tag for network statistics of this thread
      * @param packetBundlingPeriod a long that gives the time in millisecs that the copy thread will try
@@ -55,6 +58,7 @@ class CopyThread extends Thread {
     public CopyThread(final InputStream in,
                       final OutputStream out,
                       AyiyaVpnService ayiyaVpnService,
+                      VpnThread vpnThread,
                       String threadName,
                       int networkTag,
                       long packetBundlingPeriod) {
@@ -64,6 +68,7 @@ class CopyThread extends Thread {
         this.networkTag = networkTag;
         this.setName(threadName);
         this.ayiyaVpnService = ayiyaVpnService;
+        this.vpnThread = vpnThread;
         this.packetBundlingPeriod = packetBundlingPeriod;
         this.packetBufferLength = (packetBundlingPeriod > 0) ? MAX_PACKET_BUFFER_LENGTH : 0;
         // allocate packet buffer
@@ -77,7 +82,7 @@ class CopyThread extends Thread {
      * Signal that this thread should end now.
      */
     public void stopCopy() {
-        Log.i(TAG, "Stoppy copy thread " + getName());
+        Log.i(TAG, "Stopping copy thread " + getName());
         stopCopy = true;
         if (this.isAlive())
             this.interrupt();
@@ -134,6 +139,8 @@ class CopyThread extends Thread {
                     out.write(packet, 0, len);
                     // statistics
                     byteCount += len;
+                    if (packetCount == 0)
+                        vpnThread.notifyFirstPacketReceived();
                     packetCount++;
                     recvZero = 0;
                 } else {

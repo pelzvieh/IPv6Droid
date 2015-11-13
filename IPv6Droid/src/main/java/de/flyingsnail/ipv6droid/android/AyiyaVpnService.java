@@ -195,7 +195,11 @@ public class AyiyaVpnService extends VpnService {
     protected void notifyUserOfError(int resourceId, Throwable e) {
         notificationBuilder.setContentTitle(getString(resourceId));
         notificationBuilder.setContentText(
-                String.valueOf(e.getLocalizedMessage()) + " ("+e.getClass()+")");
+                String.valueOf(e.getClass())
+        );
+        notificationBuilder.setSubText(
+                        String.valueOf(e.getLocalizedMessage())
+        );
 
         Intent settingsIntent = new Intent(getApplicationContext(), SettingsActivity.class);
         // the following code is adopted directly from developer.android.com
