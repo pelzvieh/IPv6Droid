@@ -169,13 +169,55 @@
     <TableRow>
         <TextView
             android:layout_column="0"
-            android:text="@string/statistics_routes"
+            android:text="@string/statistics_native_routes"
             android:layout_gravity="left" />
 
         <TextView
             android:layout_column="1"
             android:layout_span="2"
-            android:id="@+id/statistics_routes"
+            android:id="@+id/statistics_native_routes"
+            android:text="-"
+            android:textIsSelectable="true"
+            android:layout_gravity="right" />
+    </TableRow>
+    <TableRow>
+        <TextView
+            android:layout_column="0"
+            android:text="@string/statistics_vpn_routes"
+            android:layout_gravity="left" />
+
+        <TextView
+            android:layout_column="1"
+            android:layout_span="2"
+            android:id="@+id/statistics_vpn_routes"
+            android:text="-"
+            android:textIsSelectable="true"
+            android:layout_gravity="right" />
+    </TableRow>
+    <TableRow>
+        <TextView
+            android:layout_column="0"
+            android:text="@string/statistics_native_dns"
+            android:layout_gravity="left" />
+
+        <TextView
+            android:layout_column="1"
+            android:layout_span="2"
+            android:id="@+id/statistics_native_dns"
+            android:text="-"
+            android:textIsSelectable="true"
+            android:layout_gravity="right" />
+    </TableRow>
+    <TableRow>
+        <TextView
+            android:layout_column="0"
+            android:text="@string/statistics_vpn_dns"
+            android:layout_gravity="left" />
+
+        <TextView
+            android:layout_column="1"
+            android:layout_span="2"
+            android:id="@+id/statistics_vpn_dns"
             android:text="-"
             android:textIsSelectable="true"
             android:layout_gravity="right" />

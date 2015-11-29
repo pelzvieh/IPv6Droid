@@ -269,7 +269,8 @@ public class AyiyaVpnService extends VpnService {
                 myPreferences.getBoolean("routes_default", true),
                 myPreferences.getString("routes_specific", "::/0"),
                 workaround,
-                myPreferences.getBoolean("routes_setnameservers", false));
+                myPreferences.getBoolean("routes_setnameservers", false),
+                myPreferences.getBoolean("routes_forcetunnel", false));
     }
 
     public static boolean checkAndroidVersionForWorkaround() {

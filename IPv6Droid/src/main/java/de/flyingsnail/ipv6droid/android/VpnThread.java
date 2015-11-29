@@ -26,6 +26,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
+import android.net.LinkProperties;
 import android.net.Network;
 import android.net.NetworkInfo;
 import android.net.RouteInfo;
@@ -48,7 +49,6 @@ import java.io.OutputStream;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
-import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -99,9 +99,9 @@ class VpnThread extends Thread {
     }
 
     /**
-     * The routing information of current network setting.
+     * The native routing, VPN routing, native DNS and VPN DNS information of current network setting.
      */
-    private List<RouteInfo> routeInfos;
+    private NetworkDetails networkDetails = new NetworkDetails();
 
     /**
      * The start ID of the onStartCommand call that lead to this thread being constructed. Used
@@ -118,7 +118,7 @@ class VpnThread extends Thread {
      */
     private TicConfiguration ticConfig;
     /**
-     * The configuration of the intended routing.
+     * The configuration of the intended nativeRouting.
      */
     private RoutingConfiguration routingConfiguration;
     /**
@@ -193,7 +193,7 @@ class VpnThread extends Thread {
      * @param ayiyaVpnService the Service that created this thread
      * @param cachedTunnel the previously working tunnel spec, or null if none
      * @param config the tic configuration
-     * @param routingConfiguration the routing configuration
+     * @param routingConfiguration the nativeRouting configuration
      * @param sessionName the name of this thread
      * @param startId the start ID of the onStartCommand that led to this thread being constructed
      */
@@ -214,8 +214,8 @@ class VpnThread extends Thread {
         this.applicationContext = ayiyaVpnService.getApplicationContext();
         // resolve system service "ConnectivityManager"
         connectivityManager = (ConnectivityManager)applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE);
-        // initialise routing info
-        this.routeInfos = getNetworkDetails();
+        // initialise nativeRouting info
+        updateNetworkDetails();
     }
 
 
@@ -328,21 +328,21 @@ class VpnThread extends Thread {
                 vpnStatus.setActivity(R.string.vpnservice_activity_reconnect);
                 waitOnConnectivity();
 
-                // @todo timestamp base mechanims to prevent busy looping through e.g. IOException
+                // timestamp base mechanism to prevent busy looping through e.g. IOException
                 Date now = new Date();
                 long lastIterationRun = now.getTime() - lastStartAttempt.getTime();
                 if (lastIterationRun < 1000l)
                     Thread.sleep(1000l - lastIterationRun);
 
-                // check current routing information for existing IPv6 default route
-                // then setup local tun and routing
+                // check current nativeRouting information for existing IPv6 default route
+                // then setup local tun and nativeRouting
                 Log.i(TAG, "Building new local TUN and new AYIYA object");
-                if (ipv6DefaultExists()) {
+                if (!routingConfiguration.isForceRouting() && ipv6DefaultExists()) {
                     Log.i(TAG, "Detected existing IPv6, not setting routes to tunnel");
                     vpnFD = builderNotRouted.establish();
                     tunnelRouted = false;
                 } else {
-                    Log.i(TAG, "No IPv6 detected, setting routes to tunnel");
+                    Log.i(TAG, "No native IPv6 to use, setting routes to tunnel");
                     vpnFD = builder.establish();
                     tunnelRouted = true;
                 }
@@ -363,12 +363,12 @@ class VpnThread extends Thread {
                     try {
                         fixRouting();
                         if (checkRouting()) {
-                            Log.i(TAG, "VPNService routing was broken on this device, but could be fixed by the workaround");
+                            Log.i(TAG, "VPNService nativeRouting was broken on this device, but could be fixed by the workaround");
                             postToast(applicationContext, R.string.routingfixed, Toast.LENGTH_LONG);
                         }
                     } catch (RuntimeException re) {
                         ayiyaVpnService.notifyUserOfError(R.string.routingbroken, re);
-                        Log.e(TAG, "Error fixing routing", re);
+                        Log.e(TAG, "Error fixing nativeRouting", re);
                     }
                 }
 
@@ -431,7 +431,7 @@ class VpnThread extends Thread {
     }
 
     /**
-     * Check for existing IPv6 connectivity. We're using the routing info of the operating system.
+     * Check for existing IPv6 connectivity. We're using the nativeRouting info of the operating system.
      * @return true if there's existing IPv6 connectivity
      */
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
@@ -439,7 +439,7 @@ class VpnThread extends Thread {
         if (Build.VERSION.SDK_INT >= 21) {
             Log.d(TAG, "Checking if we have an IPv6 default route on current network");
 
-            for (RouteInfo routeInfo : routeInfos) {
+            for (RouteInfo routeInfo : networkDetails.getNativeRouteInfos()) {
                 // isLoggable would be useful here, but checks for an (outdated?) convention of TAG shorter than 23 chars
                 Log.d(TAG, "Checking if route is an IPv6 default route: " + routeInfo);
                 // @todo strictly speaking, we shouldn't check for default route, but for the configured route of the tunnel
@@ -453,13 +453,13 @@ class VpnThread extends Thread {
     }
 
     /**
-     *     Android 4.4 has introduced a bug with VPN routing.
+     *     Android 4.4 has introduced a bug with VPN nativeRouting.
      *     This methods tries to check if our device suffers from this problem.
-     *     @return true if routing is OK
+     *     @return true if nativeRouting is OK
      */
     private boolean checkRouting() {
         try {
-            Log.d(TAG, "about to check routing configuration after Builder.establish");
+            Log.d(TAG, "about to check nativeRouting configuration after Builder.establish");
             Process routeChecker = Runtime.getRuntime().exec(
                     new String[]{"/system/bin/ip", "-f", "inet6", "route", "show", "default"});
             BufferedReader reader = new BufferedReader (
@@ -502,7 +502,7 @@ class VpnThread extends Thread {
      */
     private void fixRouting() {
         try {
-            Log.d(TAG, "Starting attempt to fix routing");
+            Log.d(TAG, "Starting attempt to fix nativeRouting");
             Process routeAdder = Runtime.getRuntime().exec(
                     new String[]{
                             "/system/xbin/su", "-c",
@@ -551,7 +551,7 @@ class VpnThread extends Thread {
             }
             Log.d(TAG, "Routing should be fixed, command result is " + routeAdder.exitValue());
         } catch (IOException e) {
-            Log.d(TAG, "Failed to fix routing", e);
+            Log.d(TAG, "Failed to fix nativeRouting", e);
         }
     }
 
@@ -862,31 +862,33 @@ class VpnThread extends Thread {
         });
     }
 
+
     /**
-     * Read route infos of the currently active network. Weird code, but the best I could imagine
-     * out of the ConnectivityManager API.
+     * Read route and DNS info of the currently active and the VPN network. Weird code, but the best
+     * I could imagine out of the ConnectivityManager API.
+     * In result, the networkDetails field will be updated.
      */
     @TargetApi(21)
-    private ArrayList<RouteInfo> getNetworkDetails () {
-        ArrayList<RouteInfo> routeInfos = new ArrayList<RouteInfo>(10);
+    private void updateNetworkDetails() {
         if (Build.VERSION.SDK_INT >= 21) {
-            Log.d(VpnThread.TAG, "getNetworkDetails trying to read routing");
+            Log.d(VpnThread.TAG, "updateNetworkDetails trying to read nativeRouting");
             ConnectivityManager cm = getConnectivityManager();
             NetworkInfo activeNetworkInfo = cm.getActiveNetworkInfo();
             if (activeNetworkInfo != null) {
                 List<Network> networks = Arrays.asList(cm.getAllNetworks());
-                Network activeNetwork = null;
                 for (Network n : networks) {
                     NetworkInfo ni = cm.getNetworkInfo(n);
-                    if (ni.getType() == (activeNetworkInfo.getType()))
-                        activeNetwork = n;
-                }
-                if (activeNetwork != null && activeNetworkInfo.isConnected()) {
-                    routeInfos.addAll(cm.getLinkProperties(activeNetwork).getRoutes());
+                    if (ni != null) {
+                        LinkProperties linkProperties = cm.getLinkProperties(n);
+                        if (ni.getType() == activeNetworkInfo.getType()) {
+                            networkDetails.setNativeProperties(linkProperties);
+                        } else if (ni.getType() == ConnectivityManager.TYPE_VPN) {
+                            networkDetails.setVpnProperties(linkProperties);
+                        }
+                    }
                 }
             }
         }
-        return routeInfos;
     }
 
     /**
@@ -900,6 +902,7 @@ class VpnThread extends Thread {
         }
         Statistics stats;
 
+
         stats = new Statistics(
                 outThread.getByteCount(),
                 inThread.getByteCount(),
@@ -910,8 +913,10 @@ class VpnThread extends Thread {
                 tunnelSpecification.getIpv6Pop(),
                 tunnelSpecification.getIpv6Endpoint(),
                 tunnelSpecification.getMtu(),
-                routeInfos, // Routing table of the interface
-                new ArrayList<InetAddress>(0),
+                networkDetails.getNativeRouteInfos(),
+                networkDetails.getVpnRouteInfos(),
+                networkDetails.getNativeDnsServers(),
+                networkDetails.getVpnDnsServers(),
                 tunnelRouted
         );
         return stats;
@@ -927,7 +932,7 @@ class VpnThread extends Thread {
             synchronized (vpnStatus) {
                 vpnStatus.notifyAll();
             }
-            routeInfos = getNetworkDetails();
+            updateNetworkDetails();
         }
         // check if our sockets are still valid
         if (ayiya != null && inThread != null && inThread.isAlive()) {
@@ -946,5 +951,6 @@ class VpnThread extends Thread {
     public boolean isTunnelUp() {
         return (vpnStatus != null) && (vpnStatus.getStatus().equals(VpnStatusReport.Status.Connected));
     }
+
 
 }

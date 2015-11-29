@@ -93,6 +93,7 @@ public class SettingsActivity extends PreferenceActivity {
         bindPreferenceSummaryToValue(findPreference("routes_specific"));
         bindPreferenceSummaryToValue(findPreference("routes_workaround"));
         bindPreferenceSummaryToValue(findPreference("routes_setnameservers"));
+        bindPreferenceSummaryToValue(findPreference("routes_forcetunnel"));
 
         findPreference("routes_workaround").setEnabled(AyiyaVpnService.checkAndroidVersionForWorkaround());
         bindPreferenceSummaryToValue(findPreference("tic_username"));
@@ -238,6 +239,7 @@ public class SettingsActivity extends PreferenceActivity {
             bindPreferenceSummaryToValue(findPreference("routes_specific"));
             bindPreferenceSummaryToValue(findPreference("routes_workaround"));
             bindPreferenceSummaryToValue(findPreference("routes_setnameservers"));
+            bindPreferenceSummaryToValue(findPreference("routes_forcetunnel"));
             findPreference("routes_workaround").setEnabled(AyiyaVpnService.checkAndroidVersionForWorkaround());
         }
     }

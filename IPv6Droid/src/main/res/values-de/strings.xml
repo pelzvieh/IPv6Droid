@@ -42,7 +42,8 @@
     <string name="statistics_bytes">Bytes</string>
     <string name="statistics_packets">IP-Pakete</string>
     <string name="statistics_mtu">Paketgröße</string>
-    <string name="statistics_routes">Routen</string>
+    <string name="statistics_native_routes">Routen im Basisnetz</string>
+    <string name="statistics_vpn_routes">Routen im VPN</string>
     <string name="statistics_ipv4">IPv4-Adressen</string>
     <string name="statistics_ipv6">IPv6-Adressen</string>
     <string name="robot">Roboter</string>
@@ -58,4 +59,6 @@
     <string name="statistics_isrouted">Tunnel geroutet</string>
     <string name="statistics_isrouted_yes">ja</string>
     <string name="statistics_isrouted_no">nein</string>
+    <string name="statistics_native_dns">DNS-Server (Basisnetz)</string>
+    <string name="statistics_vpn_dns">DNS-Server (VPN)</string>
 </resources>

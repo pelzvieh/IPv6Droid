@@ -46,6 +46,11 @@
         android:title="@string/pref_title_routes_setnameservers"
         android:defaultValue="false" />
 
+    <CheckBoxPreference
+        android:key="routes_forcetunnel"
+        android:title="@string/pref_title_force_routing"
+        android:defaultValue="false" />
+
     <!-- ListPreference
         android:key="routes_list"
         android:title="@string/pref_title_routes_list"

@@ -21,7 +21,7 @@
 package de.flyingsnail.ipv6droid.android;
 
 /**
- * This represents the end-user configuration related to local routing.
+ * This represents the end-user configuration related to local nativeRouting.
  */
 public class RoutingConfiguration implements Cloneable {
     /**
@@ -35,7 +35,7 @@ public class RoutingConfiguration implements Cloneable {
     private String specificRoute;
 
     /**
-     * a boolean flag if we should try to reconfigure the device's routing.
+     * a boolean flag if we should try to reconfigure the device's nativeRouting.
      */
     private boolean tryRoutingWorkaround;
 
@@ -45,17 +45,26 @@ public class RoutingConfiguration implements Cloneable {
     private boolean setNameServers;
 
     /**
+     * a boolean flag if we shoud always route IPv6 traffic through the tunnel
+     */
+    private boolean forceRouting;
+
+    /**
      * Initialize the RoutingConfiguration object.
      * @param setDefaultRoute a flag if the default route should be set
      * @param specificRoute a String giving a specific route
-     * @param tryRoutingWorkaround a flag if we should reprogram the device's routing
+     * @param tryRoutingWorkaround a flag if we should reprogram the device's nativeRouting
      * @param setNameServers a flag if we should set Google name servers
+     * @param forceRouting a flag if we should route IPv6 through the tunnel even in IPv6 capable networks
      */
-    public RoutingConfiguration(boolean setDefaultRoute, String specificRoute, boolean tryRoutingWorkaround, boolean setNameServers) {
+    public RoutingConfiguration(boolean setDefaultRoute, String specificRoute,
+                                boolean tryRoutingWorkaround, boolean setNameServers,
+                                boolean forceRouting) {
         this.setDefaultRoute = setDefaultRoute;
         this.specificRoute = specificRoute;
         this.tryRoutingWorkaround = tryRoutingWorkaround;
         this.setNameServers = setNameServers;
+        this.forceRouting = forceRouting;
     }
 
     public boolean isSetDefaultRoute() {
@@ -88,6 +97,14 @@ public class RoutingConfiguration implements Cloneable {
 
     public void setSetNameServers(boolean setNameServers) {
         this.setNameServers = setNameServers;
+    }
+
+    public boolean isForceRouting() {
+        return forceRouting;
+    }
+
+    public void setForceRouting(boolean forceRouting) {
+        this.forceRouting = forceRouting;
     }
 
     @Override

@@ -65,7 +65,10 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
     private TextView brokerIPv6View;
     private TextView myIPv4View;
     private TextView myIPv6View;
-    private TextView routesView;
+    private TextView nativeRoutesView;
+    private TextView vpnRoutesView;
+    private TextView nativeDnsView;
+    private TextView vpnDnsView;
     private TextView timestampView;
     private TextView isRoutedView;
     private ScheduledThreadPoolExecutor executor;
@@ -140,7 +143,10 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
         brokerIPv6View = (TextView)myView.findViewById(R.id.statistics_brokeripv6);
         myIPv4View = (TextView)myView.findViewById(R.id.statistics_myipv4);
         myIPv6View = (TextView)myView.findViewById(R.id.statistics_myipv6);
-        routesView = (TextView)myView.findViewById(R.id.statistics_routes);
+        nativeRoutesView = (TextView)myView.findViewById(R.id.statistics_native_routes);
+        vpnRoutesView = (TextView)myView.findViewById(R.id.statistics_vpn_routes);
+        nativeDnsView = (TextView)myView.findViewById(R.id.statistics_native_dns);
+        vpnDnsView = (TextView)myView.findViewById(R.id.statistics_vpn_dns);
         isRoutedView = (TextView)myView.findViewById(R.id.statistics_isrouted);
         timestampView = (TextView)myView.findViewById(R.id.statistics_timestamp);
         Log.i(TAG, "Successfully created view");
@@ -254,7 +260,10 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
                 updateTextView(brokerIPv6View, stats.getBrokerIPv6());
                 updateTextView(myIPv4View, stats.getMyIPv4());
                 updateTextView(myIPv6View, stats.getMyIPv6());
-                updateTextView(routesView, stats.getRouting());
+                updateTextView(nativeRoutesView, stats.getNativeRouting());
+                updateTextView(vpnRoutesView, stats.getVpnRouting());
+                updateTextView(nativeDnsView, stats.getNativeDnsSetting());
+                updateTextView(vpnDnsView, stats.getVpnDnsSetting());
                 updateTextView(timestampView, timestampFormatter.format(stats.getTimestamp()));
                 updateTextView(isRoutedView, getString(
                         stats.isTunnelRouted() ?

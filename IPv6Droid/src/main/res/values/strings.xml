@@ -35,13 +35,14 @@
     <string name="boolean_unset">disabled</string>
     <string name="action_disconnect">Disconnect</string>
     <string name="main_activity_please_start">Please start</string>
-    <string name="routingbroken">IPv6 routing broken</string>
-    <string name="routingfixed">IPv6 routing has been fixed</string>
+    <string name="routingbroken">IPv6 nativeRouting broken</string>
+    <string name="routingfixed">IPv6 nativeRouting has been fixed</string>
 
     <string name="statistics_bytes">Bytes</string>
     <string name="statistics_packets">IP packets</string>
     <string name="statistics_mtu">MTU</string>
-    <string name="statistics_routes">Routes</string>
+    <string name="statistics_native_routes">native Routes</string>
+    <string name="statistics_vpn_routes">VPN Routes</string>
     <string name="statistics_ipv4">IPv4 addresses</string>
     <string name="statistics_ipv6">IPv6 addresses</string>
     <string name="robot">Robot</string>
@@ -58,4 +59,6 @@
     <string name="statistics_isrouted">Routes set to tunnel</string>
     <string name="statistics_isrouted_yes">yes</string>
     <string name="statistics_isrouted_no">no</string>
+    <string name="statistics_native_dns">DNS Servers (native)</string>
+    <string name="statistics_vpn_dns">DNS Servers (VPN)</string>
 </resources>

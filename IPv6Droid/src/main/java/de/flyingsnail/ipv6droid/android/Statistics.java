@@ -41,12 +41,22 @@ public class Statistics {
     final Inet6Address brokerIPv6;
     final Inet6Address myIPv6;
     final int mtu;
-    final List<RouteInfo> routing;
-    final List<InetAddress> dnsSetting;
+    final List<RouteInfo> nativeRouting;
+    final List<RouteInfo> vpnRouting;
+    final List<InetAddress> nativeDnsSetting;
+    final List<InetAddress> vpnDnsSetting;
     final private Date timestamp;
     final private boolean tunnelRouted;
 
-    protected Statistics(long bytesTransmitted, long bytesReceived, long packetsTransmitted, long packetsReceived, Inet4Address brokerIPv4, Inet4Address myIPv4, Inet6Address brokerIPv6, Inet6Address myIPv6, int mtu, List<RouteInfo> routing, List<InetAddress> dnsSetting, boolean tunnelRouted) {
+    protected Statistics(long bytesTransmitted, long bytesReceived,
+                         long packetsTransmitted, long packetsReceived,
+                         Inet4Address brokerIPv4, Inet4Address myIPv4,
+                         Inet6Address brokerIPv6, Inet6Address myIPv6,
+                         int mtu,
+                         List<RouteInfo> nativeRouting, List<RouteInfo> vpnRouting,
+                         List<InetAddress> nativeDnsSetting,List<InetAddress> vpnDnsSetting,
+                         boolean tunnelRouted)
+    {
         this.bytesTransmitted = bytesTransmitted;
         this.bytesReceived = bytesReceived;
         this.packetsTransmitted = packetsTransmitted;
@@ -56,8 +66,11 @@ public class Statistics {
         this.brokerIPv6 = brokerIPv6;
         this.myIPv6 = myIPv6;
         this.mtu = mtu;
-        this.routing = routing;
-        this.dnsSetting = dnsSetting;
+        this.nativeRouting = nativeRouting;
+        this.vpnRouting = vpnRouting;
+        this.nativeDnsSetting = nativeDnsSetting;
+        this.vpnDnsSetting = vpnDnsSetting;
+
         this.tunnelRouted = tunnelRouted;
         timestamp = new Date();
     }
@@ -98,13 +111,23 @@ public class Statistics {
         return mtu;
     }
 
-    public List<RouteInfo> getRouting() {
-        return routing;
+    public List<RouteInfo> getNativeRouting() {
+        return nativeRouting;
     }
 
-    public List<InetAddress> getDnsSetting() {
-        return dnsSetting;
+    public List<RouteInfo> getVpnRouting() {
+        return vpnRouting;
     }
+
+    public List<InetAddress> getNativeDnsSetting() {
+        return nativeDnsSetting;
+    }
+
+    public List<InetAddress> getVpnDnsSetting() {
+        return vpnDnsSetting;
+    }
+
+
 
     public Date getTimestamp() { return timestamp; }
 
@@ -129,8 +152,10 @@ public class Statistics {
         if (myIPv4 != null ? !myIPv4.equals(that.myIPv4) : that.myIPv4 != null) return false;
         if (!brokerIPv6.equals(that.brokerIPv6)) return false;
         if (!myIPv6.equals(that.myIPv6)) return false;
-        if (routing != null ? !routing.equals(that.routing) : that.routing != null) return false;
-        return !(dnsSetting != null ? !dnsSetting.equals(that.dnsSetting) : that.dnsSetting != null);
+        if (nativeRouting != null ? !nativeRouting.equals(that.nativeRouting) : that.nativeRouting != null) return false;
+        if (vpnRouting != null ? !vpnRouting.equals(that.vpnRouting) : that.vpnRouting != null) return false;
+        if (vpnDnsSetting != null ? !vpnDnsSetting.equals(that.vpnDnsSetting) : that.vpnDnsSetting != null) return false;
+        return !(nativeDnsSetting != null ? !nativeDnsSetting.equals(that.nativeDnsSetting) : that.nativeDnsSetting != null);
 
     }
 
@@ -145,8 +170,10 @@ public class Statistics {
         result = 31 * result + brokerIPv6.hashCode();
         result = 31 * result + myIPv6.hashCode();
         result = 31 * result + mtu;
-        result = 31 * result + (routing != null ? routing.hashCode() : 0);
-        result = 31 * result + (dnsSetting != null ? dnsSetting.hashCode() : 0);
+        result = 31 * result + (nativeRouting != null ? nativeRouting.hashCode() : 0);
+        result = 31 * result + (vpnRouting != null ? vpnRouting.hashCode() : 0);
+        result = 31 * result + (nativeDnsSetting != null ? nativeDnsSetting.hashCode() : 0);
+        result = 31 * result + (vpnDnsSetting != null ? vpnDnsSetting.hashCode() : 0);
         result = 31 * result + (tunnelRouted ? 1 : 0);
         return result;
     }
