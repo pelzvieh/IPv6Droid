@@ -19,8 +19,35 @@ import de.flyingsnail.ipv6droid.R;
  */
 class CopyThread extends Thread {
     private static final String TAG = CopyThread.class.getName();
+    // overall count of copied bytes
     private long byteCount = 0l;
+    // overall count of copied packets
     private long packetCount = 0l;
+
+    // data about a packet burst
+    private class Burstinfo {
+        // count of bytes in a specific burst
+        public long byteCount = 0l;
+        // count of packets in a specific burst
+        public long packetCount = 0l;
+        // the start timestamp of the burst
+        public Date firstPacketReceived = new Date();
+        // the timestamp of the last packet received in that burst
+        public Date lastPacketReceived = firstPacketReceived;
+    }
+    // the info about the last completed burst
+    private Burstinfo lastCompletedBurst = null;
+    // the info about the currently running burst
+    private Burstinfo currentBurst = new Burstinfo();
+    // the average time span of a burst in milliseconds
+    private long averageBurstLength = 0l;
+    // the average time span between two bursts in milliseconds
+    private long averageBurstPause = 0l;
+    // the average number of bytes per burst
+    private long averageBurstBytes;
+    // the average number of packets per burst
+    private long averageBurstPackets;
+
     // the stream to read from
     private InputStream in;
     // the stream to write to
@@ -32,6 +59,9 @@ class CopyThread extends Thread {
     private AyiyaVpnService ayiyaVpnService;
     // instance of the Thread controlling the copy threads.
     private VpnThread vpnThread;
+    // time when last packet received
+    private Date lastPacketReceived;
+
     // The time to wait for additional packets until sending them out
     private final long packetBundlingPeriod;
     // The maximum size of packet buffer
@@ -138,10 +168,7 @@ class CopyThread extends Thread {
                 if (len > 0) {
                     out.write(packet, 0, len);
                     // statistics
-                    byteCount += len;
-                    if (packetCount == 0)
-                        vpnThread.notifyFirstPacketReceived();
-                    packetCount++;
+                    updateStatistics (len);
                     recvZero = 0;
                 } else {
                     recvZero++;
@@ -168,6 +195,68 @@ class CopyThread extends Thread {
     }
 
     /**
+     * Query the average number of bytes per burst.
+     * @return a long giving the average number of bytes per burst
+     */
+    public long getAverageBurstBytes() {
+        return averageBurstBytes;
+    }
+
+    /**
+     * Query the average number of packets per burst.
+     * @return a long giving the average number of packets per burst
+     */
+    public long getAverageBurstPackets() {
+        return averageBurstPackets;
+    }
+
+    /**
+     * Query the average time span between two bursts.
+     * @return a long giving the average time span between two bursts in milliseconds.
+     */
+    public long getAverageBurstPause() {
+        return averageBurstPause;
+    }
+
+    /**
+     * Query the average time span of a burst.
+     * @return a long giving the average time span of a burst in milliseconds.
+     */
+    public long getAverageBurstLength() {
+        return averageBurstLength;
+    }
+
+    /**
+     * Helper method to update statistics information on a received packet. This method should
+     * be called immediately after receiving a packet.
+     * @param len the length of the packet that was received just now
+     */
+    private void updateStatistics(long len) {
+        byteCount += len;
+        if (packetCount == 0)
+            vpnThread.notifyFirstPacketReceived();
+        packetCount++;
+
+        // update per-burst info
+        Date now = new Date();
+        if (now.getTime() - 1000l > currentBurst.lastPacketReceived.getTime()) {
+            // new burst
+            if (lastCompletedBurst != null)
+                burstCompleted(currentBurst, lastCompletedBurst);
+            lastCompletedBurst = currentBurst;
+            currentBurst = new Burstinfo();
+            currentBurst.firstPacketReceived = now;
+            currentBurst.lastPacketReceived = now;
+            currentBurst.byteCount = len;
+            currentBurst.packetCount = 1;
+        } else {
+            currentBurst.lastPacketReceived = now;
+            currentBurst.byteCount += len;
+            currentBurst.packetCount++;
+        }
+    }
+
+    /**
      * Get the number of bytes copied by this thread.
      * @return a long giving the number of bytes that was copied by this thread.
      */
@@ -181,5 +270,37 @@ class CopyThread extends Thread {
      */
     public long getPacketCount() {
         return packetCount;
+    }
+
+    /**
+     * Helper method to update burst-related statistics values.
+     * Should be called by other methods of this class if a burst is considered completed.
+     * @param completedBurst the Burstinfo on the completed burst.
+     */
+    private void burstCompleted (Burstinfo completedBurst, Burstinfo previousBurst) {
+        long burstSpan = completedBurst.lastPacketReceived.getTime() - completedBurst.firstPacketReceived.getTime();
+        long burstPause = completedBurst.firstPacketReceived.getTime() - previousBurst.lastPacketReceived.getTime();
+
+        // rolling average of burst length
+        averageBurstLength = rollingAverage(averageBurstLength, burstSpan);
+        // rolling average of burst pause
+        averageBurstPause = rollingAverage(averageBurstPause, burstPause);
+        // rolling average of bytes per burst
+        averageBurstBytes = rollingAverage(averageBurstBytes, completedBurst.byteCount);
+        // rolling average of packets per burst
+        averageBurstPackets = rollingAverage(averageBurstPackets, completedBurst.packetCount);
+    }
+
+    /**
+     * Helper method to calculate a rolling average
+     * @param previousAverage
+     * @param newValue
+     * @return updated rolling average
+     */
+    private long rollingAverage(long previousAverage, long newValue) {
+        // we implement a rolling average window
+        return (previousAverage == 0.0) ?
+                        newValue :
+                        (long)(newValue * 0.01 + 0.99*previousAverage);
     }
 }

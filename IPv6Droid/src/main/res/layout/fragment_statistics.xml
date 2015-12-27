@@ -100,6 +100,102 @@
     </TableRow>
 
     <TableRow>
+
+        <TextView
+            android:text="@string/statistics_bytes_per_burst"
+            android:layout_column="0"
+            android:id="@+id/statistics_bytes_per_burst"
+            android:layout_gravity="left" />
+
+        <TextView
+            android:layout_column="1"
+            android:id="@+id/statistics_bytes_per_burst_transmitted"
+            android:text="-"
+            android:textIsSelectable="true"
+            android:layout_gravity="right" />
+
+        <TextView
+            android:layout_column="2"
+            android:id="@+id/statistics_bytes_per_burst_received"
+            android:paddingLeft="10dp"
+            android:text="-"
+            android:textIsSelectable="true"
+            android:layout_gravity="right" />
+    </TableRow>
+
+    <TableRow>
+
+        <TextView
+            android:text="@string/statistics_packets_per_burst"
+            android:layout_column="0"
+            android:id="@+id/statistics_packets_per_burst"
+            android:layout_gravity="left" />
+
+        <TextView
+            android:layout_column="1"
+            android:id="@+id/statistics_packets_per_burst_transmitted"
+            android:text="-"
+            android:textIsSelectable="true"
+            android:layout_gravity="right" />
+
+        <TextView
+            android:layout_column="2"
+            android:id="@+id/statistics_packets_per_burst_received"
+            android:paddingLeft="10dp"
+            android:text="-"
+            android:textIsSelectable="true"
+            android:layout_gravity="right" />
+    </TableRow>
+
+    <TableRow>
+
+        <TextView
+            android:text="@string/statistics_time_of_burst"
+            android:layout_column="0"
+            android:id="@+id/statistics_time_of_burst"
+            android:layout_gravity="left" />
+
+        <TextView
+            android:layout_column="1"
+            android:id="@+id/statistics_time_of_burst_transmitted"
+            android:text="-"
+            android:textIsSelectable="true"
+            android:layout_gravity="right" />
+
+        <TextView
+            android:layout_column="2"
+            android:id="@+id/statistics_time_of_burst_received"
+            android:paddingLeft="10dp"
+            android:text="-"
+            android:textIsSelectable="true"
+            android:layout_gravity="right" />
+    </TableRow>
+
+    <TableRow>
+
+        <TextView
+            android:text="@string/statistics_pause_between_bursts"
+            android:layout_column="0"
+            android:id="@+id/statistics_pause_between_bursts"
+            android:layout_gravity="left" />
+
+        <TextView
+            android:layout_column="1"
+            android:id="@+id/statistics_pause_between_bursts_transmitted"
+            android:text="-"
+            android:textIsSelectable="true"
+            android:layout_gravity="right" />
+
+        <TextView
+            android:layout_column="2"
+            android:id="@+id/statistics_pause_between_bursts_received"
+            android:paddingLeft="10dp"
+            android:text="-"
+            android:textIsSelectable="true"
+            android:layout_gravity="right" />
+    </TableRow>
+
+    <TableRow>
         <TextView
             android:text="@string/statistics_ipv4"
             android:layout_column="0"

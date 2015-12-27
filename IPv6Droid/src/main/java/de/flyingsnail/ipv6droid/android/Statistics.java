@@ -36,6 +36,14 @@ public class Statistics {
     final long bytesReceived;
     final long packetsTransmitted;
     final long packetsReceived;
+    final long bytesPerBurstTransmitted;
+    final long bytesPerBurstReceived;
+    final long packetsPerBurstTransmitted;
+    final long packetsPerBurstReceived;
+    final long timeSpanPerBurstTransmitted;
+    final long timeSpanPerBurstReceived;
+    final long timeLapseBetweenBurstsTransmitted;
+    final long timeLapseBetweenBurstsReceived;
     final Inet4Address brokerIPv4;
     final Inet4Address myIPv4;
     final Inet6Address brokerIPv6;
@@ -50,6 +58,10 @@ public class Statistics {
 
     protected Statistics(long bytesTransmitted, long bytesReceived,
                          long packetsTransmitted, long packetsReceived,
+                         long bytesPerBurstTransmitted, long bytesPerBurstReceived,
+                         long packetsPerBurstTransmitted, long packetsPerBurstReceived,
+                         long timeSpanPerBurstTransmitted, long timeSpanPerBurstReceived,
+                         long timeLapseBetweenBurstsTransmitted, long timeLapseBetweenBurstsReceived,
                          Inet4Address brokerIPv4, Inet4Address myIPv4,
                          Inet6Address brokerIPv6, Inet6Address myIPv6,
                          int mtu,
@@ -61,6 +73,14 @@ public class Statistics {
         this.bytesReceived = bytesReceived;
         this.packetsTransmitted = packetsTransmitted;
         this.packetsReceived = packetsReceived;
+        this.bytesPerBurstReceived = bytesPerBurstReceived;
+        this.bytesPerBurstTransmitted = bytesPerBurstTransmitted;
+        this.packetsPerBurstTransmitted = packetsPerBurstTransmitted;
+        this.packetsPerBurstReceived = packetsPerBurstReceived;
+        this.timeSpanPerBurstTransmitted = timeSpanPerBurstTransmitted;
+        this.timeSpanPerBurstReceived = timeSpanPerBurstReceived;
+        this.timeLapseBetweenBurstsTransmitted = timeLapseBetweenBurstsTransmitted;
+        this.timeLapseBetweenBurstsReceived = timeLapseBetweenBurstsReceived;
         this.brokerIPv4 = brokerIPv4;
         this.myIPv4 = myIPv4;
         this.brokerIPv6 = brokerIPv6;
@@ -89,6 +109,38 @@ public class Statistics {
 
     public long getPacketsReceived() {
         return packetsReceived;
+    }
+
+    public long getBytesPerBurstTransmitted() {
+        return bytesPerBurstTransmitted;
+    }
+
+    public long getBytesPerBurstReceived() {
+        return bytesPerBurstReceived;
+    }
+
+    public long getPacketsPerBurstTransmitted() {
+        return packetsPerBurstTransmitted;
+    }
+
+    public long getPacketsPerBurstReceived() {
+        return packetsPerBurstReceived;
+    }
+
+    public long getTimeSpanPerBurstTransmitted() {
+        return timeSpanPerBurstTransmitted;
+    }
+
+    public long getTimeSpanPerBurstReceived() {
+        return timeSpanPerBurstReceived;
+    }
+
+    public long getTimeLapseBetweenBurstsTransmitted() {
+        return timeLapseBetweenBurstsTransmitted;
+    }
+
+    public long getTimeLapseBetweenBurstsReceived() {
+        return timeLapseBetweenBurstsReceived;
     }
 
     public Inet4Address getBrokerIPv4() {
