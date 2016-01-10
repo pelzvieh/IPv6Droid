@@ -28,14 +28,14 @@
     <string name="pref_title_username">Username</string>
     <string name="pref_title_password">Password</string>
     <string name="pref_title_host">TIC host</string>
-    <string name="pref_default_host"></string>
+    <string name="pref_default_host" translatable="false">tic.sixxs.net</string>
     <string name="pref_autostart">Start Tunnel at Boot</string>
 
     <!-- Routes settings -->
     <string name="pref_header_routes">Route settings</string>
     <string name="pref_title_routes_default">Set IPv6 default route</string>
     <string name="pref_title_routes_specific">Specific IPv6 subnet to route</string>
-    <string name="pref_default_routes_specific"></string>
+    <string name="pref_default_routes_specific" translatable="false"/>
     <string name="pref_title_routes_setnameservers">Set Google DNS servers</string>
     <string name="pref_title_routes_workaround">Try workaround of Android 4.4 nativeRouting bug</string>
     <string name="pref_title_force_routing">Force routing through VPN in IPv6 capable networks</string>

@@ -90,8 +90,7 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
      * @return A new instance of fragment StatisticsFragment.
      */
     public static StatisticsFragment newInstance() {
-        StatisticsFragment fragment = new StatisticsFragment();
-        return fragment;
+        return new StatisticsFragment();
     }
 
     public StatisticsFragment() {
@@ -189,7 +188,9 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
             updaterFuture = executor.scheduleWithFixedDelay(new Updater(handler), 0, 1l, TimeUnit.SECONDS);
         } catch (Exception e) {
             Log.e(TAG, "Could not schedule statistics updates");
-            getView().setVisibility(View.INVISIBLE);
+            View myView = getView();
+            if (myView != null)
+                myView.setVisibility(View.INVISIBLE);
         }
         Log.i(TAG, "Successfully started");
     }
@@ -275,10 +276,10 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
                 updateTextView(bytesPerBurstReceivedView, stats.getBytesPerBurstReceived());
                 updateTextView(packetsPerBurstTransmittedView, stats.getPacketsPerBurstTransmitted());
                 updateTextView(packetsPerBurstReceivedView, stats.getPacketsPerBurstReceived());
-                updateTextView(timeSpanPerBurstTransmittedView, stats.getTimeSpanPerBurstTransmitted());
-                updateTextView(timeSpanPerBurstReceivedView, stats.getTimeSpanPerBurstReceived());
-                updateTextView(timeLapseBetweenBurstsTransmittedView, stats.getTimeLapseBetweenBurstsTransmitted());
-                updateTextView(timeLapseBetweenBurstsReceivedView, stats.getTimeLapseBetweenBurstsReceived());
+                updateTextView(timeSpanPerBurstTransmittedView, stats.getTimeSpanPerBurstTransmitted()/1000l);
+                updateTextView(timeSpanPerBurstReceivedView, stats.getTimeSpanPerBurstReceived()/1000l);
+                updateTextView(timeLapseBetweenBurstsTransmittedView, stats.getTimeLapseBetweenBurstsTransmitted()/1000l);
+                updateTextView(timeLapseBetweenBurstsReceivedView, stats.getTimeLapseBetweenBurstsReceived()/1000l);
                 updateTextView(mtuView, stats.getMtu());
                 updateTextView(brokerIPv4View, stats.getBrokerIPv4());
                 updateTextView(brokerIPv6View, stats.getBrokerIPv6());

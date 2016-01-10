@@ -19,6 +19,7 @@ import de.flyingsnail.ipv6droid.R;
  */
 class CopyThread extends Thread {
     private static final String TAG = CopyThread.class.getName();
+    private static final double DECAY_TIME = 60000.0; // time of decay to 1/e in milliseconds
     // overall count of copied bytes
     private long byteCount = 0l;
     // overall count of copied packets
@@ -83,7 +84,6 @@ class CopyThread extends Thread {
      * @param networkTag an int representing the tag for network statistics of this thread
      * @param packetBundlingPeriod a long that gives the time in millisecs that the copy thread will try
      *                             to delay until a packet is sent out, waiting for additional packets.
-     * @return The thread that does so until interrupted.
      */
     public CopyThread(final InputStream in,
                       final OutputStream out,
@@ -280,27 +280,31 @@ class CopyThread extends Thread {
     private void burstCompleted (Burstinfo completedBurst, Burstinfo previousBurst) {
         long burstSpan = completedBurst.lastPacketReceived.getTime() - completedBurst.firstPacketReceived.getTime();
         long burstPause = completedBurst.firstPacketReceived.getTime() - previousBurst.lastPacketReceived.getTime();
+        long timeLapse = completedBurst.lastPacketReceived.getTime() - previousBurst.lastPacketReceived.getTime();
+
+        double previousDepletion = Math.exp(-((double)timeLapse)/DECAY_TIME);
 
         // rolling average of burst length
-        averageBurstLength = rollingAverage(averageBurstLength, burstSpan);
+        averageBurstLength = rollingAverage(previousDepletion, averageBurstLength, burstSpan);
         // rolling average of burst pause
-        averageBurstPause = rollingAverage(averageBurstPause, burstPause);
+        averageBurstPause = rollingAverage(previousDepletion, averageBurstPause, burstPause);
         // rolling average of bytes per burst
-        averageBurstBytes = rollingAverage(averageBurstBytes, completedBurst.byteCount);
+        averageBurstBytes = rollingAverage(previousDepletion, averageBurstBytes, completedBurst.byteCount);
         // rolling average of packets per burst
-        averageBurstPackets = rollingAverage(averageBurstPackets, completedBurst.packetCount);
+        averageBurstPackets = rollingAverage(previousDepletion, averageBurstPackets, completedBurst.packetCount);
     }
 
     /**
      * Helper method to calculate a rolling average
-     * @param previousAverage
-     * @param newValue
+     * @param decay a double giving the time-based depletion factor of the previousAverage
+     * @param previousAverage a long giving the previous rolling average value
+     * @param newValue a long giving a new addon to the rolling average
      * @return updated rolling average
      */
-    private long rollingAverage(long previousAverage, long newValue) {
+    private long rollingAverage(double decay, long previousAverage, long newValue) {
         // we implement a rolling average window
         return (previousAverage == 0.0) ?
                         newValue :
-                        (long)(newValue * 0.01 + 0.99*previousAverage);
+                        (long)(newValue * (1-decay) + decay*previousAverage);
     }
 }
