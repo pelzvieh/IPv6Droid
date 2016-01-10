@@ -20,6 +20,7 @@
 
 package de.flyingsnail.ipv6droid.ayiya;
 
+import android.support.annotation.NonNull;
 import android.util.Log;
 
 import java.io.IOException;
@@ -146,7 +147,7 @@ public class Ayiya {
         NONE,  /* None */
         INTEGER,	/* Integer */
         STRING	/* ASCII String */
-    };
+    }
 
     /**
      * The algorithm to calculate the hashes of datagrams. This code supports SHA1 only.
@@ -157,7 +158,7 @@ public class Ayiya {
         MD5,	/* MD5 Signature */
         SHA1,	/* SHA1 Signature */
         UMAC	/* UMAC Signature (UMAC: Message Authentication Code using Universal Hashing / draft-krovetz-umac-04.txt */
-    };
+    }
 
     /**
      * The authentication type for datagrams. This code supports SHAREDSECRET only.
@@ -167,11 +168,10 @@ public class Ayiya {
         NONE,	/* No authentication */
         SHAREDSECRED,	/* Shared Secret */
         PGP	/* Public/Private Key */
-    };
+    }
 
     /**
      * The code of AYIYA operation. This code supports NOOP and FORWARD only.
-     * @todo check if the other opcodes have to be implemented
      */
     enum OpCode
     {
@@ -183,7 +183,7 @@ public class Ayiya {
         MOTD,	/* MOTD */
         QUERY_REQUEST,	/* Query Request */
         QUERY_RESPONSE	/* Query Response */
-    };
+    }
 
 
     /**
@@ -526,12 +526,12 @@ public class Ayiya {
         }
 
         @Override
-        public int read(byte[] buffer) throws IOException {
+        public int read(@NonNull byte[] buffer) throws IOException {
             return read(buffer, 0, buffer.length);
         }
 
         @Override
-        public int read(byte[] buffer, int offset, int length) throws IOException {
+        public int read(@NonNull byte[] buffer, int offset, int length) throws IOException {
             ensureBuffer();
             int byteCount = Math.min(streamBuffer.get().remaining(), length);
             streamBuffer.get().get(buffer, offset, byteCount);
@@ -560,7 +560,7 @@ public class Ayiya {
     private class AyiyaOutputStream extends OutputStream {
 
         @Override
-        public void write(byte[] buffer) throws IOException {
+        public void write(@NonNull byte[] buffer) throws IOException {
             try {
                 Ayiya.this.write(buffer);
             } catch (TunnelBrokenException e) {
@@ -569,7 +569,7 @@ public class Ayiya {
         }
 
         @Override
-        public void write(byte[] buffer, int offset, int count) throws IOException {
+        public void write(@NonNull byte[] buffer, int offset, int count) throws IOException {
             this.write(Arrays.copyOfRange(buffer, offset, offset + count));
         }
 

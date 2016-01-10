@@ -77,7 +77,7 @@ public class AyiyaVpnService extends VpnService {
     public void onCreate() {
         super.onCreate();
         this.notificationBuilder = new NotificationCompat.Builder(getApplicationContext())
-                .setSmallIcon(R.drawable.ic_launcher);
+                .setSmallIcon(R.drawable.ic_notification);
 
     }
 
@@ -107,7 +107,8 @@ public class AyiyaVpnService extends VpnService {
             Log.i(TAG, "VpnThread not started again - already running");
             Toast.makeText(getApplicationContext(),
                     R.string.vpnservice_already_running,
-                    Toast.LENGTH_LONG);
+                    Toast.LENGTH_LONG).show();
+
         }
         return START_REDELIVER_INTENT;
     }

@@ -207,7 +207,11 @@ class VpnThread extends Thread {
         this.ayiyaVpnService = ayiyaVpnService;
         this.vpnStatus = new VpnStatusReport(ayiyaVpnService);
         this.ticConfig = (TicConfiguration)config.clone();
-        this.routingConfiguration = (RoutingConfiguration)routingConfiguration.clone();
+        try {
+            this.routingConfiguration = (RoutingConfiguration)routingConfiguration.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new IllegalStateException("Cloning of RoutingConfiguration failed", e);
+        }
         this.tunnelSpecification = cachedTunnel;
         this.startId = startId;
         // extract the application context

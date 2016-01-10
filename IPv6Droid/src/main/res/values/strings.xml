@@ -23,7 +23,6 @@
 
     <string name="app_name">IPv6Droid</string>
     <string name="action_settings">Settings</string>
-    <string name="Start">Starten</string>
     <string name="pref_title_routes">Route settings</string>
     <string name="action_connect">Connect</string>
     <string name="action_tic_reload">Reload tunnels</string>
@@ -50,7 +49,6 @@
     <string name="headline_transmitted">from device</string>
     <string name="action_show_statistics">Statistics</string>
     <string name="title_activity_statistics">Statistics</string>
-    <string name="hello_world">Hello world!</string>
     <string name="statistics_timestamp">Last updated</string>
     <string name="copythreadexception">Copy thread ran into an exception</string>
     <string name="unexpected_runtime_exception">Unexpected problem, tunnel aborting</string>

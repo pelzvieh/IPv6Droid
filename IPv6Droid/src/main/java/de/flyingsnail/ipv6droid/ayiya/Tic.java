@@ -37,7 +37,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.StringTokenizer;
 
-import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 /**
@@ -343,7 +342,7 @@ public class Tic {
         Log.i(TAG, "Switching to SSL encrypted connection");
 
         SSLSocketFactory socketFactory = (SSLSocketFactory) SSLSocketFactory.getDefault();
-        socket = (SSLSocket)socketFactory.createSocket(socket,
+        socket = socketFactory.createSocket(socket,
                 config.getServer(),
                 TIC_PORT,
                 true);

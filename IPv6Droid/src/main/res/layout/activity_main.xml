@@ -65,30 +65,22 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/androidRobot"
-                android:layout_alignParentLeft="true"
                 android:src="@drawable/android_robot"
                 android:baseline="100dp"
-                android:layout_alignBaseline="@+id/earthView"
-                android:layout_margin="12dp"/>
+            android:layout_margin="12dp"/>
 
         <ImageView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/statusImage"
-                android:layout_alignParentLeft="false"
-                android:src="@drawable/off"
-                android:layout_centerHorizontal="true"
-                android:layout_below="@+id/progressBar"
-                android:layout_margin="25dp"/>
+            android:src="@drawable/off"
+            android:layout_margin="25dp"/>
 
         <ImageView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/earthView"
-                android:layout_below="@+id/progressBar"
-                android:src="@drawable/erde"
-                android:layout_alignParentRight="true"
-                />
+            android:src="@drawable/erde" />
     </LinearLayout>
 
     <Button

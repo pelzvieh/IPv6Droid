@@ -268,6 +268,7 @@ public class MainActivity extends Activity {
             // open private file
             InputStream is = openFileInput(FILE_LAST_TUNNEL);
             ObjectInputStream os = new ObjectInputStream(is);
+            //noinspection unchecked
             cachedTunnels = (List<TicTunnel>)os.readObject();
             int selected = os.readInt();
             tunnel = cachedTunnels.get(selected);

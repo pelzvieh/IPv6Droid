@@ -23,8 +23,6 @@
 
     <string name="app_name">IPv6Droid</string>
     <string name="action_settings">Einstellungen</string>
-    <string name="hello_world">Jemand da?</string>
-    <string name="Start">Starten</string>
     <string name="pref_title_routes">Routen</string>
     <string name="action_connect">Verbinden</string>
     <string name="action_tic_reload">Tunneldefinitionen neu laden</string>

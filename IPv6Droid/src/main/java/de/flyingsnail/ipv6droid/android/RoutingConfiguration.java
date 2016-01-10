@@ -108,12 +108,7 @@ public class RoutingConfiguration implements Cloneable {
     }
 
     @Override
-    protected Object clone() {
-        try {
-            return super.clone();
-        } catch (CloneNotSupportedException e) {
-            throw new IllegalStateException("Cloning failed", e);
-        }
+    protected Object clone() throws CloneNotSupportedException {
+        return super.clone();
     }
-
 }
