@@ -35,6 +35,7 @@ import android.net.VpnService;
 import android.os.Build;
 import android.os.Handler;
 import android.os.ParcelFileDescriptor;
+import android.support.annotation.Nullable;
 import android.system.OsConstants;
 import android.util.Log;
 import android.widget.Toast;
@@ -102,12 +103,6 @@ class VpnThread extends Thread {
      * The native routing, VPN routing, native DNS and VPN DNS information of current network setting.
      */
     private NetworkDetails networkDetails = new NetworkDetails();
-
-    /**
-     * The start ID of the onStartCommand call that lead to this thread being constructed. Used
-     * to stop the according service.
-     */
-    private final int startId;
 
     /**
      * The service that created this thread.
@@ -195,14 +190,12 @@ class VpnThread extends Thread {
      * @param config the tic configuration
      * @param routingConfiguration the nativeRouting configuration
      * @param sessionName the name of this thread
-     * @param startId the start ID of the onStartCommand that led to this thread being constructed
      */
     VpnThread(AyiyaVpnService ayiyaVpnService,
-              TicTunnel cachedTunnel,
+              @Nullable TicTunnel cachedTunnel,
               TicConfiguration config,
               RoutingConfiguration routingConfiguration,
-              String sessionName,
-              int startId) {
+              String sessionName) {
         setName(sessionName);
         this.ayiyaVpnService = ayiyaVpnService;
         this.vpnStatus = new VpnStatusReport(ayiyaVpnService);
@@ -213,7 +206,6 @@ class VpnThread extends Thread {
             throw new IllegalStateException("Cloning of RoutingConfiguration failed", e);
         }
         this.tunnelSpecification = cachedTunnel;
-        this.startId = startId;
         // extract the application context
         this.applicationContext = ayiyaVpnService.getApplicationContext();
         // resolve system service "ConnectivityManager"
@@ -263,15 +255,11 @@ class VpnThread extends Thread {
         } catch (IOException e) {
             Log.e(TAG, "IOException caught before reading in tunnel data", e);
             ayiyaVpnService.notifyUserOfError(R.string.vpnservice_io_during_startup, e);
-        } catch (InterruptedException e) {
-            Log.i(TAG, "VpnThread interrupted outside of control loops", e);
         } catch (Throwable t) {
             Log.e(TAG, "Failed to run tunnel", t);
-            // if this thread fails, the service per se is out of order
+            // something went wrong in an unexpected way
             ayiyaVpnService.notifyUserOfError(R.string.vpnservice_unexpected_problem, t);
         }
-        // if this thread fails, the service per se is out of order
-        ayiyaVpnService.stopSelf(startId);
         vpnStatus.clear(); // back at zero
     }
 
@@ -951,7 +939,6 @@ class VpnThread extends Thread {
             if (!ayiya.isAlive()) {
                 Log.i(TAG, "ayiya object no longer functional after connectivity change");
                 inThread.stopCopy();
-                interrupt();
             }
         }
     }

@@ -33,12 +33,14 @@ import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
+import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.statusdetail.StatisticsActivity;
 import de.flyingsnail.ipv6droid.ayiya.TicConfiguration;
 import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 
@@ -68,9 +70,19 @@ public class AyiyaVpnService extends VpnService {
     private NotificationCompat.Builder notificationBuilder;
 
     /**
-     * We're only ever displaying one notification, this is its ID.
+     * We're only ever displaying one error notification, this is its ID.
      */
-    private final int notificationID = 0xdeadbeef;
+    private final int exceptionNotificationID = 0xdeadbeef;
+
+    /**
+     * The ID of the ongoing notification that our service is running
+     */
+    private final int ongoingNotificationId = 0xaffe;
+
+    /**
+     * A flag that keeps track if the VPN is inteded to run or not.
+     */
+    private boolean vpnShouldRun = false;
 
 
     @Override
@@ -78,14 +90,13 @@ public class AyiyaVpnService extends VpnService {
         super.onCreate();
         this.notificationBuilder = new NotificationCompat.Builder(getApplicationContext())
                 .setSmallIcon(R.drawable.ic_notification);
-
+        // register receivers of broadcasts
+        registerLocalCommandReceiver();
+        registerGlobalConnectivityReceiver();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        // instantiate a notification builder
-
-
         Log.d(TAG, "received start command");
         if (thread == null || !thread.isAlive()) {
             // Build the configuration object from the saved shared preferences.
@@ -94,15 +105,12 @@ public class AyiyaVpnService extends VpnService {
             RoutingConfiguration routingConfiguration = loadRoutingConfiguration(myPreferences);
             Log.d(TAG, "retrieved configuration");
 
-            // register receivers of broadcasts
-            registerLocalCommandReceiver();
-            registerGlobalConnectivityReceiver();
-
             // Start a new session by creating a new thread.
-            TicTunnel cachedTunnel = (TicTunnel)intent.getSerializableExtra(EXTRA_CACHED_TUNNEL);
-            thread = new VpnThread(this, cachedTunnel, ticConfiguration, routingConfiguration, SESSION_NAME, startId);
-            thread.start();
-            Log.i(TAG, "VpnThread started");
+            // @todo handling cached tunnel is broken in context of START_STICKY. Refactor and change start mode
+            TicTunnel cachedTunnel = (intent == null) ? null : (TicTunnel) intent.getSerializableExtra(EXTRA_CACHED_TUNNEL);
+            thread = new VpnThread(this, cachedTunnel, ticConfiguration, routingConfiguration, SESSION_NAME);
+            startVpn();
+            displayOngoingNotification(null);
         } else {
             Log.i(TAG, "VpnThread not started again - already running");
             Toast.makeText(getApplicationContext(),
@@ -113,24 +121,40 @@ public class AyiyaVpnService extends VpnService {
         return START_REDELIVER_INTENT;
     }
 
+    /**
+     * Start the created and initialised VPN thread.
+     */
+    private synchronized void startVpn() {
+        vpnShouldRun = true;
+        thread.start();
+        Log.i(TAG, "VpnThread started");
+    }
+
+    /**
+     * Request the VPN thread to stop.
+     */
+    private synchronized void stopVpn() {
+        vpnShouldRun = false;
+        if (thread != null && thread.isAlive()) {
+            thread.requestTunnelClose();
+        }
+    }
+
     @Override
     public void onDestroy() {
         Log.i(TAG, "Prepare destruction of VpnService");
-        if (thread != null && thread.isAlive()) {
-            thread.requestTunnelClose();
-            notifyUserOfError(R.string.ayiyavpnservice_destroyed, new Exception());
-        }
+        stopVpn();
+        notifyUserOfError(R.string.ayiyavpnservice_destroyed, new Exception(""));
         unregisterGlobalConnectivityReceiver();
         unregisterLocalCommandReceiver();
+        super.onDestroy();
     }
 
     @Override
     public void onRevoke() {
         Log.i(TAG, "VPN usage rights are being revoked - closing tunnel thread");
-        if (thread != null && thread.isAlive()) {
-            thread.requestTunnelClose();
-            notifyUserOfError(R.string.ayiyavpnservice_revoked, new Exception());
-        }
+        stopVpn();
+        notifyUserOfError(R.string.ayiyavpnservice_revoked, new Exception());
         super.onRevoke();
     }
 
@@ -173,6 +197,7 @@ public class AyiyaVpnService extends VpnService {
 
     /**
      * Create a new instance of AyiyaVpnService.Builder. This method exists solely for VpnThread.
+     *
      * @return a new instance.
      */
     protected Builder createBuilder() {
@@ -189,27 +214,38 @@ public class AyiyaVpnService extends VpnService {
     }
 
     /**
-     * Generate a user notification with the supplied expection's cause as detail message.
+     * Prepare notificationBuilder to build a notification from this service. Called from the
+     * two specific notification display helper methods.
+     *
      * @param resourceId the string resource supplying the notification title
-     * @param e the Exception the cause of which is to be displayed
      */
-    protected void notifyUserOfError(int resourceId, Throwable e) {
+    private void initializeNotificationBuilder(int resourceId, Class intentClass) {
         notificationBuilder.setContentTitle(getString(resourceId));
-        notificationBuilder.setContentText(
-                String.valueOf(e.getClass())
-        );
-        notificationBuilder.setSubText(
-                        String.valueOf(e.getLocalizedMessage())
-        );
 
-        Intent settingsIntent = new Intent(getApplicationContext(), SettingsActivity.class);
+        Intent settingsIntent = new Intent(getApplicationContext(), intentClass);
         // the following code is adopted directly from developer.android.com
         PendingIntent resultPendingIntent = PendingIntent.getActivity(
                 getApplicationContext(),
                 0,
                 settingsIntent,
-                PendingIntent.FLAG_ONE_SHOT);
+                0);
         notificationBuilder.setContentIntent(resultPendingIntent);
+    }
+
+    /**
+     * Generate a user notification with the supplied expection's cause as detail message.
+     *
+     * @param resourceId the string resource supplying the notification title
+     * @param e          the Exception the cause of which is to be displayed
+     */
+    protected void notifyUserOfError(int resourceId, Throwable e) {
+        initializeNotificationBuilder(resourceId, SettingsActivity.class);
+        notificationBuilder.setContentText(
+                String.valueOf(e.getClass())
+        );
+        notificationBuilder.setSubText(
+                String.valueOf(e.getLocalizedMessage())
+        );
         notificationBuilder.setAutoCancel(true);
 
         // provide the expanded layout
@@ -221,22 +257,54 @@ public class AyiyaVpnService extends VpnService {
         NotificationManager notificationManager =
                 (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         // mId allows you to update the notification later on.
-        notificationManager.notify(notificationID, notificationBuilder.build());
+        notificationManager.notify(exceptionNotificationID, notificationBuilder.build());
     }
 
-    /** Inner class to handle stop requests */
+    /**
+     * A helper method to initialize and display a notification on the
+     * @param statusReport a VpnStatusReport giving details about current VPN status
+     */
+    private void displayOngoingNotification(@Nullable VpnStatusReport statusReport) {
+        initializeNotificationBuilder(R.string.app_name, StatisticsActivity.class);
+        notificationBuilder.setOngoing(true);
+        if (statusReport != null)
+            notificationBuilder.setContentText(getResources().getString(statusReport.getActivity()));
+        else
+            notificationBuilder.setContentText(getResources().getString(R.string.vpnservice_activity_wait));
+        startForeground(ongoingNotificationId, notificationBuilder.build());
+
+        // register receiver for status updates to update the notification status
+        // setup the intent filter for status broadcasts
+        // The filter's action is BROADCAST_ACTION
+        IntentFilter statusIntentFilter = new IntentFilter(VpnStatusReport.BC_STATUS);
+
+        // Registers the StatusReceiver and its intent filter
+        LocalBroadcastManager.getInstance(this).registerReceiver(new StatusReceiver(),
+                statusIntentFilter);
+
+    }
+
+    /**
+     * Inner class to handle stop requests
+     */
     private class CommandReceiver extends BroadcastReceiver {
-        private CommandReceiver() {}
+        private CommandReceiver() {
+        }
 
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            if (action.equals(MainActivity.BC_STOP)) {
-                Log.i(TAG, "Received explicit stop brodcast, will stop VPN Tread");
-                thread.requestTunnelClose();
-            } else if (action.equals(MainActivity.BC_STATUS_UPDATE)) {
-                Log.i(TAG, "Someone requested a status report, will have one send");
-                thread.reportStatus();
+            if (thread != null && thread.isAlive()) {
+                if (action.equals(MainActivity.BC_STOP)) {
+                    Log.i(TAG, "Received explicit stop brodcast, will stop VPN Tread");
+                    stopVpn();
+                    stopSelf(); // user command is the only event that corresponds to "the work is done"
+                } else if (action.equals(MainActivity.BC_STATUS_UPDATE)) {
+                    Log.i(TAG, "Someone requested a status report, will have one send");
+                    thread.reportStatus();
+                }
+            } else if (vpnShouldRun) {
+                Log.e(TAG, "AyiyaVpnService's thread is broken altough it should run");
             }
         }
     }
@@ -245,14 +313,15 @@ public class AyiyaVpnService extends VpnService {
      * Inner class to handle connectivity changes
      */
     public class ConnectivityReceiver extends BroadcastReceiver {
-        private ConnectivityReceiver() {}
+        private ConnectivityReceiver() {
+        }
 
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             if (action.equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
-                if (thread != null)
-                    thread.onConnectivityChange (intent);
+                if (thread != null && thread.isAlive())
+                    thread.onConnectivityChange(intent);
             }
         }
     }
@@ -282,10 +351,23 @@ public class AyiyaVpnService extends VpnService {
     public class StatisticsBinder extends Binder {
         /**
          * Get statistics from the tunnel refreshing thread.
+         *
          * @return the Statistics, or null
          */
         public Statistics getStatistics() {
             return (thread == null || !thread.isTunnelUp()) ? null : thread.getStatistics();
+        }
+    }
+
+    /**
+     * Inner class to handle status updates
+     */
+    private class StatusReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            VpnStatusReport statusReport = (VpnStatusReport)intent.getSerializableExtra(VpnStatusReport.EDATA_STATUS_REPORT);
+            if (statusReport != null)
+                displayOngoingNotification(statusReport);
         }
     }
 }
