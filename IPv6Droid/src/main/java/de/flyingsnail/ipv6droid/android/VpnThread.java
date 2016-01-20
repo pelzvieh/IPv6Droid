@@ -311,6 +311,7 @@ class VpnThread extends Thread {
         closeTunnel = false;
 
         Date lastStartAttempt = new Date(0l);
+        // @todo split into two loops, the inner refreshing inThread and ayiya object, the outer refreshing the vpnFD if broken. Caution on routing!!!
         while (!closeTunnel) {
             try {
                 if (interrupted())
@@ -414,6 +415,7 @@ class VpnThread extends Thread {
                 ayiyaVpnService.notifyUserOfError(R.string.unexpected_runtime_exception, e);
                 throw e;
             } finally {
+                // @todo only do this in the outer loop
                 cleanAll();
                 localIp = null;
                 postToast(applicationContext, R.string.vpnservice_tunnel_down, Toast.LENGTH_SHORT);
@@ -646,7 +648,7 @@ class VpnThread extends Thread {
                         timeoutSuspected = true;
                     else if (new Date().getTime() - tunnelSpecification.getCreationDate().getTime()
                             > TIC_RECHECK_BLOCKED_MILLISECONDS) {
-                        boolean tunnelChanged = false;
+                        boolean tunnelChanged;
                         try {
                             tunnelChanged = readTunnelFromTIC();
                         } catch (IOException ioe) {
@@ -934,11 +936,20 @@ class VpnThread extends Thread {
             }
             updateNetworkDetails();
         }
+
         // check if our sockets are still valid
         if (ayiya != null && inThread != null && inThread.isAlive()) {
             if (!ayiya.isAlive()) {
-                Log.i(TAG, "ayiya object no longer functional after connectivity change");
-                inThread.stopCopy();
+                Log.i(TAG, "ayiya object no longer functional after connectivity change - reconnecting");
+                try {
+                    ayiya.reconnect();
+                } catch (IOException e) {
+                    Log.e(TAG, "reconnection failed temporarily");
+                    inThread.stopCopy();
+                } catch (ConnectionFailedException e) {
+                    Log.e(TAG, "reconnection failed fundamentally");
+                    inThread.stopCopy();
+                }
             }
         }
     }

@@ -244,6 +244,13 @@ public class Ayiya {
     }
 
     /**
+     * Re-Connect the tunnel, closing the existing socket
+     */
+    public void reconnect() throws IOException, ConnectionFailedException {
+        close();
+        connect();
+    }
+    /**
      * Tell if a valid response has already been received by this instance.
      * @return true if any valid response was already received.
      */
@@ -418,7 +425,7 @@ public class Ayiya {
         }
 
         // check if correct AYIYA packet
-        if (buildByte(4, Identity.INTEGER.ordinal()) != packet[0+offset] ||
+        if (buildByte(4, Identity.INTEGER.ordinal()) != packet[offset] ||
                 buildByte(5, HashAlgorithm.SHA1.ordinal()) != packet[1+offset] ||
                 AuthType.SHAREDSECRED.ordinal() != (packet[2+offset] >> 4) ||
                 (getSupportedOpCode(packet, offset, bytecount) == null) ||
@@ -455,7 +462,7 @@ public class Ayiya {
         } catch (NoSuchAlgorithmException e) {
             throw new TunnelBrokenException("Unable to do sha1 hashes", e);
         }
-        sha1.update(packet, 0+offset, 24);
+        sha1.update(packet, offset, 24);
         sha1.update(hashedPassword);
         sha1.update(packet, 44+offset, bytecount-44);
         byte[] myHash = sha1.digest();
@@ -596,6 +603,7 @@ public class Ayiya {
      */
     public void close() {
         if (socket != null && !socket.isClosed()) {
+            socket.disconnect();
             socket.close();
             socket = null; // it's useless anyway
         }

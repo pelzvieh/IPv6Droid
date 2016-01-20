@@ -109,7 +109,6 @@ public class MainActivity extends Activity {
         //    lastEvents = new LinkedBlockingDeque<>(EVENT_LENGTH);
 
         // setup the intent filter for status broadcasts
-        // The filter's action is BROADCAST_ACTION
         IntentFilter statusIntentFilter = new IntentFilter(VpnStatusReport.BC_STATUS);
 
         // Registers the StatusReceiver and its intent filter
