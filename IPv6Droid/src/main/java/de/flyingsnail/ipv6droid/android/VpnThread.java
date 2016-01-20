@@ -32,6 +32,7 @@ import android.net.NetworkInfo;
 import android.net.RouteInfo;
 import android.net.TrafficStats;
 import android.net.VpnService;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Handler;
 import android.os.ParcelFileDescriptor;
@@ -941,15 +942,22 @@ class VpnThread extends Thread {
         if (ayiya != null && inThread != null && inThread.isAlive()) {
             if (!ayiya.isAlive()) {
                 Log.i(TAG, "ayiya object no longer functional after connectivity change - reconnecting");
-                try {
-                    ayiya.reconnect();
-                } catch (IOException e) {
-                    Log.e(TAG, "reconnection failed temporarily");
-                    inThread.stopCopy();
-                } catch (ConnectionFailedException e) {
-                    Log.e(TAG, "reconnection failed fundamentally");
-                    inThread.stopCopy();
-                }
+                new AsyncTask<Ayiya, Void, Void>() {
+                    @Override
+                    protected Void doInBackground(Ayiya... params) {
+                        try {
+                            ayiya.reconnect();
+                        } catch (IOException e) {
+                            Log.e(TAG, "reconnection failed temporarily");
+                            inThread.stopCopy();
+                        } catch (ConnectionFailedException e) {
+                            Log.e(TAG, "reconnection failed fundamentally");
+                            inThread.stopCopy();
+                        }
+                        return null;
+                    }
+
+                }.execute(ayiya);
             }
         }
     }
