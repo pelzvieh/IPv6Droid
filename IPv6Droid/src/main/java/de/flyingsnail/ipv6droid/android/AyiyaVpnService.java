@@ -20,6 +20,7 @@
 
 package de.flyingsnail.ipv6droid.android;
 
+import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
@@ -29,6 +30,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.VpnService;
+import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
@@ -99,6 +101,7 @@ public class AyiyaVpnService extends VpnService {
         ongoingNotificationBuilder = createNotificationBuilder(StatisticsActivity.class);
         ongoingNotificationBuilder.setContentTitle(getString(R.string.app_name));
         ongoingNotificationBuilder.setOngoing(true);
+        ongoingNotificationBuilder.setVisibility(Notification.VISIBILITY_PUBLIC);
 
         // register receivers of broadcasts
         registerLocalCommandReceiver();
@@ -125,7 +128,6 @@ public class AyiyaVpnService extends VpnService {
             Log.d(TAG, "retrieved configuration");
 
             // Start a new session by creating a new thread.
-            // @todo handling cached tunnel is broken in context of START_STICKY. Refactor and change start mode
             TicTunnel cachedTunnel = (intent == null) ? null : (TicTunnel) intent.getSerializableExtra(EXTRA_CACHED_TUNNEL);
             thread = new VpnThread(this, cachedTunnel, ticConfiguration, routingConfiguration, SESSION_NAME);
             startVpn();
@@ -180,7 +182,13 @@ public class AyiyaVpnService extends VpnService {
     @Override
     public void onRevoke() {
         Log.i(TAG, "VPN usage rights are being revoked - closing tunnel thread");
-        stopVpn();
+        new AsyncTask<Void, Void, Void>() {
+            @Override
+            protected Void doInBackground(Void... params) {
+                stopVpn();
+                return null;
+            }
+        }.execute();
         notifyUserOfError(R.string.ayiyavpnservice_revoked, new Exception(""));
         super.onRevoke();
     }
@@ -310,8 +318,16 @@ public class AyiyaVpnService extends VpnService {
             String action = intent.getAction();
             if (thread != null && thread.isAlive()) {
                 if (action.equals(MainActivity.BC_STOP)) {
-                    Log.i(TAG, "Received explicit stop brodcast, will stop VPN Tread");
-                    stopVpn();
+                    Log.i(TAG, "Received explicit stop broadcast, will stop VPN Tread");
+                    new AsyncTask<Void, Void, Void>(){
+                        @Override
+                        protected Void doInBackground(Void... params) {
+                            Log.d(TAG, "async close thread starting");
+                            stopVpn();
+                            thread = null;
+                            return null;
+                        }
+                    }.execute();
                     stopSelf(); // user command is the only event that corresponds to "the work is done"
                 } else if (action.equals(MainActivity.BC_STATUS_UPDATE)) {
                     Log.i(TAG, "Someone requested a status report, will have one send");

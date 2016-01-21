@@ -112,12 +112,14 @@ class CopyThread extends Thread {
      * Signal that this thread should end now.
      */
     public void stopCopy() {
-        Log.i(TAG, "Stopping copy thread " + getName());
-        stopCopy = true;
-        if (this.isAlive())
-            this.interrupt();
-        cleanAll();
-        setName(getName() + " (shutting down)");
+        if (!stopCopy) {
+            Log.i(TAG, "Stopping copy thread " + getName());
+            stopCopy = true;
+            if (this.isAlive())
+                this.interrupt();
+            cleanAll();
+            setName(getName() + " (shutting down)");
+        }
     }
 
     /**
@@ -162,7 +164,7 @@ class CopyThread extends Thread {
             // @TODO there *must* be a suitable utility class for that...?
             while (!stopCopy) {
                 byte[]packet = bufferPool.remove();
-                int len = in.read (packet);
+                int len = in.read (packet); // actually, the thread might hang here for a loooong time
                 if (stopCopy || isInterrupted())
                     break;
                 if (len > 0) {

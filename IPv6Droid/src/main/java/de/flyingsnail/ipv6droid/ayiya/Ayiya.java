@@ -224,7 +224,7 @@ public class Ayiya {
     /**
      * Connect the tunnel.
      */
-    public void connect() throws IOException, ConnectionFailedException {
+    public synchronized void connect() throws IOException, ConnectionFailedException {
         if (socket != null) {
             throw new IllegalStateException("This Tic is already connected.");
         }
@@ -232,6 +232,8 @@ public class Ayiya {
         // UDP connection
         socket = new DatagramSocket();
         socket.connect(ipv4Pop, PORT);
+        socket.setSoTimeout(0); // no read timeout
+        //socket.setSoTimeout(10000); // 10 secs. read timeout
 
         // beat it!
         try {
@@ -246,7 +248,9 @@ public class Ayiya {
     /**
      * Re-Connect the tunnel, closing the existing socket
      */
-    public void reconnect() throws IOException, ConnectionFailedException {
+    public synchronized void reconnect() throws IOException, ConnectionFailedException {
+        if (socket == null)
+            throw new IllegalStateException("Ayiya object is closed or not initialized");
         close();
         connect();
     }
@@ -601,7 +605,7 @@ public class Ayiya {
     /**
      * Close our socket. Basically that's about it.
      */
-    public void close() {
+    public synchronized void close() {
         if (socket != null && !socket.isClosed()) {
             socket.disconnect();
             socket.close();

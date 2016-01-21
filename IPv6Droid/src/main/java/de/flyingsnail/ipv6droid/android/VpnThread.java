@@ -228,19 +228,24 @@ class VpnThread extends Thread {
 
             waitOnConnectivity();
 
-            if (tunnelSpecification == null) {
-                readTunnelFromTIC();
-            } else {
-                Log.i(TAG, "Using cached TicTunnel instead of contacting TIC");
-            }
-            vpnStatus.setActiveTunnel(tunnelSpecification);
-            vpnStatus.setProgressPerCent(25);
+            // startup process during which no parallel shutdown is allowed
+            VpnService.Builder builder;
+            VpnService.Builder builderNotRouted;
+            synchronized (this) {
+                if (tunnelSpecification == null) {
+                    readTunnelFromTIC();
+                } else {
+                    Log.i(TAG, "Using cached TicTunnel instead of contacting TIC");
+                }
+                vpnStatus.setActiveTunnel(tunnelSpecification);
+                vpnStatus.setProgressPerCent(25);
 
-            // build vpn device on local machine
-            VpnService.Builder builder = ayiyaVpnService.createBuilder();
-            configureBuilderFromTunnelSpecification(builder, tunnelSpecification, false);
-            VpnService.Builder builderNotRouted = ayiyaVpnService.createBuilder();
-            configureBuilderFromTunnelSpecification(builderNotRouted, tunnelSpecification, true);
+                // build vpn device on local machine
+                builder = ayiyaVpnService.createBuilder();
+                configureBuilderFromTunnelSpecification(builder, tunnelSpecification, false);
+                builderNotRouted = ayiyaVpnService.createBuilder();
+                configureBuilderFromTunnelSpecification(builderNotRouted, tunnelSpecification, true);
+            }
             refreshTunnelLoop(builder, builderNotRouted);
 
             // important status change
@@ -279,7 +284,7 @@ class VpnThread extends Thread {
     /**
      * Request copy threads to close, close sockets.
      */
-    private void cleanAll() {
+    private synchronized void cleanAll() {
         if (inThread != null)
             inThread.stopCopy();
         if (outThread != null)
@@ -292,8 +297,9 @@ class VpnThread extends Thread {
             }
         }
         try {
-            if (vpnFD != null)
+            if (vpnFD != null) {
                 vpnFD.close();
+            }
         } catch (Exception e) {
             Log.e(TAG, "Cannot close local socket", e);
         }
@@ -390,6 +396,7 @@ class VpnThread extends Thread {
                 inThread = new CopyThread (popIn, localOut, ayiyaVpnService, this, "AYIYA from POP to local", TAG_INCOMING_THREAD, 0);
                 outThread.start();
                 inThread.start();
+                vpnStatus.setStatus(VpnStatusReport.Status.Connected);
 
                 // now do a ping on IPv6 level. This should involve receiving one packet
                 if (tunnelSpecification.getIpv6Pop().isReachable(10000)) {
@@ -412,9 +419,9 @@ class VpnThread extends Thread {
                 vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
             } catch (InterruptedException e) {
                 Log.i(VpnThread.TAG, "refresh tunnel loop received interrupt", e);
-            } catch (RuntimeException e) {
-                ayiyaVpnService.notifyUserOfError(R.string.unexpected_runtime_exception, e);
-                throw e;
+            } catch (Throwable t) {
+                ayiyaVpnService.notifyUserOfError(R.string.unexpected_runtime_exception, t);
+                Log.e(TAG, "Caught unexpected throwable", t);
             } finally {
                 // @todo only do this in the outer loop
                 cleanAll();
@@ -927,6 +934,7 @@ class VpnThread extends Thread {
 
     /**
      * Notify all threads waiting on a status change.
+     * This is safe to call from the main thread.
      * @param intent the intent that was broadcast to flag the status change. Not currently used.
      */
     public void onConnectivityChange(Intent intent) {
@@ -946,7 +954,7 @@ class VpnThread extends Thread {
                     @Override
                     protected Void doInBackground(Ayiya... params) {
                         try {
-                            ayiya.reconnect();
+                            ayiya.reconnect(); // raises an exception if another thead is currently closing
                         } catch (IOException e) {
                             Log.e(TAG, "reconnection failed temporarily");
                             inThread.stopCopy();
