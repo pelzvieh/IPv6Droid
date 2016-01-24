@@ -197,10 +197,10 @@ public class MainActivity extends Activity {
         super.onPause();
 
         if (availableTunnels != null && selectedTunnel != null && statusReceiver.isTunnelProven()) {
-            Log.i(TAG, "We have an updated tunnel list and will write it back to cache");
+            Log.i (TAG, "We have an updated tunnel list and will write it back to cache");
             if (availableTunnels.contains(selectedTunnel)) {
                 // we have a tunnel that should work
-                writePersistedTunnel();
+                writePersistedTunnel ();
             } else
                 Log.e (TAG, "Inconsistent data from statusReceiver: active tunnel not in tunnel list - aborting write back");
         }
@@ -357,30 +357,28 @@ public class MainActivity extends Activity {
         private void updateUi () {
             int imageRes = R.drawable.off;
             VpnStatusReport.Status status = statusReport.getStatus();
-            if (status != null) {
-                switch (status) {
-                    case Connected:
-                        imageRes = R.drawable.transmitting;
-                        break;
-                    case Idle:
-                        imageRes = R.drawable.off;
-                        break;
-                    case Connecting:
-                        imageRes = R.drawable.pending;
-                        break;
-                    case Disturbed:
-                        imageRes = R.drawable.disturbed;
-                        break;
-                }
-                MainActivity.this.status.setImageResource(imageRes);
+            switch (status) {
+                case Connected:
+                    imageRes = R.drawable.transmitting;
+                    break;
+                case Idle:
+                    imageRes = R.drawable.off;
+                    break;
+                case Connecting:
+                    imageRes = R.drawable.pending;
+                    break;
+                case Disturbed:
+                    imageRes = R.drawable.disturbed;
+                    break;
             }
+            MainActivity.this.status.setImageResource(imageRes);
             if (statusReport.getProgressPerCent() > 0) {
                 MainActivity.this.progress.setIndeterminate(false);
                 MainActivity.this.progress.setProgress(statusReport.getProgressPerCent());
             } else
                 MainActivity.this.progress.setIndeterminate(true);
 
-            if (status == null || status == VpnStatusReport.Status.Idle) {
+            if (status == VpnStatusReport.Status.Idle) {
                 redundantStartButton.setVisibility(View.VISIBLE);
                 MainActivity.this.progress.setVisibility(View.INVISIBLE);
                 MainActivity.this.activity.setVisibility(View.INVISIBLE);
@@ -398,12 +396,8 @@ public class MainActivity extends Activity {
                 MainActivity.this.activity.setText(getResources().getString(statusReport.getActivity()));
 
             // read tunnel information, if updated
-            if (statusReport.getTicTunnelList() != null)
-                availableTunnels = statusReport.getTicTunnelList();
+            availableTunnels = statusReport.getTicTunnelList();
             // deal with null here to avoid nasty checks everywhere else...
-            if (availableTunnels == null)
-                availableTunnels = new ArrayList<TicTunnel>(0);
-
             if (statusReport.getActiveTunnel() != null)
                 selectedTunnel = statusReport.getActiveTunnel();
 

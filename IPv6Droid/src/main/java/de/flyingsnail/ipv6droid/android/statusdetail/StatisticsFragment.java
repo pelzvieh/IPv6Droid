@@ -41,7 +41,7 @@ import java.util.concurrent.TimeUnit;
 
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.AyiyaVpnService;
-import de.flyingsnail.ipv6droid.android.Statistics;
+import de.flyingsnail.ipv6droid.android.statistics.Statistics;
 
 /**
  * A simple {@link Fragment} subclass.

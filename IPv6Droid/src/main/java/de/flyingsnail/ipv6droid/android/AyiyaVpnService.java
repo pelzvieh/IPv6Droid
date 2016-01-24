@@ -43,6 +43,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.statistics.Statistics;
 import de.flyingsnail.ipv6droid.android.statusdetail.StatisticsActivity;
 import de.flyingsnail.ipv6droid.ayiya.TicConfiguration;
 import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
@@ -120,7 +121,7 @@ public class AyiyaVpnService extends VpnService {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.i(TAG, "received start command");
-        if (thread == null || !thread.isAlive()) {
+        if (thread == null || !thread.isIntendedToRun()) {
             // Build the configuration object from the saved shared preferences.
             SharedPreferences myPreferences = PreferenceManager.getDefaultSharedPreferences(this);
             TicConfiguration ticConfiguration = loadTicConfiguration(myPreferences);
@@ -156,7 +157,7 @@ public class AyiyaVpnService extends VpnService {
      */
     private synchronized void stopVpn() {
         vpnShouldRun = false;
-        if (thread != null && thread.isAlive()) {
+        if (thread != null && thread.isIntendedToRun()) {
             Log.d(TAG, "stopVpn - requestTunnelClose");
             thread.requestTunnelClose();
         }
@@ -185,7 +186,9 @@ public class AyiyaVpnService extends VpnService {
         new AsyncTask<Void, Void, Void>() {
             @Override
             protected Void doInBackground(Void... params) {
+                Log.d (TAG, "Start async closing of VPN");
                 stopVpn();
+                thread = null;
                 return null;
             }
         }.execute();
@@ -314,7 +317,7 @@ public class AyiyaVpnService extends VpnService {
         }
 
         @Override
-        public void onReceive(Context context, Intent intent) {
+        public void onReceive(@NonNull Context context, @NonNull Intent intent) {
             String action = intent.getAction();
             if (thread != null && thread.isAlive()) {
                 if (action.equals(MainActivity.BC_STOP)) {
@@ -347,7 +350,7 @@ public class AyiyaVpnService extends VpnService {
         }
 
         @Override
-        public void onReceive(Context context, Intent intent) {
+        public void onReceive(Context context, @NonNull Intent intent) {
             String action = intent.getAction();
             if (action.equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
                 if (thread != null && thread.isAlive())

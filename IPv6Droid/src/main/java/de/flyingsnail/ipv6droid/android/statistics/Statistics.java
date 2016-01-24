@@ -18,7 +18,7 @@
  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  */
 
-package de.flyingsnail.ipv6droid.android;
+package de.flyingsnail.ipv6droid.android.statistics;
 
 import android.net.RouteInfo;
 
@@ -30,38 +30,36 @@ import java.util.List;
 
 /**
  * Created by pelzi on 01.05.15.
+ * This class is a transporter for statistical information from the VPN management thread to the
+ * GUI classes.
  */
 public class Statistics {
-    final long bytesTransmitted;
-    final long bytesReceived;
-    final long packetsTransmitted;
-    final long packetsReceived;
-    final long bytesPerBurstTransmitted;
-    final long bytesPerBurstReceived;
-    final long packetsPerBurstTransmitted;
-    final long packetsPerBurstReceived;
-    final long timeSpanPerBurstTransmitted;
-    final long timeSpanPerBurstReceived;
-    final long timeLapseBetweenBurstsTransmitted;
-    final long timeLapseBetweenBurstsReceived;
-    final Inet4Address brokerIPv4;
-    final Inet4Address myIPv4;
-    final Inet6Address brokerIPv6;
-    final Inet6Address myIPv6;
-    final int mtu;
-    final List<RouteInfo> nativeRouting;
-    final List<RouteInfo> vpnRouting;
-    final List<InetAddress> nativeDnsSetting;
-    final List<InetAddress> vpnDnsSetting;
+    final private long bytesTransmitted;
+    final private long bytesReceived;
+    final private long packetsTransmitted;
+    final private long packetsReceived;
+    final private long bytesPerBurstTransmitted;
+    final private long bytesPerBurstReceived;
+    final private long packetsPerBurstTransmitted;
+    final private long packetsPerBurstReceived;
+    final private long timeSpanPerBurstTransmitted;
+    final private long timeSpanPerBurstReceived;
+    final private long timeLapseBetweenBurstsTransmitted;
+    final private long timeLapseBetweenBurstsReceived;
+    final private Inet4Address brokerIPv4;
+    final private Inet4Address myIPv4;
+    final private Inet6Address brokerIPv6;
+    final private Inet6Address myIPv6;
+    final private int mtu;
+    final private List<RouteInfo> nativeRouting;
+    final private List<RouteInfo> vpnRouting;
+    final private List<InetAddress> nativeDnsSetting;
+    final private List<InetAddress> vpnDnsSetting;
     final private Date timestamp;
     final private boolean tunnelRouted;
 
-    protected Statistics(long bytesTransmitted, long bytesReceived,
-                         long packetsTransmitted, long packetsReceived,
-                         long bytesPerBurstTransmitted, long bytesPerBurstReceived,
-                         long packetsPerBurstTransmitted, long packetsPerBurstReceived,
-                         long timeSpanPerBurstTransmitted, long timeSpanPerBurstReceived,
-                         long timeLapseBetweenBurstsTransmitted, long timeLapseBetweenBurstsReceived,
+    public Statistics(TransmissionStatistics outgoingStatistics,
+                         TransmissionStatistics ingoingStatistics,
                          Inet4Address brokerIPv4, Inet4Address myIPv4,
                          Inet6Address brokerIPv6, Inet6Address myIPv6,
                          int mtu,
@@ -69,18 +67,18 @@ public class Statistics {
                          List<InetAddress> nativeDnsSetting,List<InetAddress> vpnDnsSetting,
                          boolean tunnelRouted)
     {
-        this.bytesTransmitted = bytesTransmitted;
-        this.bytesReceived = bytesReceived;
-        this.packetsTransmitted = packetsTransmitted;
-        this.packetsReceived = packetsReceived;
-        this.bytesPerBurstReceived = bytesPerBurstReceived;
-        this.bytesPerBurstTransmitted = bytesPerBurstTransmitted;
-        this.packetsPerBurstTransmitted = packetsPerBurstTransmitted;
-        this.packetsPerBurstReceived = packetsPerBurstReceived;
-        this.timeSpanPerBurstTransmitted = timeSpanPerBurstTransmitted;
-        this.timeSpanPerBurstReceived = timeSpanPerBurstReceived;
-        this.timeLapseBetweenBurstsTransmitted = timeLapseBetweenBurstsTransmitted;
-        this.timeLapseBetweenBurstsReceived = timeLapseBetweenBurstsReceived;
+        this.bytesTransmitted = outgoingStatistics.getByteCount();
+        this.bytesReceived = ingoingStatistics.getByteCount();
+        this.packetsTransmitted = outgoingStatistics.getPacketCount();
+        this.packetsReceived = ingoingStatistics.getPacketCount();
+        this.bytesPerBurstTransmitted = outgoingStatistics.getAverageBurstBytes();
+        this.bytesPerBurstReceived = ingoingStatistics.getAverageBurstBytes();
+        this.packetsPerBurstTransmitted = outgoingStatistics.getAverageBurstPackets();
+        this.packetsPerBurstReceived = ingoingStatistics.getAverageBurstPackets();
+        this.timeSpanPerBurstTransmitted = outgoingStatistics.getAverageBurstLength();
+        this.timeSpanPerBurstReceived = ingoingStatistics.getAverageBurstLength();
+        this.timeLapseBetweenBurstsTransmitted = outgoingStatistics.getAverageBurstPause();
+        this.timeLapseBetweenBurstsReceived = ingoingStatistics.getAverageBurstPause();
         this.brokerIPv4 = brokerIPv4;
         this.myIPv4 = myIPv4;
         this.brokerIPv6 = brokerIPv6;

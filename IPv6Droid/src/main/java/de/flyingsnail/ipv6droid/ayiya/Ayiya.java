@@ -609,8 +609,8 @@ public class Ayiya {
         if (socket != null && !socket.isClosed()) {
             socket.disconnect();
             socket.close();
-            socket = null; // it's useless anyway
         }
+        socket = null; // it's useless anyway
     }
 
 }

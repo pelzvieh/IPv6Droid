@@ -36,6 +36,7 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Handler;
 import android.os.ParcelFileDescriptor;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.system.OsConstants;
 import android.util.Log;
@@ -60,6 +61,8 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.statistics.Statistics;
+import de.flyingsnail.ipv6droid.android.statistics.TransmissionStatistics;
 import de.flyingsnail.ipv6droid.ayiya.AuthenticationFailedException;
 import de.flyingsnail.ipv6droid.ayiya.Ayiya;
 import de.flyingsnail.ipv6droid.ayiya.ConnectionFailedException;
@@ -183,6 +186,14 @@ class VpnThread extends Thread {
      * The tunnel protocol object
      */
     private Ayiya ayiya;
+    /**
+     * The incoming statistics collector.
+     */
+    private final TransmissionStatistics ingoingStatistics;
+    /**
+     * The outgoing statistics collector.
+     */
+    private final TransmissionStatistics outgoingStatistics;
 
     /**
      * The constructor setting all required fields.
@@ -192,11 +203,11 @@ class VpnThread extends Thread {
      * @param routingConfiguration the nativeRouting configuration
      * @param sessionName the name of this thread
      */
-    VpnThread(AyiyaVpnService ayiyaVpnService,
+    VpnThread(@NonNull AyiyaVpnService ayiyaVpnService,
               @Nullable TicTunnel cachedTunnel,
-              TicConfiguration config,
-              RoutingConfiguration routingConfiguration,
-              String sessionName) {
+              @NonNull TicConfiguration config,
+              @NonNull RoutingConfiguration routingConfiguration,
+              @NonNull String sessionName) {
         setName(sessionName);
         this.ayiyaVpnService = ayiyaVpnService;
         this.vpnStatus = new VpnStatusReport(ayiyaVpnService);
@@ -209,6 +220,9 @@ class VpnThread extends Thread {
         this.tunnelSpecification = cachedTunnel;
         // extract the application context
         this.applicationContext = ayiyaVpnService.getApplicationContext();
+        // the statistics collector
+        this.ingoingStatistics = new TransmissionStatistics();
+        this.outgoingStatistics = new TransmissionStatistics();
         // resolve system service "ConnectivityManager"
         connectivityManager = (ConnectivityManager)applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE);
         // initialise nativeRouting info
@@ -218,6 +232,7 @@ class VpnThread extends Thread {
 
     @Override
     public void run() {
+        closeTunnel = false;
         try {
             TrafficStats.setThreadStatsTag(TAG_PARENT_THREAD);
             handler = new Handler(applicationContext.getMainLooper());
@@ -274,21 +289,27 @@ class VpnThread extends Thread {
      * Request the tunnel control loop (running in a different thread) to stop.
      */
     protected void requestTunnelClose() {
-        Log.i(TAG, "Shutting down");
-        closeTunnel = true;
-        cleanAll();
-        setName(getName() + " (shutting down)");
-        interrupt();
+        if (isIntendedToRun()) {
+            Log.i(TAG, "Shutting down");
+            closeTunnel = true;
+            cleanAll();
+            setName(getName() + " (shutting down)");
+            interrupt();
+        }
     }
 
     /**
      * Request copy threads to close, close sockets.
      */
     private synchronized void cleanAll() {
-        if (inThread != null)
+        if (inThread != null) {
             inThread.stopCopy();
-        if (outThread != null)
+            inThread = null;
+        }
+        if (outThread != null) {
             outThread.stopCopy();
+            outThread = null;
+        }
         if (ayiya != null) {
             try {
                 ayiya.close();
@@ -303,6 +324,8 @@ class VpnThread extends Thread {
         } catch (Exception e) {
             Log.e(TAG, "Cannot close local socket", e);
         }
+        vpnStatus.setStatus (VpnStatusReport.Status.Idle);
+        vpnFD = null;
     }
 
     /**
@@ -392,8 +415,8 @@ class VpnThread extends Thread {
                 }
 
                 // start the copying threads
-                outThread = new CopyThread (localIn, popOut, ayiyaVpnService, this, "AYIYA from local to POP", TAG_OUTGOING_THREAD, 0);
-                inThread = new CopyThread (popIn, localOut, ayiyaVpnService, this, "AYIYA from POP to local", TAG_INCOMING_THREAD, 0);
+                outThread = new CopyThread (localIn, popOut, ayiyaVpnService, this, "AYIYA from local to POP", TAG_OUTGOING_THREAD, 0, outgoingStatistics);
+                inThread = new CopyThread (popIn, localOut, ayiyaVpnService, this, "AYIYA from POP to local", TAG_INCOMING_THREAD, 0, ingoingStatistics);
                 outThread.start();
                 inThread.start();
                 vpnStatus.setStatus(VpnStatusReport.Status.Connected);
@@ -411,7 +434,7 @@ class VpnThread extends Thread {
                 vpnStatus.setActivity(R.string.vpnservice_activity_online);
 
                 // loop until interrupted or tunnel defective
-                monitoredHeartbeatLoop(ayiya);
+                monitoredHeartbeatLoop();
 
             } catch (IOException e) {
                 Log.i(TAG, "Tunnel connection broke down, closing and reconnecting ayiya", e);
@@ -608,7 +631,6 @@ class VpnThread extends Thread {
      * declared exceptions when either it is no longer intended to run or the given ayiya doesn't
      * seem to work any more. It just exits if one of the copy threads terminated (see there).
      *
-     * @param ayiya the ayiya instance with which this is operating
      * @throws InterruptedException if someone (e.g. the user...) doesn't want us to go on.
      * @throws IOException in case of a (usually temporary) technical problem with the current ayiya.
      *   Often, this means that our IP address did change.
@@ -616,7 +638,7 @@ class VpnThread extends Thread {
      *   is not enabled any more in TIC, or the given and up-to-date TIC information in the tunnel
      *   repeatedly doesn't lead to a working tunnel.
      */
-    private void monitoredHeartbeatLoop(Ayiya ayiya) throws InterruptedException, IOException, ConnectionFailedException {
+    private void monitoredHeartbeatLoop() throws InterruptedException, IOException, ConnectionFailedException {
         boolean timeoutSuspected = false;
         long lastPacketDelta = 0l;
         long heartbeatInterval = tunnelSpecification.getHeartbeatInterval() * 1000;
@@ -631,8 +653,12 @@ class VpnThread extends Thread {
             // inThread crashes on external network changes even if no transfer
             // is active.
             inThread.join(heartbeatInterval - lastPacketDelta);
+            if (closeTunnel)
+                break;
             lastPacketDelta = new Date().getTime() - ayiya.getLastPacketSentTime().getTime();
-            if (inThread.isAlive() && outThread.isAlive() && lastPacketDelta >= heartbeatInterval - 100) {
+            if ((inThread != null && inThread.isAlive()) &&
+                    (outThread != null && outThread.isAlive()) &&
+                    lastPacketDelta >= heartbeatInterval - 100) {
                 try {
                     Log.i(TAG, "Sending heartbeat");
                     ayiya.beat();
@@ -739,7 +765,7 @@ class VpnThread extends Thread {
         return tunnelChanged;
     }
 
-    private static boolean checkExpiry (Date lastReceived, int heartbeatInterval) {
+    private static boolean checkExpiry (@NonNull Date lastReceived, int heartbeatInterval) {
         Calendar oldestExpectedPacket = Calendar.getInstance();
         oldestExpectedPacket.add(Calendar.SECOND, -heartbeatInterval);
         if (lastReceived.before(oldestExpectedPacket.getTime())) {
@@ -760,7 +786,7 @@ class VpnThread extends Thread {
      * @throws IOException in case of a communication problem
      * @throws ConnectionFailedException in case of a logical problem with the setup
      */
-    private List<TicTunnel> expandSuitables(List<String> tunnelIds, Tic tic) throws IOException, ConnectionFailedException {
+    private @NonNull List<TicTunnel> expandSuitables(@NonNull List<String> tunnelIds, @NonNull Tic tic) throws IOException, ConnectionFailedException {
         List<TicTunnel> retval = new ArrayList<TicTunnel>(tunnelIds.size());
         for (String id: tunnelIds) {
             TicTunnel desc;
@@ -790,7 +816,7 @@ class VpnThread extends Thread {
      * TargetApi annotation and concentrate API specific code at one place.
      */
     @TargetApi(21)
-    private void configureNewSettings(VpnService.Builder builder) {
+    private void configureNewSettings(@NonNull VpnService.Builder builder) {
         if (Build.VERSION.SDK_INT >= 21) {
             builder.setBlocking(true);
             builder.allowBypass();
@@ -803,8 +829,8 @@ class VpnThread extends Thread {
      * @param builder the Builder to configure
      * @param tunnelSpecification the TicTunnel specification of the tunnel to set up.
      */
-    private void configureBuilderFromTunnelSpecification(VpnService.Builder builder,
-                                                         TicTunnel tunnelSpecification,
+    private void configureBuilderFromTunnelSpecification(@NonNull VpnService.Builder builder,
+                                                         @NonNull TicTunnel tunnelSpecification,
                                                          boolean suppressRouting) {
         builder.setMtu(tunnelSpecification.getMtu());
         builder.setSession(tunnelSpecification.getPopName());
@@ -855,7 +881,7 @@ class VpnThread extends Thread {
      * @param resId the ressource ID of the string to post
      * @param duration constant coding the duration
      */
-    private void postToast (final Context ctx, final int resId, final int duration) {
+    private void postToast (final @NonNull Context ctx, final int resId, final int duration) {
         handler.post(new Runnable() {
             @Override
             public void run() {
@@ -897,27 +923,15 @@ class VpnThread extends Thread {
      * Read out current statistics values
      * @return the Statistics object with current values
      */
-    public Statistics getStatistics() {
+    public synchronized Statistics getStatistics() {
         Log.d(VpnThread.TAG, "getStatistics() called");
         if (!isTunnelUp()) {
             throw new IllegalStateException("Attempt to get Statistics on a non-running tunnel");
         }
         Statistics stats;
-
-
         stats = new Statistics(
-                outThread.getByteCount(),
-                inThread.getByteCount(),
-                outThread.getPacketCount(),
-                inThread.getPacketCount(),
-                outThread.getAverageBurstBytes(),
-                inThread.getAverageBurstBytes(),
-                outThread.getAverageBurstPackets(),
-                inThread.getAverageBurstPackets(),
-                outThread.getAverageBurstLength(),
-                inThread.getAverageBurstLength(),
-                outThread.getAverageBurstPause(),
-                inThread.getAverageBurstPause(),
+                outgoingStatistics,
+                ingoingStatistics,
                 tunnelSpecification.getIPv4Pop(),
                 localIp,
                 tunnelSpecification.getIpv6Pop(),
@@ -935,9 +949,9 @@ class VpnThread extends Thread {
     /**
      * Notify all threads waiting on a status change.
      * This is safe to call from the main thread.
-     * @param intent the intent that was broadcast to flag the status change. Not currently used.
+     * @param intent the intent that was broadcast to flag the status change.
      */
-    public void onConnectivityChange(Intent intent) {
+    public void onConnectivityChange(@NonNull Intent intent) {
         Log.i(TAG, "Connectivity changed");
         if (!intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false)) {
             synchronized (vpnStatus) {
@@ -947,25 +961,26 @@ class VpnThread extends Thread {
         }
 
         // check if our sockets are still valid
-        if (ayiya != null && inThread != null && inThread.isAlive()) {
-            if (!ayiya.isAlive()) {
+        final Ayiya myAyiya = ayiya; // avoid race conditions
+        final CopyThread myInThread = inThread;
+        if (myAyiya != null && myInThread != null && myInThread.isAlive()) {
+            if (!myAyiya.isAlive()) {
                 Log.i(TAG, "ayiya object no longer functional after connectivity change - reconnecting");
-                new AsyncTask<Ayiya, Void, Void>() {
+                new AsyncTask<Void, Void, Void>() {
                     @Override
-                    protected Void doInBackground(Ayiya... params) {
+                    protected Void doInBackground(Void... params) {
                         try {
-                            ayiya.reconnect(); // raises an exception if another thead is currently closing
-                        } catch (IOException e) {
-                            Log.e(TAG, "reconnection failed temporarily");
-                            inThread.stopCopy();
-                        } catch (ConnectionFailedException e) {
-                            Log.e(TAG, "reconnection failed fundamentally");
-                            inThread.stopCopy();
+                            myAyiya.reconnect(); // raises an exception if another thead is currently closing
+                        } catch (IllegalStateException e) {
+                            Log.i(TAG, "ayiya object was closed in the meantime", e);
+                        } catch (Throwable t) {
+                            Log.e(TAG, "reconnection failed", t);
+                            myInThread.stopCopy();
                         }
                         return null;
                     }
 
-                }.execute(ayiya);
+                }.execute();
             }
         }
     }
@@ -976,6 +991,15 @@ class VpnThread extends Thread {
      */
     public boolean isTunnelUp() {
         return (vpnStatus != null) && (vpnStatus.getStatus().equals(VpnStatusReport.Status.Connected));
+    }
+
+    /**
+     * Query if a tunnel should be running generally. In contrast to @ref #isTunnelUp, this will
+     * also return true if the tunnel is currently pausing due to lack of network connectivity.
+     * @return a boolean, true if this thread is active and trying to keep a tunnel up.
+     */
+    public boolean isIntendedToRun() {
+        return isAlive() && !closeTunnel;
     }
 
 

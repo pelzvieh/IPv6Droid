@@ -22,9 +22,12 @@ package de.flyingsnail.ipv6droid.android;
 
 import android.content.Context;
 import android.content.Intent;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 import de.flyingsnail.ipv6droid.R;
@@ -104,6 +107,8 @@ public class VpnStatusReport implements Serializable {
         activity = R.string.vpnservice_activity_wait;
         activeTunnel = null;
         tunnelProvedWorking = false;
+        ticTunnelList = new ArrayList<TicTunnel>();
+        cause = null;
         reportStatus();
     }
 
@@ -144,7 +149,7 @@ public class VpnStatusReport implements Serializable {
             reportStatus();
     }
 
-    protected void setCause(Throwable cause) {
+    protected void setCause(@Nullable Throwable cause) {
         boolean changed = (this.cause != cause) && (
                 this.cause == null || !this.cause.equals(cause)
         );
@@ -199,7 +204,7 @@ public class VpnStatusReport implements Serializable {
      * Get the classified status of the tunnel.
      * @return the Status
      */
-    public Status getStatus() {
+    public @NonNull Status getStatus() {
         return status;
     }
 
@@ -215,11 +220,11 @@ public class VpnStatusReport implements Serializable {
      * Get the currently active (or build) tunnel
      * @return the TicTunnel
      */
-    public TicTunnel getActiveTunnel() {
+    public @Nullable TicTunnel getActiveTunnel() {
         return activeTunnel;
     }
 
-    public void setTicTunnelList(List<TicTunnel> ticTunnelList) {
+    public void setTicTunnelList(@NonNull List<TicTunnel> ticTunnelList) {
         this.ticTunnelList = ticTunnelList;
     }
 
@@ -227,7 +232,7 @@ public class VpnStatusReport implements Serializable {
      * Get the list of TicTunnels available to the user.
      * @return a List<TicTunnel></TicTunnel>
      */
-    public List<TicTunnel> getTicTunnelList() {
+    public @NonNull List<TicTunnel> getTicTunnelList() {
         return ticTunnelList;
     }
 
@@ -235,7 +240,7 @@ public class VpnStatusReport implements Serializable {
      * Get the cause of the current status. Only set if the status is disrupted in any way.
      * @return the Throwable specifying the cause of disruption, or null if no disruption.
      */
-    public Throwable getCause() {
+    public @Nullable Throwable getCause() {
         return cause;
     }
 
