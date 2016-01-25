@@ -299,16 +299,14 @@ class VpnThread extends Thread {
     }
 
     /**
-     * Request copy threads to close, close sockets.
+     * Request copy threads to close, reset thread fields, and close ayiya object
      */
-    private synchronized void cleanAll() {
+    private synchronized void cleanCopyThreads() {
         if (inThread != null) {
             inThread.stopCopy();
-            inThread = null;
         }
         if (outThread != null) {
             outThread.stopCopy();
-            outThread = null;
         }
         if (ayiya != null) {
             try {
@@ -317,6 +315,13 @@ class VpnThread extends Thread {
                 Log.e(TAG, "Cannot close ayiya object", e);
             }
         }
+
+    }
+    /**
+     * Request copy threads to close, close ayiya object and VPN socket.
+     */
+    private synchronized void cleanAll() {
+        cleanCopyThreads();
         try {
             if (vpnFD != null) {
                 vpnFD.close();
@@ -329,21 +334,22 @@ class VpnThread extends Thread {
     }
 
     /**
-     * Run the tunnel as long as it should be running. This method ends via one of its declared
-     * exceptions, or in case that this thread is interrupted.
-     * @param builder the VpnService.Builder that is used to re-created the VPN Service in environments w/o IPv6
-     * @param builderNotRouted the VpnService.Builder that is used in environments with IPv6
-     * @throws ConnectionFailedException in case that the current configuration seems permanently defective.
+     * Run tunnels with a given local end (vpnFD remaining constant, local IP remaining constant,
+     * all connections staying up. In effect, this method will (re-)connect the ayiya part and run
+     * monitoredHeartbeatLoop on it.
+     *
+     * @throws ConnectionFailedException in case that the current configuration seems permanently defective
      */
-    private void refreshTunnelLoop(VpnService.Builder builder, VpnService.Builder builderNotRouted) throws ConnectionFailedException {
-        // Prepare the tunnel to PoP
-        ayiya = new Ayiya(tunnelSpecification);
-        closeTunnel = false;
-
+    private void refreshRemoteEnd() throws ConnectionFailedException, InterruptedException {
         Date lastStartAttempt = new Date(0l);
-        // @todo split into two loops, the inner refreshing inThread and ayiya object, the outer refreshing the vpnFD if broken. Caution on routing!!!
-        while (!closeTunnel) {
+        while (!closeTunnel && vpnFD.getFileDescriptor().valid()) {
             try {
+                // Packets to be sent are queued in this input stream.
+                FileInputStream localIn = new FileInputStream(vpnFD.getFileDescriptor());
+
+                // Packets received need to be written to this output stream.
+                FileOutputStream localOut = new FileOutputStream(vpnFD.getFileDescriptor());
+
                 if (interrupted())
                     throw new InterruptedException("Tunnel loop has interrupted status set");
 
@@ -356,46 +362,10 @@ class VpnThread extends Thread {
                 long lastIterationRun = now.getTime() - lastStartAttempt.getTime();
                 if (lastIterationRun < 1000l)
                     Thread.sleep(1000l - lastIterationRun);
-
-                // check current nativeRouting information for existing IPv6 default route
-                // then setup local tun and nativeRouting
-                Log.i(TAG, "Building new local TUN and new AYIYA object");
-                if (!routingConfiguration.isForceRouting() && ipv6DefaultExists()) {
-                    Log.i(TAG, "Detected existing IPv6, not setting routes to tunnel");
-                    vpnFD = builderNotRouted.establish();
-                    tunnelRouted = false;
-                } else {
-                    Log.i(TAG, "No native IPv6 to use, setting routes to tunnel");
-                    vpnFD = builder.establish();
-                    tunnelRouted = true;
-                }
-
-                vpnStatus.setActivity(R.string.vpnservice_activity_localnet);
-                vpnStatus.setProgressPerCent(50);
-
-                // Packets to be sent are queued in this input stream.
-                FileInputStream localIn = new FileInputStream(vpnFD.getFileDescriptor());
-
-                // Packets received need to be written to this output stream.
-                FileOutputStream localOut = new FileOutputStream(vpnFD.getFileDescriptor());
-
-                // due to kitkat issue, check local health
-                if (routingConfiguration.isTryRoutingWorkaround() && !checkRouting()) {
-                    Log.e(TAG, "Routing broken on this device, no default route is set for IPv6");
-                    postToast(applicationContext, R.string.routingbroken, Toast.LENGTH_LONG);
-                    try {
-                        fixRouting();
-                        if (checkRouting()) {
-                            Log.i(TAG, "VPNService nativeRouting was broken on this device, but could be fixed by the workaround");
-                            postToast(applicationContext, R.string.routingfixed, Toast.LENGTH_LONG);
-                        }
-                    } catch (RuntimeException re) {
-                        ayiyaVpnService.notifyUserOfError(R.string.routingbroken, re);
-                        Log.e(TAG, "Error fixing nativeRouting", re);
-                    }
-                }
+                lastStartAttempt = new Date();
 
                 // setup tunnel to PoP
+                Log.i(TAG, "Building new ayiya object");
                 ayiya.connect();
                 vpnStatus.setProgressPerCent(75);
                 vpnStatus.setActivity(R.string.vpnservice_activity_ping_pop);
@@ -415,6 +385,7 @@ class VpnThread extends Thread {
                 }
 
                 // start the copying threads
+                Log.i (TAG, "Starting copy threads");
                 outThread = new CopyThread (localIn, popOut, ayiyaVpnService, this, "AYIYA from local to POP", TAG_OUTGOING_THREAD, 0, outgoingStatistics);
                 inThread = new CopyThread (popIn, localOut, ayiyaVpnService, this, "AYIYA from POP to local", TAG_INCOMING_THREAD, 0, ingoingStatistics);
                 outThread.start();
@@ -435,20 +406,92 @@ class VpnThread extends Thread {
 
                 // loop until interrupted or tunnel defective
                 monitoredHeartbeatLoop();
+                Log.i(TAG, "monitored heartbeat loop ended");
 
             } catch (IOException e) {
-                Log.i(TAG, "Tunnel connection broke down, closing and reconnecting ayiya", e);
+                Log.i(TAG, "Tunnel connection broke down, closing and reconnecting ayiya (remote end)", e);
                 vpnStatus.setProgressPerCent(50);
                 vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
+            } catch (InterruptedException e) {
+                Log.i(VpnThread.TAG, "refresh remote end loop received interrupt", e);
+                throw e;
+            } finally {
+                cleanCopyThreads();
+                localIp = null;
+                inThread = null;
+                outThread = null;
+            }
+        }
+    }
+
+    /**
+     * Run the tunnel as long as it should be running. This method ends via one of its declared
+     * exceptions, or in case that this thread is interrupted.
+     * @param builder the VpnService.Builder that is used to re-created the VPN Service in environments w/o IPv6
+     * @param builderNotRouted the VpnService.Builder that is used in environments with IPv6
+     * @throws ConnectionFailedException in case that the current configuration seems permanently defective.
+     */
+    private void refreshTunnelLoop(VpnService.Builder builder, VpnService.Builder builderNotRouted) throws ConnectionFailedException {
+        // Prepare the tunnel to PoP
+        ayiya = new Ayiya(tunnelSpecification);
+        closeTunnel = false;
+
+        Date lastStartAttempt = new Date(0l);
+        while (!closeTunnel) {
+            try {
+                if (interrupted())
+                    throw new InterruptedException("Tunnel loop has interrupted status set");
+
+                // timestamp base mechanism to prevent busy looping through e.g. IOException
+                long lastIterationRun = new Date().getTime() - lastStartAttempt.getTime();
+                if (lastIterationRun < 1000l)
+                    Thread.sleep(1000l - lastIterationRun);
+                lastStartAttempt = new Date();
+
+                // check current nativeRouting information for existing IPv6 default route
+                // then setup local tun and nativeRouting
+                Log.i(TAG, "Building new local TUN  object");
+                if (!routingConfiguration.isForceRouting() && ipv6DefaultExists()) {
+                    Log.i(TAG, "Detected existing IPv6, not setting routes to tunnel");
+                    vpnFD = builderNotRouted.establish();
+                    tunnelRouted = false;
+                } else {
+                    Log.i(TAG, "No native IPv6 to use, setting routes to tunnel");
+                    vpnFD = builder.establish();
+                    tunnelRouted = true;
+                }
+
+                vpnStatus.setActivity(R.string.vpnservice_activity_localnet);
+                vpnStatus.setProgressPerCent(50);
+
+                // due to kitkat issue, check local health
+                if (routingConfiguration.isTryRoutingWorkaround() && !checkRouting()) {
+                    Log.e(TAG, "Routing broken on this device, no default route is set for IPv6");
+                    postToast(applicationContext, R.string.routingbroken, Toast.LENGTH_LONG);
+                    try {
+                        fixRouting();
+                        if (checkRouting()) {
+                            Log.i(TAG, "VPNService nativeRouting was broken on this device, but could be fixed by the workaround");
+                            postToast(applicationContext, R.string.routingfixed, Toast.LENGTH_LONG);
+                        }
+                    } catch (RuntimeException re) {
+                        ayiyaVpnService.notifyUserOfError(R.string.routingbroken, re);
+                        Log.e(TAG, "Error fixing nativeRouting", re);
+                    }
+                }
+
+                // loop over IPv4 network changes
+                refreshRemoteEnd();
+
+                Log.i(TAG, "Refreshing remote VPN end stopped");
+
             } catch (InterruptedException e) {
                 Log.i(VpnThread.TAG, "refresh tunnel loop received interrupt", e);
             } catch (Throwable t) {
                 ayiyaVpnService.notifyUserOfError(R.string.unexpected_runtime_exception, t);
                 Log.e(TAG, "Caught unexpected throwable", t);
             } finally {
-                // @todo only do this in the outer loop
                 cleanAll();
-                localIp = null;
                 postToast(applicationContext, R.string.vpnservice_tunnel_down, Toast.LENGTH_SHORT);
             }
         }
@@ -646,7 +689,7 @@ class VpnThread extends Thread {
             Log.i(TAG, "Lifting heartbeat interval to 300 secs");
             heartbeatInterval = 300000l;
         }
-        while (!closeTunnel && inThread.isAlive() && outThread.isAlive()) {
+        while (!closeTunnel && (inThread != null && inThread.isAlive()) && (outThread != null && outThread.isAlive())) {
             // wait for the heartbeat interval to finish or until inThread dies.
             // Note: the inThread is reading from the network socket to the POP
             // in case of network changes, this socket breaks immediately, so
@@ -970,12 +1013,9 @@ class VpnThread extends Thread {
                     @Override
                     protected Void doInBackground(Void... params) {
                         try {
-                            myAyiya.reconnect(); // raises an exception if another thead is currently closing
-                        } catch (IllegalStateException e) {
-                            Log.i(TAG, "ayiya object was closed in the meantime", e);
+                            cleanCopyThreads();
                         } catch (Throwable t) {
-                            Log.e(TAG, "reconnection failed", t);
-                            myInThread.stopCopy();
+                            Log.e(TAG, "stopping copy threads failed", t);
                         }
                         return null;
                     }
