@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory
+        android:title="@string/pref_header_login"
+        android:key="pref_key_login_settings">
+        <EditTextPreference
+            android:key="tic_username"
+            android:title="@string/pref_title_username"
+            android:defaultValue=""
+            android:selectAllOnFocus="true"
+            android:inputType="textPersonName"
+            android:singleLine="true"
+            android:maxLines="1"
+            />
+
+        <!-- NOTE: EditTextPreference accepts EditText attributes. -->
+        <!-- NOTE: EditTextPreference's summary should be set to its value by the activity code. -->
+        <EditTextPreference
+            android:key="tic_password"
+            android:title="@string/pref_title_password"
+            android:defaultValue=""
+            android:selectAllOnFocus="true"
+            android:inputType="textPassword"
+            android:singleLine="true"
+            android:maxLines="1" />
+
+        <!-- NOTE: EditTextPreference accepts EditText attributes. -->
+        <!-- NOTE: EditTextPreference's summary should be set to its value by the activity code. -->
+        <EditTextPreference
+            android:key="tic_host"
+            android:title="@string/pref_title_host"
+            android:defaultValue="@string/pref_default_host"
+            android:selectAllOnFocus="true"
+            android:inputType="textUri"
+            android:singleLine="true"
+            android:maxLines="1" />
+
+        <SwitchPreference
+            android:key="autostart"
+            android:title="@string/pref_title_autostart"
+            android:summaryOff="@string/pref_summary_autostart_off"
+            android:summaryOn="@string/pref_summary_autostart_on"
+            android:defaultValue="false" />
+
+    </PreferenceCategory>
+    <PreferenceCategory
+        android:title="@string/pref_header_routes"
+        android:key="pref_key_route_settings">
+        <!-- A 'parent' preference, which enables/disables child preferences (below)
+     when checked/unchecked. -->
+        <SwitchPreference
+            android:key="routes_default"
+            android:title="@string/pref_title_routes_default"
+            android:summaryOn="@string/pref_summary_routes_default_on"
+            android:summaryOff="@string/pref_summary_routes_default_off"
+            android:defaultValue="true" />
+
+        <EditTextPreference
+            android:key="routes_specific"
+            android:title="@string/pref_title_routes_specific"
+            android:defaultValue="@string/pref_default_routes_specific"
+            android:selectAllOnFocus="false"
+            android:inputType="textNoSuggestions"
+            android:singleLine="true"
+            android:maxLines="1" />
+
+        <SwitchPreference
+            android:key="routes_workaround"
+            android:title="@string/pref_title_routes_workaround"
+            android:summaryOn="@string/pref_summary_routes_workaround_on"
+            android:summaryOff="@string/pref_summary_routes_workaround_off"
+            android:defaultValue="false" />
+
+        <SwitchPreference
+            android:key="routes_setnameservers"
+            android:title="@string/pref_title_routes_setnameservers"
+            android:summaryOff="@string/pref_summary_routes_setnameservers_off"
+            android:summaryOn="@string/pref_summary_routes_setnameservers_on"
+            android:defaultValue="false" />
+
+        <SwitchPreference
+            android:key="routes_forcetunnel"
+            android:title="@string/pref_title_force_routing"
+            android:summaryOn="@string/pref_summary_force_routing_on"
+            android:summaryOff="@string/pref_summary_force_routing_off"
+            android:defaultValue="false" />
+
+    </PreferenceCategory>
+</PreferenceScreen>

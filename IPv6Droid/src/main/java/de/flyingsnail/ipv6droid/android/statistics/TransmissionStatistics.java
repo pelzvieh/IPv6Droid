@@ -20,6 +20,8 @@
 package de.flyingsnail.ipv6droid.android.statistics;
 
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+import android.util.LruCache;
 
 import java.util.Date;
 
@@ -30,54 +32,110 @@ public class TransmissionStatistics {
     private static final String TAG = TransmissionStatistics.class.getName();
 
     private static final double DECAY_TIME = 60000.0; // time of decay to 1/e in milliseconds
+    public static final long BURST_TIMEOUT = 1000l;
     // overall count of copied bytes
     private long byteCount = 0l;
     // overall count of copied packets
     private long packetCount = 0l;
 
     // the info about the last completed burst
-    private Burstinfo lastCompletedBurst = null;
+    private @Nullable Burstinfo lastCompletedBurst = null;
     // the info about the currently running burst
-    private Burstinfo currentBurst = new Burstinfo();
-    // the average time span of a burst in milliseconds
-    private long averageBurstLength = 0l;
-    // the average time span between two bursts in milliseconds
-    private long averageBurstPause = 0l;
+    private @Nullable Burstinfo currentBurst = null;
+    // the average time span of a burst in seconds
+    private double averageBurstLength = 0.0;
+    // the average time span between two bursts in seconds
+    private double averageBurstPause = 0.0;
     // the average number of bytes per burst
-    private long averageBurstBytes = 0l;
+    private double averageBurstBytes = 0.0;
     // the average number of packets per burst
-    private long averageBurstPackets = 0l;
+    private double averageBurstPackets = 0.0;
+    // helper cache for depletion values on time spans
+    LruCache<Long, Double> depletionCache = new LruCache<Long, Double>(10) {
+        /**
+         * Calculate a new depletion factor from a given time lapse. This will be called by LruCache
+         * on cache misses.
+         * @param key a Long giving the time lapse in milliseconds
+         * @return a Double giving the depletion factor corresponding to the time lapse key.
+         */
+        @Override
+        protected Double create(Long key) {
+            return Math.exp(-((double) key) / DECAY_TIME);
+        }
+    };
 
     /**
      * Query the average number of bytes per burst.
-     * @return a long giving the average number of bytes per burst
+     * @return a double giving the average number of bytes per burst
      */
-    public long getAverageBurstBytes() {
+    public double getAverageBurstBytes() {
+        checkBurstCompletion();
         return averageBurstBytes;
     }
 
     /**
      * Query the average number of packets per burst.
-     * @return a long giving the average number of packets per burst
+     * @return a double giving the average number of packets per burst
      */
-    public long getAverageBurstPackets() {
+    public double getAverageBurstPackets() {
+        checkBurstCompletion();
         return averageBurstPackets;
     }
 
     /**
-     * Query the average time span between two bursts.
-     * @return a long giving the average time span between two bursts in milliseconds.
+     * Query the average time span between two bursts. The value returned accounts for the
+     * time elapsed since the last burst and the call done - i.e. increases with time when no
+     * packet bursts finish.
+     * @return a double giving the average time span between two bursts in seconds.
      */
-    public long getAverageBurstPause() {
-        return averageBurstPause;
+    public double getAverageBurstPause() {
+        checkBurstCompletion();
+        // avoid race conditions
+        Burstinfo myCurrentBurst = currentBurst;
+        Burstinfo myLastCompletedBurst = lastCompletedBurst;
+        if (myCurrentBurst != null || myLastCompletedBurst == null)
+            return averageBurstPause; // we're currently inside a burst, so the average lapse doesn't change
+        else {
+            // return the value as if a burst was just started and ended right now
+            long lapse = dateDifference(new Date(), myLastCompletedBurst.lastPacketReceived);
+            return rollingAverage(lapse, averageBurstPause, lapse/1000);
+        }
     }
 
     /**
      * Query the average time span of a burst.
-     * @return a long giving the average time span of a burst in milliseconds.
+     * @return a double giving the average time span of a burst in seconds.
      */
-    public long getAverageBurstLength() {
-        return averageBurstLength;
+    public double getAverageBurstLength() {
+        checkBurstCompletion();
+        if (currentBurst == null || lastCompletedBurst == null)
+            return averageBurstLength; // we're outside a burst, so the average length doesn't change
+        else {
+            // return the value as if a burst was just started and ended right now
+            return rollingAverage(
+                    dateDifference(currentBurst.firstPacketReceived, lastCompletedBurst.firstPacketReceived),
+                    averageBurstLength,
+                    dateDifference(new Date(), currentBurst.firstPacketReceived)/1000);
+        }
+    }
+
+    /**
+     * helper method that checks if the current burst is closed (by timeout), and in this case takes
+     * care to update the relevant statistics values by calling burstComplete, and rotating currentBurst
+     * to lastCompletedBurst. In timeout case, this method leaves currentBurst as null.
+     * @return a boolean as true if a timeout was detected, false if the currentBurst is yet to be used.
+     */
+    private synchronized boolean checkBurstCompletion() {
+        // update per-burst info
+        if (currentBurst != null && dateDifference(new Date(), currentBurst.lastPacketReceived) > BURST_TIMEOUT) {
+            // new burst
+            if (lastCompletedBurst != null)
+                burstCompleted(currentBurst, lastCompletedBurst);
+            lastCompletedBurst = currentBurst;
+            currentBurst = null;
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -85,24 +143,18 @@ public class TransmissionStatistics {
      * be called immediately after receiving a packet.
      * @param len the length of the packet that was received just now
      */
-    public void updateStatistics(long len) {
+    public synchronized void updateStatistics(long len) {
         byteCount += len;
         packetCount++;
 
         // update per-burst info
-        Date now = new Date();
-        if (now.getTime() - 1000l > currentBurst.lastPacketReceived.getTime()) {
+        if (currentBurst == null || checkBurstCompletion()) {
             // new burst
-            if (lastCompletedBurst != null)
-                burstCompleted(currentBurst, lastCompletedBurst);
-            lastCompletedBurst = currentBurst;
             currentBurst = new Burstinfo();
-            currentBurst.firstPacketReceived = now;
-            currentBurst.lastPacketReceived = now;
             currentBurst.byteCount = len;
             currentBurst.packetCount = 1;
         } else {
-            currentBurst.lastPacketReceived = now;
+            currentBurst.lastPacketReceived = new Date();
             currentBurst.byteCount += len;
             currentBurst.packetCount++;
         }
@@ -125,39 +177,51 @@ public class TransmissionStatistics {
     }
 
     /**
+     *
+     * @param minuend a Date giving the time from which to substract
+     * @param subtrahend a Date giving the time to substract
+     * @return a long indicating the time in milliseconds from subtrahend to minuend
+     */
+    private long dateDifference (Date minuend, Date subtrahend) {
+        return minuend.getTime() - subtrahend.getTime();
+    }
+    /**
      * Helper method to update burst-related statistics values.
      * Should be called by other methods of this class if a burst is considered completed.
      * @param completedBurst the Burstinfo on the completed burst.
      */
     private void burstCompleted (@NonNull Burstinfo completedBurst, @NonNull Burstinfo previousBurst) {
-        long burstSpan = completedBurst.lastPacketReceived.getTime() - completedBurst.firstPacketReceived.getTime();
-        long burstPause = completedBurst.firstPacketReceived.getTime() - previousBurst.lastPacketReceived.getTime();
-        long timeLapse = completedBurst.lastPacketReceived.getTime() - previousBurst.lastPacketReceived.getTime();
-
-        double previousDepletion = Math.exp(-((double)timeLapse)/DECAY_TIME);
+        double burstSpan = (double)
+                dateDifference(completedBurst.lastPacketReceived, completedBurst.firstPacketReceived)
+            /1000.0;
+        double burstPause = (double)
+                dateDifference(completedBurst.firstPacketReceived, previousBurst.lastPacketReceived)
+            /1000.0;
+        long timeLapse = dateDifference(completedBurst.lastPacketReceived, previousBurst.lastPacketReceived);
 
         // rolling average of burst length
-        averageBurstLength = rollingAverage(previousDepletion, averageBurstLength, burstSpan);
+        averageBurstLength = rollingAverage(timeLapse, averageBurstLength, burstSpan);
         // rolling average of burst pause
-        averageBurstPause = rollingAverage(previousDepletion, averageBurstPause, burstPause);
+        averageBurstPause = rollingAverage(timeLapse, averageBurstPause, burstPause);
         // rolling average of bytes per burst
-        averageBurstBytes = rollingAverage(previousDepletion, averageBurstBytes, completedBurst.byteCount);
+        averageBurstBytes = rollingAverage(timeLapse, averageBurstBytes, completedBurst.byteCount);
         // rolling average of packets per burst
-        averageBurstPackets = rollingAverage(previousDepletion, averageBurstPackets, completedBurst.packetCount);
+        averageBurstPackets = rollingAverage(timeLapse, averageBurstPackets, completedBurst.packetCount);
     }
 
     /**
      * Helper method to calculate a rolling average
-     * @param decay a double giving the time-based depletion factor of the previousAverage
+     * @param timeLapse a long giving the time lapse since the previous value
      * @param previousAverage a long giving the previous rolling average value
      * @param newValue a long giving a new addon to the rolling average
      * @return updated rolling average
      */
-    private long rollingAverage(double decay, long previousAverage, long newValue) {
+    private double rollingAverage(long timeLapse, double previousAverage, double newValue) {
         // we implement a rolling average window
+        double decay = depletionCache.get(timeLapse);
         return (previousAverage == 0.0) ?
                 newValue :
-                (long)(newValue * (1-decay) + decay*previousAverage);
+                (newValue * (1.0-decay) + decay*previousAverage);
     }
 
 

@@ -26,11 +26,18 @@ import java.util.Date;
  */
 public class Burstinfo {
     // count of bytes in a specific burst
-    public long byteCount = 0l;
+    public long byteCount;
     // count of packets in a specific burst
-    public long packetCount = 0l;
+    public long packetCount;
     // the start timestamp of the burst
-    public Date firstPacketReceived = new Date();
+    public Date firstPacketReceived;
     // the timestamp of the last packet received in that burst
-    public Date lastPacketReceived = firstPacketReceived;
+    public Date lastPacketReceived;
+
+    public Burstinfo() {
+        firstPacketReceived = new Date();
+        lastPacketReceived = firstPacketReceived;
+        byteCount = 0l;
+        packetCount = 0l;
+    }
 }

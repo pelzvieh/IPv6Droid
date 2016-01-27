@@ -25,6 +25,7 @@ import android.content.Intent;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
+import android.util.Log;
 
 import java.io.Serializable;
 import java.util.List;
@@ -35,7 +36,7 @@ import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 /**
 * Created by pelzi on 05.09.13.
 */
-public class VpnStatusReport implements Serializable {
+public class VpnStatusReport implements Serializable, Cloneable {
     /**
      * The Action name for a status broadcast intent.
      */
@@ -45,6 +46,7 @@ public class VpnStatusReport implements Serializable {
      * The extended data name for the status in a status broadcast intent.
      */
     public static final String EDATA_STATUS_REPORT = AyiyaVpnService.class.getName() + ".STATUS_REPORT";
+    private static final String TAG = VpnStatusReport.class.getName();
 
     /**
      * An int indicating the progress of tunnel creation.
@@ -166,10 +168,11 @@ public class VpnStatusReport implements Serializable {
 
         if (progressPerCent != that.progressPerCent) return false;
         if (tunnelProvedWorking != that.tunnelProvedWorking) return false;
-        if (activeTunnel != null ? !activeTunnel.equals(that.activeTunnel) : that.activeTunnel != null)
-            return false;
-        return activity == that.activity && status == that.status;
-
+        return !(activeTunnel != null ?
+                 !activeTunnel.equals(that.activeTunnel) :
+                 that.activeTunnel != null)
+                && activity == that.activity
+                && status == that.status;
     }
 
     @Override
@@ -225,6 +228,7 @@ public class VpnStatusReport implements Serializable {
 
     public void setTicTunnelList(@NonNull List<TicTunnel> ticTunnelList) {
         this.ticTunnelList = ticTunnelList;
+        reportStatus();
     }
 
     /**
@@ -256,10 +260,14 @@ public class VpnStatusReport implements Serializable {
     protected void reportStatus() {
         if (context == null)
             return; // we're outside any Android context
-        Intent statusBroadcast = new Intent(BC_STATUS)
-                .putExtra(EDATA_STATUS_REPORT, this);
-        // Broadcast locally
-        LocalBroadcastManager.getInstance(context).sendBroadcast(statusBroadcast);
+        try {
+            Intent statusBroadcast = new Intent(BC_STATUS)
+                    .putExtra(EDATA_STATUS_REPORT, (VpnStatusReport) this.clone());
+            // Broadcast locally
+            LocalBroadcastManager.getInstance(context).sendBroadcast(statusBroadcast);
+        } catch (CloneNotSupportedException e) {
+            Log.wtf(TAG, "CloneNotSupported on VpnStatusReport", e);
+        }
     }
 
 

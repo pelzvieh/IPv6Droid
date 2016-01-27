@@ -35,6 +35,7 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import java.text.DateFormat;
+import java.text.NumberFormat;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -256,6 +257,7 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
      * A private class that updates the UI with new Statistics.
      */
     private class RedrawHandler extends Handler {
+        private NumberFormat numberFormat = NumberFormat.getNumberInstance();
         @Override
         public void handleMessage(Message inputMessage) {
             View myView = getView();
@@ -268,18 +270,18 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
                 myView.setVisibility(View.INVISIBLE);
             } else {
                 myView.setVisibility(View.VISIBLE);
-                updateTextView(bytesTransmittedView, stats.getBytesTransmitted());
-                updateTextView(bytesReceivedView, stats.getBytesReceived());
-                updateTextView(packetsTransmittedView, stats.getPacketsTransmitted());
-                updateTextView(packetsReceivedView, stats.getPacketsReceived());
-                updateTextView(bytesPerBurstTransmittedView, stats.getBytesPerBurstTransmitted());
-                updateTextView(bytesPerBurstReceivedView, stats.getBytesPerBurstReceived());
-                updateTextView(packetsPerBurstTransmittedView, stats.getPacketsPerBurstTransmitted());
-                updateTextView(packetsPerBurstReceivedView, stats.getPacketsPerBurstReceived());
-                updateTextView(timeSpanPerBurstTransmittedView, stats.getTimeSpanPerBurstTransmitted()/1000l);
-                updateTextView(timeSpanPerBurstReceivedView, stats.getTimeSpanPerBurstReceived()/1000l);
-                updateTextView(timeLapseBetweenBurstsTransmittedView, stats.getTimeLapseBetweenBurstsTransmitted()/1000l);
-                updateTextView(timeLapseBetweenBurstsReceivedView, stats.getTimeLapseBetweenBurstsReceived()/1000l);
+                updateTextView(bytesTransmittedView, numberFormat.format(stats.getBytesTransmitted()));
+                updateTextView(bytesReceivedView, numberFormat.format(stats.getBytesReceived()));
+                updateTextView(packetsTransmittedView, numberFormat.format(stats.getPacketsTransmitted()));
+                updateTextView(packetsReceivedView, numberFormat.format(stats.getPacketsReceived()));
+                updateTextView(bytesPerBurstTransmittedView, numberFormat.format(stats.getBytesPerBurstTransmitted()));
+                updateTextView(bytesPerBurstReceivedView, numberFormat.format(stats.getBytesPerBurstReceived()));
+                updateTextView(packetsPerBurstTransmittedView, numberFormat.format(stats.getPacketsPerBurstTransmitted()));
+                updateTextView(packetsPerBurstReceivedView, numberFormat.format(stats.getPacketsPerBurstReceived()));
+                updateTextView(timeSpanPerBurstTransmittedView, numberFormat.format(stats.getTimeSpanPerBurstTransmitted()));
+                updateTextView(timeSpanPerBurstReceivedView, numberFormat.format(stats.getTimeSpanPerBurstReceived()));
+                updateTextView(timeLapseBetweenBurstsTransmittedView, numberFormat.format(stats.getTimeLapseBetweenBurstsTransmitted()));
+                updateTextView(timeLapseBetweenBurstsReceivedView, numberFormat.format(stats.getTimeLapseBetweenBurstsReceived()));
                 updateTextView(mtuView, stats.getMtu());
                 updateTextView(brokerIPv4View, stats.getBrokerIPv4());
                 updateTextView(brokerIPv6View, stats.getBrokerIPv6());

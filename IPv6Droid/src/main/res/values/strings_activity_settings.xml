@@ -29,15 +29,25 @@
     <string name="pref_title_password">Password</string>
     <string name="pref_title_host">TIC host</string>
     <string name="pref_default_host" translatable="false">tic.sixxs.net</string>
-    <string name="pref_autostart">Start Tunnel at Boot</string>
+    <string name="pref_title_autostart">Start Tunnel at Boot</string>
+    <string name="pref_summary_autostart_on">Automatically start the IPv6 tunnel after (re-)starting the device</string>
+    <string name="pref_summary_autostart_off">Explicit start from the app is required to start the IPv6 tunnel</string>
 
     <!-- Routes settings -->
     <string name="pref_header_routes">Route settings</string>
     <string name="pref_title_routes_default">Set IPv6 default route</string>
+    <string name="pref_summary_routes_default_on">Use the VPN for all IPv6 based traffic</string>
+    <string name="pref_summary_routes_default_off">Use the VPN only for the specified specific IPv6 subnet</string>
     <string name="pref_title_routes_specific">Specific IPv6 subnet to route</string>
     <string name="pref_default_routes_specific" translatable="false"/>
     <string name="pref_title_routes_setnameservers">Set Google DNS servers</string>
-    <string name="pref_title_routes_workaround">Try workaround of Android 4.4 nativeRouting bug</string>
-    <string name="pref_title_force_routing">Force routing through VPN in IPv6 capable networks</string>
+    <string name="pref_summary_routes_setnameservers_on">Use Google name servers for hostname resolution</string>
+    <string name="pref_summary_routes_setnameservers_off">Use native network\'s name servers for hostname resolution</string>
+    <string name="pref_title_routes_workaround">Android 4.4 workaround</string>
+    <string name="pref_summary_routes_workaround_on">Tries to cure routing bug in Android 4.4.x. Requires root.</string>
+    <string name="pref_summary_routes_workaround_off">Don\'t attempt dirty tricks.</string>
+    <string name="pref_title_force_routing">Force routing through VPN</string>
+    <string name="pref_summary_force_routing_on">Use the VPN tunnel even in IPv6 capable networks</string>
+    <string name="pref_summary_force_routing_off">Use native network in IPv6 capable networks</string>
 
 </resources>

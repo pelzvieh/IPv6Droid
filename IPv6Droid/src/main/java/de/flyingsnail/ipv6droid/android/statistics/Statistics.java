@@ -38,14 +38,14 @@ public class Statistics {
     final private long bytesReceived;
     final private long packetsTransmitted;
     final private long packetsReceived;
-    final private long bytesPerBurstTransmitted;
-    final private long bytesPerBurstReceived;
-    final private long packetsPerBurstTransmitted;
-    final private long packetsPerBurstReceived;
-    final private long timeSpanPerBurstTransmitted;
-    final private long timeSpanPerBurstReceived;
-    final private long timeLapseBetweenBurstsTransmitted;
-    final private long timeLapseBetweenBurstsReceived;
+    final private double bytesPerBurstTransmitted;
+    final private double bytesPerBurstReceived;
+    final private double packetsPerBurstTransmitted;
+    final private double packetsPerBurstReceived;
+    final private double timeSpanPerBurstTransmitted;
+    final private double timeSpanPerBurstReceived;
+    final private double timeLapseBetweenBurstsTransmitted;
+    final private double timeLapseBetweenBurstsReceived;
     final private Inet4Address brokerIPv4;
     final private Inet4Address myIPv4;
     final private Inet6Address brokerIPv6;
@@ -109,35 +109,35 @@ public class Statistics {
         return packetsReceived;
     }
 
-    public long getBytesPerBurstTransmitted() {
+    public double getBytesPerBurstTransmitted() {
         return bytesPerBurstTransmitted;
     }
 
-    public long getBytesPerBurstReceived() {
+    public double getBytesPerBurstReceived() {
         return bytesPerBurstReceived;
     }
 
-    public long getPacketsPerBurstTransmitted() {
+    public double getPacketsPerBurstTransmitted() {
         return packetsPerBurstTransmitted;
     }
 
-    public long getPacketsPerBurstReceived() {
+    public double getPacketsPerBurstReceived() {
         return packetsPerBurstReceived;
     }
 
-    public long getTimeSpanPerBurstTransmitted() {
+    public double getTimeSpanPerBurstTransmitted() {
         return timeSpanPerBurstTransmitted;
     }
 
-    public long getTimeSpanPerBurstReceived() {
+    public double getTimeSpanPerBurstReceived() {
         return timeSpanPerBurstReceived;
     }
 
-    public long getTimeLapseBetweenBurstsTransmitted() {
+    public double getTimeLapseBetweenBurstsTransmitted() {
         return timeLapseBetweenBurstsTransmitted;
     }
 
-    public long getTimeLapseBetweenBurstsReceived() {
+    public double getTimeLapseBetweenBurstsReceived() {
         return timeLapseBetweenBurstsReceived;
     }
 
@@ -202,10 +202,16 @@ public class Statistics {
         if (myIPv4 != null ? !myIPv4.equals(that.myIPv4) : that.myIPv4 != null) return false;
         if (!brokerIPv6.equals(that.brokerIPv6)) return false;
         if (!myIPv6.equals(that.myIPv6)) return false;
-        if (nativeRouting != null ? !nativeRouting.equals(that.nativeRouting) : that.nativeRouting != null) return false;
-        if (vpnRouting != null ? !vpnRouting.equals(that.vpnRouting) : that.vpnRouting != null) return false;
-        if (vpnDnsSetting != null ? !vpnDnsSetting.equals(that.vpnDnsSetting) : that.vpnDnsSetting != null) return false;
-        return !(nativeDnsSetting != null ? !nativeDnsSetting.equals(that.nativeDnsSetting) : that.nativeDnsSetting != null);
+        if (nativeRouting != null ? !nativeRouting.equals(that.nativeRouting) : that.nativeRouting != null)
+            return false;
+        if (vpnRouting != null ? !vpnRouting.equals(that.vpnRouting) : that.vpnRouting != null)
+            return false;
+        return !(vpnDnsSetting != null
+                 ? !vpnDnsSetting.equals(that.vpnDnsSetting)
+                 : that.vpnDnsSetting != null)
+                && !(nativeDnsSetting != null
+                     ? !nativeDnsSetting.equals(that.nativeDnsSetting)
+                     : that.nativeDnsSetting != null);
 
     }
 

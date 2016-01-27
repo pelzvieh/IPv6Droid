@@ -82,6 +82,7 @@ public class MainActivity extends Activity {
      * The Action name for a vpn stop broadcast intent.
      */
     public static final String BC_STOP = MainActivity.class.getName() + ".STOP";
+
     /**
      * The Action name for a status update request broadcast.
      */
@@ -95,6 +96,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        PreferenceManager.setDefaultValues(getApplicationContext(), R.xml.preferences, false);
         SharedPreferences myPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
         // init handles to GUI elements

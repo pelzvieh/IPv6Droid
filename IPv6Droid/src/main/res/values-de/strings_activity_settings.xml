@@ -28,7 +28,7 @@
     <string name="pref_title_username">Benutzername</string>
     <string name="pref_title_password">Passwort</string>
     <string name="pref_title_host">TIC-Server</string>
-    <string name="pref_autostart">Tunnel beim Einschalten starten</string>
+    <string name="pref_title_autostart">Tunnel beim Einschalten starten</string>
 
     <!-- Routes settings -->
     <string name="pref_header_routes">Routen-Einstellungen</string>
