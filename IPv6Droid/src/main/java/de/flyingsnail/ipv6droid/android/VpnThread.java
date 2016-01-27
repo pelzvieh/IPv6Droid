@@ -358,6 +358,22 @@ class VpnThread extends Thread {
                 vpnStatus.setActivity(R.string.vpnservice_activity_reconnect);
                 waitOnConnectivity();
 
+                // due to kitkat issue, check local health
+                if (routingConfiguration.isTryRoutingWorkaround() && !checkRouting()) {
+                    Log.e(TAG, "Routing broken on this device, no default route is set for IPv6");
+                    postToast(applicationContext, R.string.routingbroken, Toast.LENGTH_LONG);
+                    try {
+                        fixRouting();
+                        if (checkRouting()) {
+                            Log.i(TAG, "VPNService nativeRouting was broken on this device, but could be fixed by the workaround");
+                            postToast(applicationContext, R.string.routingfixed, Toast.LENGTH_LONG);
+                        }
+                    } catch (RuntimeException re) {
+                        ayiyaVpnService.notifyUserOfError(R.string.routingbroken, re);
+                        Log.e(TAG, "Error fixing nativeRouting", re);
+                    }
+                }
+
                 // timestamp base mechanism to prevent busy looping through e.g. IOException
                 Date now = new Date();
                 long lastIterationRun = now.getTime() - lastStartAttempt.getTime();
@@ -466,22 +482,6 @@ class VpnThread extends Thread {
 
                 vpnStatus.setActivity(R.string.vpnservice_activity_localnet);
                 vpnStatus.setProgressPerCent(50);
-
-                // due to kitkat issue, check local health
-                if (routingConfiguration.isTryRoutingWorkaround() && !checkRouting()) {
-                    Log.e(TAG, "Routing broken on this device, no default route is set for IPv6");
-                    postToast(applicationContext, R.string.routingbroken, Toast.LENGTH_LONG);
-                    try {
-                        fixRouting();
-                        if (checkRouting()) {
-                            Log.i(TAG, "VPNService nativeRouting was broken on this device, but could be fixed by the workaround");
-                            postToast(applicationContext, R.string.routingfixed, Toast.LENGTH_LONG);
-                        }
-                    } catch (RuntimeException re) {
-                        ayiyaVpnService.notifyUserOfError(R.string.routingbroken, re);
-                        Log.e(TAG, "Error fixing nativeRouting", re);
-                    }
-                }
 
                 // loop over IPv4 network changes
                 refreshRemoteEnd();
