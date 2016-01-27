@@ -214,7 +214,7 @@ public class Ayiya {
         return ayiyaHash(s.getBytes("UTF-8"));
     }
 
-    private static byte[] ayiyaHash (byte[] in) throws NoSuchAlgorithmException, UnsupportedEncodingException {
+    private static byte[] ayiyaHash (byte[] in) throws NoSuchAlgorithmException {
         // compute the SHA1 hash of the password
         MessageDigest sha1 = MessageDigest.getInstance("SHA1");
         sha1.update(in);
@@ -411,6 +411,11 @@ public class Ayiya {
     }
 
     private OpCode getSupportedOpCode (byte[] packet, int offset, int bytecount) {
+        if (bytecount < 3) {
+            Log.e(TAG, "Received too short package");
+            return null;
+        }
+
         try {
             int opCodeOrdinal = packet[2+offset] &0xF;
             return OpCode.values()[opCodeOrdinal];

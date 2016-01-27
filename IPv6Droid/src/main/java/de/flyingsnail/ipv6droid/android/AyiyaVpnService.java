@@ -102,7 +102,9 @@ public class AyiyaVpnService extends VpnService {
         ongoingNotificationBuilder = createNotificationBuilder(StatisticsActivity.class);
         ongoingNotificationBuilder.setContentTitle(getString(R.string.app_name));
         ongoingNotificationBuilder.setOngoing(true);
-        ongoingNotificationBuilder.setVisibility(Notification.VISIBILITY_PUBLIC);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            ongoingNotificationBuilder.setVisibility(Notification.VISIBILITY_PUBLIC);
+        }
 
         // register receivers of broadcasts
         registerLocalCommandReceiver();

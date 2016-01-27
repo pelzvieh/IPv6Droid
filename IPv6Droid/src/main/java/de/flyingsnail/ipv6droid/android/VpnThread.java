@@ -267,6 +267,7 @@ class VpnThread extends Thread {
             vpnStatus.setProgressPerCent(0);
             vpnStatus.setStatus(VpnStatusReport.Status.Idle);
             vpnStatus.setActivity(R.string.vpnservice_activity_closing);
+            vpnStatus.setCause(null);
         } catch (AuthenticationFailedException e) {
             Log.e(TAG, "Authentication step failed", e);
             ayiyaVpnService.notifyUserOfError(R.string.vpnservice_authentication_failed, e);
@@ -391,6 +392,7 @@ class VpnThread extends Thread {
                 outThread.start();
                 inThread.start();
                 vpnStatus.setStatus(VpnStatusReport.Status.Connected);
+                vpnStatus.setCause(null);
 
                 // now do a ping on IPv6 level. This should involve receiving one packet
                 if (tunnelSpecification.getIpv6Pop().isReachable(10000)) {
@@ -411,6 +413,7 @@ class VpnThread extends Thread {
             } catch (IOException e) {
                 Log.i(TAG, "Tunnel connection broke down, closing and reconnecting ayiya (remote end)", e);
                 vpnStatus.setProgressPerCent(50);
+                vpnStatus.setCause(e);
                 vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
             } catch (InterruptedException e) {
                 Log.i(VpnThread.TAG, "refresh remote end loop received interrupt", e);
@@ -757,6 +760,7 @@ class VpnThread extends Thread {
             vpnStatus.setTunnelProvedWorking(true);
             vpnStatus.setStatus(VpnStatusReport.Status.Connected);
             vpnStatus.setProgressPerCent(100);
+            vpnStatus.setCause(null);
         }
     }
     /**
@@ -786,6 +790,7 @@ class VpnThread extends Thread {
             // some status reporting...
             vpnStatus.setActivity(R.string.vpnservice_activity_query_tic);
             vpnStatus.setStatus(VpnStatusReport.Status.Connecting);
+            vpnStatus.setCause(null);
 
             tic.connect();
             List<String> tunnelIds = tic.listTunnels();
@@ -827,9 +832,8 @@ class VpnThread extends Thread {
      * @param tic the connected Tic object
      * @return a List&lt;TicTunnel&gt; containing suitable tunnel specifications from the ID list
      * @throws IOException in case of a communication problem
-     * @throws ConnectionFailedException in case of a logical problem with the setup
      */
-    private @NonNull List<TicTunnel> expandSuitables(@NonNull List<String> tunnelIds, @NonNull Tic tic) throws IOException, ConnectionFailedException {
+    private @NonNull List<TicTunnel> expandSuitables(@NonNull List<String> tunnelIds, @NonNull Tic tic) throws IOException {
         List<TicTunnel> retval = new ArrayList<TicTunnel>(tunnelIds.size());
         for (String id: tunnelIds) {
             TicTunnel desc;

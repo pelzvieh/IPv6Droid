@@ -71,6 +71,7 @@ public class MainActivity extends Activity {
     private ImageView status;
     private Button redundantStartButton;
     private ListView tunnelListView;
+    private TextView causeView;
     private TicTunnel selectedTunnel;
     private List<TicTunnel> availableTunnels;
     //@todo maintaining the event list in an Activity is nonsense, as it would receive events only when visible
@@ -102,6 +103,7 @@ public class MainActivity extends Activity {
         status = (ImageView) findViewById(R.id.statusImage);
         redundantStartButton = (Button) findViewById(R.id.redundant_start_button);
         tunnelListView = (ListView) findViewById(R.id.tunnelList);
+        causeView = (TextView) findViewById(R.id.cause);
         flushTunnelLists();
         if (statusReceiver == null)
             statusReceiver = new StatusReceiver();
@@ -196,7 +198,7 @@ public class MainActivity extends Activity {
     protected void onPause() {
         super.onPause();
 
-        if (availableTunnels != null && selectedTunnel != null && statusReceiver.isTunnelProven()) {
+        if (availableTunnels != null && !availableTunnels.isEmpty() && selectedTunnel != null && statusReceiver.isTunnelProven()) {
             Log.i (TAG, "We have an updated tunnel list and will write it back to cache");
             if (availableTunnels.contains(selectedTunnel)) {
                 // we have a tunnel that should work
@@ -396,7 +398,9 @@ public class MainActivity extends Activity {
                 MainActivity.this.activity.setText(getResources().getString(statusReport.getActivity()));
 
             // read tunnel information, if updated
-            availableTunnels = statusReport.getTicTunnelList();
+            if (statusReport.getTicTunnelList() != null)
+                availableTunnels = statusReport.getTicTunnelList();
+
             // deal with null here to avoid nasty checks everywhere else...
             if (statusReport.getActiveTunnel() != null)
                 selectedTunnel = statusReport.getActiveTunnel();
@@ -416,6 +420,12 @@ public class MainActivity extends Activity {
             } else {
                 tunnelListView.setVisibility(View.INVISIBLE);
             }
+            Throwable cause = statusReport.getCause();
+            if (cause != null && cause.getLocalizedMessage() != null) {
+                causeView.setText(cause.getLocalizedMessage());
+                causeView.setVisibility(View.VISIBLE);
+            } else
+                causeView.setVisibility(View.INVISIBLE);
         }
 
         @Override

@@ -330,10 +330,9 @@ public class Tic {
      * Send STARTTLS command. On success message from server, replace active socket and reader/writer
      * by SSLSocket wrapped around the TCP socket.
      */
-    private void protocolStepStartTLS() throws IOException, ConnectionFailedException {
-        String answer;
+    private void protocolStepStartTLS() throws IOException {
         try {
-            answer = requestResponse("STARTTLS");
+            requestResponse("STARTTLS");
         } catch (ConnectionFailedException e) {
             // @todo is this really a good idea? Are all TIC servers around guaranteed to offer TLS?
             Log.i(TAG, "Server did not accept TLS encryption, going on with plain socket");

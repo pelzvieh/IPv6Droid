@@ -67,21 +67,32 @@
                 android:id="@+id/androidRobot"
                 android:src="@drawable/android_robot"
                 android:baseline="100dp"
-            android:layout_margin="12dp"/>
+            android:layout_margin="12dp"
+            android:contentDescription="Robot" />
 
         <ImageView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/statusImage"
             android:src="@drawable/off"
-            android:layout_margin="25dp"/>
+            android:layout_margin="25dp"
+            android:contentDescription="Connection" />
 
         <ImageView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/earthView"
-            android:src="@drawable/erde" />
+            android:src="@drawable/erde"
+            android:contentDescription="World" />
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/cause"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/linearLayout"
+        android:layout_centerHorizontal="true"
+        android:visibility="invisible" />
 
     <Button
         android:layout_width="wrap_content"

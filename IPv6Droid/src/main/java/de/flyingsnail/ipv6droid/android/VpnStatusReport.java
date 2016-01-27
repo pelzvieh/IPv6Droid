@@ -27,7 +27,6 @@ import android.support.annotation.Nullable;
 import android.support.v4.content.LocalBroadcastManager;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.List;
 
 import de.flyingsnail.ipv6droid.R;
@@ -107,7 +106,7 @@ public class VpnStatusReport implements Serializable {
         activity = R.string.vpnservice_activity_wait;
         activeTunnel = null;
         tunnelProvedWorking = false;
-        ticTunnelList = new ArrayList<TicTunnel>();
+        ticTunnelList = null;
         cause = null;
         reportStatus();
     }
@@ -230,9 +229,9 @@ public class VpnStatusReport implements Serializable {
 
     /**
      * Get the list of TicTunnels available to the user.
-     * @return a List<TicTunnel></TicTunnel>
+     * @return a List&lt;TicTunnel&gt; or null if no new list was queried in the running session.
      */
-    public @NonNull List<TicTunnel> getTicTunnelList() {
+    public @Nullable List<TicTunnel> getTicTunnelList() {
         return ticTunnelList;
     }
 

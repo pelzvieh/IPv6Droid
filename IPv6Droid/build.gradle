@@ -44,7 +44,7 @@ android {
 
     defaultConfig {
         minSdkVersion 14
-        targetSdkVersion 14
+        targetSdkVersion 23
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_6
