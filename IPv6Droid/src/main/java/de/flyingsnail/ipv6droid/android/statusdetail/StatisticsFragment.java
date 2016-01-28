@@ -242,7 +242,7 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
                 }
                 // if the statistics differ, send a redraw message
                 if (stats != oldstats // this checks if not both are null
-                        && (stats == null || oldstats == null || !stats.equals(oldstats))) {
+                   ) {
                     oldstats = stats;
                     Message redrawMessage = handler.obtainMessage(0, stats);
                     redrawMessage.sendToTarget();

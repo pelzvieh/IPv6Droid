@@ -42,11 +42,12 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.io.Serializable;
+
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.statistics.Statistics;
 import de.flyingsnail.ipv6droid.android.statusdetail.StatisticsActivity;
 import de.flyingsnail.ipv6droid.ayiya.TicConfiguration;
-import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 
 /**
  * The Android service controlling the VpnThread.
@@ -57,7 +58,7 @@ public class AyiyaVpnService extends VpnService {
     private static final String TAG = AyiyaVpnService.class.getName();
     private static final String SESSION_NAME = AyiyaVpnService.class.getSimpleName();
 
-    public static final String EXTRA_CACHED_TUNNEL = AyiyaVpnService.class.getName() + ".CACHED_TUNNEL";
+    public static final String EXTRA_CACHED_TUNNELS = AyiyaVpnService.class.getName() + ".CACHED_TUNNEL";
 
     public static final String STATISTICS_INTERFACE = AyiyaVpnService.class.getPackage().getName() + ".Statistics";
 
@@ -130,9 +131,17 @@ public class AyiyaVpnService extends VpnService {
             RoutingConfiguration routingConfiguration = loadRoutingConfiguration(myPreferences);
             Log.d(TAG, "retrieved configuration");
 
+            // Read out the initial tunnels from the Intent, if present
+            Tunnels cachedTunnels = null;
+            // Android's Parcel system doesn't handle subclasses well, so...
+            if (intent != null) {
+                Serializable serializable = intent.getSerializableExtra(EXTRA_CACHED_TUNNELS);
+                if (serializable != null) {
+                    cachedTunnels = new Tunnels(serializable);
+                }
+            }
             // Start a new session by creating a new thread.
-            TicTunnel cachedTunnel = (intent == null) ? null : (TicTunnel) intent.getSerializableExtra(EXTRA_CACHED_TUNNEL);
-            thread = new VpnThread(this, cachedTunnel, ticConfiguration, routingConfiguration, SESSION_NAME);
+            thread = new VpnThread(this, cachedTunnels, ticConfiguration, routingConfiguration, SESSION_NAME);
             startVpn();
             displayOngoingNotification(null);
         } else {

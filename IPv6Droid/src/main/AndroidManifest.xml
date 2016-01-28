@@ -59,7 +59,8 @@
             android:name=".android.SettingsActivity"
             android:label="@string/title_activity_settings"
             android:parentActivityName=".android.MainActivity"
-            tools:ignore="UnusedAttribute" >
+            tools:ignore="UnusedAttribute"
+            android:launchMode="singleTop">
 
             <!-- Parent activity meta-data to support 4.0 and lower -->
             <meta-data
@@ -68,7 +69,13 @@
         </activity>
         <activity
             android:name=".android.statusdetail.StatisticsActivity"
-            android:label="@string/title_activity_statistics" >
+            android:label="@string/title_activity_statistics"
+            android:parentActivityName=".android.MainActivity"
+            android:launchMode="singleTop">
+            <!-- Parent activity meta-data to support 4.0 and lower -->
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="de.flyingsnail.ipv6droid.android.MainActivity" />
         </activity>
 
         <receiver

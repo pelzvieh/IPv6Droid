@@ -65,20 +65,15 @@ public class VpnStatusReport implements Serializable, Cloneable {
     private int activity;
 
     /**
-     * A TicTunnel representing the tunnel that is created or running.
-     */
-    private TicTunnel activeTunnel;
-
-    /**
      * A boolean indicating if bytes were already coming in from the PoP to our device (which is
      * the final prove that the tunnel is working.
      */
     private boolean tunnelProvedWorking;
 
     /**
-     * A List of TicTunnel objects representing the tunnel definitions available for the account.
+     * A Tunnels objects representing the tunnel definitions available for the account.
      */
-    private List<TicTunnel> ticTunnelList;
+    private Tunnels tunnels;
 
     /**
      * A Throwable indicating, if applicable, the cause of a disturbed state (null otherwise).
@@ -106,9 +101,8 @@ public class VpnStatusReport implements Serializable, Cloneable {
         progressPerCent = 0;
         status = Status.Idle;
         activity = R.string.vpnservice_activity_wait;
-        activeTunnel = null;
         tunnelProvedWorking = false;
-        ticTunnelList = null;
+        tunnels = null;
         cause = null;
         reportStatus();
     }
@@ -134,11 +128,19 @@ public class VpnStatusReport implements Serializable, Cloneable {
             reportStatus();
     }
 
-    protected void setActiveTunnel(TicTunnel activeTunnel) {
-        boolean changed = (this.activeTunnel != activeTunnel) && (
-                    this.activeTunnel == null || !this.activeTunnel.equals(activeTunnel)
+    /**
+     * Sets the active tunnel on the Tunnels object.
+     * @param activeTunnel the newly active Tunnel. May be null.
+     * @throws IllegalArgumentException if the new activeTunnel is not contained in the tunnels list.
+     * @throws IllegalStateException if now tunnels are yet set.
+     */
+    protected void setActiveTunnel(@Nullable TicTunnel activeTunnel) throws IllegalArgumentException, IllegalStateException {
+        if (tunnels == null)
+            throw new IllegalStateException("No tunnels are set when trying to set the active tunnel");
+        boolean changed = (tunnels.getActiveTunnel() != activeTunnel) && (
+                    tunnels.getActiveTunnel() == null || !tunnels.getActiveTunnel().equals(activeTunnel)
                 ) ;
-        this.activeTunnel = activeTunnel;
+        tunnels.setActiveTunnel(activeTunnel); // throws IllegalArgumentException if activeTunnel not contained
         if (changed)
             reportStatus();
     }
@@ -168,11 +170,12 @@ public class VpnStatusReport implements Serializable, Cloneable {
 
         if (progressPerCent != that.progressPerCent) return false;
         if (tunnelProvedWorking != that.tunnelProvedWorking) return false;
-        return !(activeTunnel != null ?
-                 !activeTunnel.equals(that.activeTunnel) :
-                 that.activeTunnel != null)
-                && activity == that.activity
-                && status == that.status;
+        if (activity != that.activity
+                || status != that.status)
+            return false;
+        return !(tunnels != null ?
+                 !tunnels.equals(that.tunnels) :
+                 that.tunnels != null);
     }
 
     @Override
@@ -180,7 +183,7 @@ public class VpnStatusReport implements Serializable, Cloneable {
         int result = progressPerCent;
         result = 31 * result + status.hashCode();
         result = 31 * result + activity;
-        result = 31 * result + (activeTunnel != null ? activeTunnel.hashCode() : 0);
+        result = 31 * result + (tunnels != null ? tunnels.hashCode() : 0);
         result = 31 * result + (tunnelProvedWorking ? 1 : 0);
         return result;
     }
@@ -223,11 +226,26 @@ public class VpnStatusReport implements Serializable, Cloneable {
      * @return the TicTunnel
      */
     public @Nullable TicTunnel getActiveTunnel() {
-        return activeTunnel;
+        return tunnels == null ? null : tunnels.getActiveTunnel();
     }
 
+    /**
+     * Sets a new list of tunnels and tries to save the active tunnel if it is still in the list,
+     * or resets active tunnel to null if no longer contained.
+     * This is kept separate from @ref setActiveTunnel
+     * @param ticTunnelList the new List of TicTunnel objects
+     */
     public void setTicTunnelList(@NonNull List<TicTunnel> ticTunnelList) {
-        this.ticTunnelList = ticTunnelList;
+        tunnels.replaceTunnelList(ticTunnelList);
+        reportStatus();
+    }
+
+    /**
+     * Set tunnel list and active tunnel from new Tunnels object.
+     * @param tunnels the new Tunnels object
+     */
+    public void setTunnels(@NonNull Tunnels tunnels) {
+        this.tunnels = new Tunnels (tunnels, tunnels.getActiveTunnel());
         reportStatus();
     }
 
@@ -235,8 +253,8 @@ public class VpnStatusReport implements Serializable, Cloneable {
      * Get the list of TicTunnels available to the user.
      * @return a List&lt;TicTunnel&gt; or null if no new list was queried in the running session.
      */
-    public @Nullable List<TicTunnel> getTicTunnelList() {
-        return ticTunnelList;
+    public @Nullable Tunnels getTunnels() {
+        return tunnels;
     }
 
     /**
@@ -276,7 +294,7 @@ public class VpnStatusReport implements Serializable, Cloneable {
     public String toString() {
         // @todo internationalize
         return "changed to " + status.toString() + ", " +
-                (activeTunnel == null ? "no tunnel" : "tunnel " + activeTunnel.getTunnelName()) +
+                (getActiveTunnel() == null ? "no tunnel" : "tunnel " + getActiveTunnel().getTunnelName()) +
                 (cause == null ? "" : ", cause class " + cause.getClass().getName());
     }
 }

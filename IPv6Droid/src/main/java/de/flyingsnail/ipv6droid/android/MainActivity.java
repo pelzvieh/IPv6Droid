@@ -48,7 +48,6 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
 import java.util.List;
 
 import de.flyingsnail.ipv6droid.R;
@@ -60,23 +59,40 @@ import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
  */
 public class MainActivity extends Activity {
 
+    /**
+     * The tag to use for logging
+     */
     private static final String TAG = MainActivity.class.getName();
     private static final int REQUEST_START_VPN = 1;
     private static final int REQUEST_SETTINGS = 2;
     private static final int REQUEST_STATISTICS = 3;
+    /**
+     * A String giving the file name for persisting tunnel information
+     */
     private static final String FILE_LAST_TUNNEL = "last_tunnel";
+
+    /** The magic name of the Intent extra that signals that an automatic tunnel start is intended */
     public static final String EXTRA_AUTOSTART = "AUTOSTART";
+
+    /** A TextView that presents in natural language, what is going on */
     private TextView activity;
+    /** A ProgressBar that visualizes the progress of building the tunnel */
     private ProgressBar progress;
+    /** An ImageView that visualizes the current status of the tunnel */
     private ImageView status;
+    /** An additional start button that is shown if we're just waiting for the user to start */
     private Button redundantStartButton;
+    /** The ListView that is going to list all available tunnels */
     private ListView tunnelListView;
+    /** A TextView that presents the reason for the current status, if this represents a fault */
     private TextView causeView;
-    private TicTunnel selectedTunnel;
-    private List<TicTunnel> availableTunnels;
+    /** The Tunnels object that holds the list of available tunnels plus the currently selected one */
+    private Tunnels tunnels;
+/*    private TicTunnel selectedTunnel;
+    private List<TicTunnel> availableTunnels;*/
     //@todo maintaining the event list in an Activity is nonsense, as it would receive events only when visible
     //private Deque<VpnStatusReport> lastEvents;
-    private final int EVENT_LENGTH=10;
+    //private final int EVENT_LENGTH=10;
 
     /**
      * The Action name for a vpn stop broadcast intent.
@@ -87,10 +103,24 @@ public class MainActivity extends Activity {
      * The Action name for a status update request broadcast.
      */
     public static final String BC_STATUS_UPDATE = MainActivity.class.getName() + ".STATUS_REQUEST";
-    private StatusReceiver statusReceiver;
-    private MenuItem refreshTunnelMenuItem;
-    private boolean autostart = false;
 
+    /**
+     * The receiver for status broadcasts from the AyiyaVpnService.
+     */
+    private StatusReceiver statusReceiver;
+
+    /**
+     * The menuitem for refreshing the tunnel list. This will be enabled or disabled depending on
+     * the VPN status.
+     */
+    private MenuItem refreshTunnelMenuItem;
+
+
+    /**
+     * Overridden method from activity, initialises the activity and restores any previously saved
+     * state information
+     * @param savedInstanceState the Bundle to which state was saved previously.
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -106,7 +136,11 @@ public class MainActivity extends Activity {
         redundantStartButton = (Button) findViewById(R.id.redundant_start_button);
         tunnelListView = (ListView) findViewById(R.id.tunnelList);
         causeView = (TextView) findViewById(R.id.cause);
-        flushTunnelLists();
+        tunnels = new Tunnels();
+        tunnelListView.setAdapter(new ArrayAdapter<TicTunnel>(MainActivity.this,
+                        R.layout.tunnellist_template,
+                        tunnels)
+        );
         if (statusReceiver == null)
             statusReceiver = new StatusReceiver();
         //if (lastEvents == null)
@@ -119,7 +153,6 @@ public class MainActivity extends Activity {
         LocalBroadcastManager.getInstance(this).registerReceiver(statusReceiver,
                 statusIntentFilter);
 
-        autostart = myPreferences.getBoolean("autostart", false);
         // check login configuration and start Settings if not yet set.
         if (myPreferences.getString("tic_username", "").isEmpty() ||
                 myPreferences.getString("tic_password", "").isEmpty() ||
@@ -132,10 +165,16 @@ public class MainActivity extends Activity {
         requestStatus();
     }
 
+    /**
+     * The overriden method from Activity is called when we receive a start intent.
+     */
     @Override
     protected void onStart() {
         super.onStart();
+        // @todo refactor to a common helper class that can be used directly from BootReceiver
         Intent intent = getIntent();
+        SharedPreferences myPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean autostart = myPreferences.getBoolean("autostart", false);
         boolean onBoot = intent.getBooleanExtra(MainActivity.EXTRA_AUTOSTART, false);
         if (onBoot && autostart) {
             startVPN(null);
@@ -143,6 +182,9 @@ public class MainActivity extends Activity {
         }
     }
 
+    /**
+     * This overriden method is called before the instance gets destroyed.
+     */
     @Override
     protected void onDestroy() {
         // switch off ui updates
@@ -151,15 +193,11 @@ public class MainActivity extends Activity {
         super.onDestroy();
     }
 
-    private void flushTunnelLists() {
-        availableTunnels = new ArrayList<TicTunnel>();
-        selectedTunnel = null;
-        tunnelListView.setAdapter(new ArrayAdapter<TicTunnel>(MainActivity.this,
-                        R.layout.tunnellist_template,
-                        availableTunnels)
-        );
-    }
-
+    /**
+     * This overridden method gets called when the menu should be created.
+     * @param menu the Menu to inflate to
+     * @return a boolean, always true
+     */
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -177,7 +215,7 @@ public class MainActivity extends Activity {
         // update selected tunnel
         int checkedItem = tunnelListView.getCheckedItemPosition();
         if (checkedItem != AdapterView.INVALID_POSITION) {
-            selectedTunnel = (TicTunnel) tunnelListView.getItemAtPosition(checkedItem);
+            tunnels.setActiveTunnel((TicTunnel) tunnelListView.getItemAtPosition(checkedItem));
         }
 
         // Start system-managed intent for VPN
@@ -190,6 +228,10 @@ public class MainActivity extends Activity {
         }
     }
 
+    /**
+     * This overriden method restores its state from a Bundle.
+     * @param savedInstanceState the Bundle containing the saved state.
+     */
     @Override
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
@@ -199,14 +241,10 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
-
-        if (availableTunnels != null && !availableTunnels.isEmpty() && selectedTunnel != null && statusReceiver.isTunnelProven()) {
+        // @todo writing back the tunnels list should not depend on a visible Activity getting paused.
+        if (!tunnels.isEmpty() && tunnels.isTunnelActive() && statusReceiver.isTunnelProven()) {
             Log.i (TAG, "We have an updated tunnel list and will write it back to cache");
-            if (availableTunnels.contains(selectedTunnel)) {
-                // we have a tunnel that should work
-                writePersistedTunnel ();
-            } else
-                Log.e (TAG, "Inconsistent data from statusReceiver: active tunnel not in tunnel list - aborting write back");
+            writePersistedTunnel();
         }
     }
 
@@ -248,6 +286,14 @@ public class MainActivity extends Activity {
         LocalBroadcastManager.getInstance(this).sendBroadcast(statusBroadcast);
     }
 
+    /**
+     * This is a callback that is going to be called by Android if the user agreed to starting
+     * a VPN by this app.
+     *
+     * @param requestCode an int that should be the magic number REQUEST_START_VPN
+     * @param resultCode an int that should be the magic number RESULT_OK
+     * @param data an Intent
+     */
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -255,8 +301,10 @@ public class MainActivity extends Activity {
             case REQUEST_START_VPN:
                 if (resultCode == RESULT_OK) {
                     Intent intent = new Intent(this, AyiyaVpnService.class);
-                    if (selectedTunnel != null)
-                        intent.putExtra(AyiyaVpnService.EXTRA_CACHED_TUNNEL, selectedTunnel);
+                    if (tunnels.isTunnelActive()) {
+                        // Android's Parcel system doesn't handle subclasses well, so...
+                        intent.putExtra(AyiyaVpnService.EXTRA_CACHED_TUNNELS, tunnels.getAndroidSerializable());
+                    }
                     startService(intent);
                 }
                 break;
@@ -265,6 +313,7 @@ public class MainActivity extends Activity {
 
     /** Read from a private file. If no such file exists, leave current list and selection untouched */
     private void loadPersistedTunnel() {
+        // @todo move to a separate class, perhaps change persistence mechanism
         TicTunnel tunnel;
         List<TicTunnel> cachedTunnels;
         try {
@@ -273,25 +322,31 @@ public class MainActivity extends Activity {
             ObjectInputStream os = new ObjectInputStream(is);
             //noinspection unchecked
             cachedTunnels = (List<TicTunnel>)os.readObject();
-            int selected = os.readInt();
-            tunnel = cachedTunnels.get(selected);
+            if (cachedTunnels instanceof Tunnels) {
+                tunnels.setAll((Tunnels) cachedTunnels);
+            } else {
+                // this is for reading the previous file format
+                int selected = os.readInt();
+                tunnel = cachedTunnels.get(selected);
+                tunnels.replaceTunnelList(cachedTunnels);
+                tunnels.setActiveTunnel(tunnel);
+            }
         } catch (Exception e) {
             Log.e(TAG, "Could not retrieve saved state of TicTunnel", e);
             return;
         }
 
-        // update MainActivities fields
-        selectedTunnel = tunnel;
-        availableTunnels = cachedTunnels;
     }
 
-    /** Write to a private file. Format is: ArrayList&lt;TicTunnel&gt; tunnels; int selected */
+    /** Write to a private file. Format is: ArrayList&lt;TicTunnel&gt; tunnels; int selected; (old)
+     * or a Tunnels tunnels; int selected; (new) */
     private void writePersistedTunnel() {
+        // @todo move to a separate class, perhaps change persistence mechanism
         try {
             OutputStream fs = openFileOutput(FILE_LAST_TUNNEL, MODE_PRIVATE);
             ObjectOutputStream os = new ObjectOutputStream(fs);
-            os.writeObject(availableTunnels);
-            os.writeInt(availableTunnels.indexOf(selectedTunnel));
+            os.writeObject(tunnels);
+            os.writeInt(tunnels.indexOf(tunnels.getActiveTunnel()));
             os.close();
             fs.close();
         } catch (IOException e) {
@@ -341,7 +396,7 @@ public class MainActivity extends Activity {
     }
 
     private void forceTunnelReload(View clickedView) {
-        flushTunnelLists();
+        tunnels.clear();
         startVPN(clickedView);
     }
 
@@ -400,23 +455,14 @@ public class MainActivity extends Activity {
                 MainActivity.this.activity.setText(getResources().getString(statusReport.getActivity()));
 
             // read tunnel information, if updated
-            if (statusReport.getTicTunnelList() != null)
-                availableTunnels = statusReport.getTicTunnelList();
-
-            // deal with null here to avoid nasty checks everywhere else...
-            if (statusReport.getActiveTunnel() != null)
-                selectedTunnel = statusReport.getActiveTunnel();
+            if (statusReport.getTunnels() != null)
+                tunnels.setAll(statusReport.getTunnels());
 
             // show tunnel information
-            // @todo implementation is too cheap - no internationalization, etc. Necessary to generate custom Adapter.
-            tunnelListView.setAdapter(new ArrayAdapter<TicTunnel>(MainActivity.this,
-                            R.layout.tunnellist_template,
-                            availableTunnels)
-            );
-            if (!availableTunnels.isEmpty()) {
+            if (!tunnels.isEmpty()) {
                 tunnelListView.setVisibility(View.VISIBLE);
 
-                int position = availableTunnels.indexOf(selectedTunnel);
+                int position = tunnels.indexOf(tunnels.getActiveTunnel());
                 if (position >= 0)
                   tunnelListView.setItemChecked(position, true);
             } else {
