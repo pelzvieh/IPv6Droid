@@ -42,6 +42,8 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.Serializable;
 
 import de.flyingsnail.ipv6droid.R;
@@ -90,6 +92,12 @@ public class AyiyaVpnService extends VpnService {
      */
     private boolean vpnShouldRun = false;
     private NotificationCompat.Builder ongoingNotificationBuilder;
+    private TunnelPersisting tunnelPersisting;
+    private Tunnels cachedTunnels;
+
+    public AyiyaVpnService() {
+        cachedTunnels = null;
+    }
 
 
     @Override
@@ -118,7 +126,15 @@ public class AyiyaVpnService extends VpnService {
         LocalBroadcastManager.getInstance(this).registerReceiver(statusReceiver,
                 statusIntentFilter);
 
-
+        // load persisted tunnels from file
+        tunnelPersisting = new TunnelPersistingFile(getApplicationContext());
+        try {
+            cachedTunnels = tunnelPersisting.readTunnels();
+        } catch (FileNotFoundException e) {
+            Log.i(TAG, "no persisted tunnels information", e);
+        } catch (IOException e) {
+            Log.e(TAG, "Can't load persisted tunnels", e);
+        }
     }
 
     @Override
@@ -131,15 +147,17 @@ public class AyiyaVpnService extends VpnService {
             RoutingConfiguration routingConfiguration = loadRoutingConfiguration(myPreferences);
             Log.d(TAG, "retrieved configuration");
 
-            // Read out the initial tunnels from the Intent, if present
-            Tunnels cachedTunnels = null;
-            // Android's Parcel system doesn't handle subclasses well, so...
+            // Read out the requested tunnels configuration from the Intent, if present.
+            // This is necessary to support, because it might differ from the persisted tunnel set,
+            // specifically, the user might have <em>selected<em> a different tunnel from the list.
             if (intent != null) {
+                // Android's Parcel system doesn't handle subclasses well, so...
                 Serializable serializable = intent.getSerializableExtra(EXTRA_CACHED_TUNNELS);
                 if (serializable != null) {
                     cachedTunnels = new Tunnels(serializable);
                 }
             }
+
             // Start a new session by creating a new thread.
             thread = new VpnThread(this, cachedTunnels, ticConfiguration, routingConfiguration, SESSION_NAME);
             startVpn();
@@ -411,8 +429,22 @@ public class AyiyaVpnService extends VpnService {
         public void onReceive(Context context, Intent intent) {
             VpnStatusReport statusReport = (VpnStatusReport)intent.getSerializableExtra(VpnStatusReport.EDATA_STATUS_REPORT);
             Log.i(TAG, "received status update: " + String.valueOf(statusReport));
-            if (statusReport != null)
+            if (statusReport != null) {
+                // update persistent notification
                 displayOngoingNotification(statusReport);
+                // write back persisted tunnels if tunnel works and list was changed
+                if (statusReport.isTunnelProvedWorking() &&
+                        (cachedTunnels == null || !cachedTunnels.equals(statusReport.getTunnels()))) {
+                    cachedTunnels = statusReport.getTunnels();
+                    try {
+                        if (cachedTunnels != null)
+                            tunnelPersisting.writeTunnels(cachedTunnels);
+                    } catch (IOException e) {
+                        Log.e(TAG, "Couldn't write tunnels to file", e);
+                    }
+                }
+
+            }
         }
     }
 }

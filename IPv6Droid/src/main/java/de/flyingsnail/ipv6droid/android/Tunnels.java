@@ -31,9 +31,12 @@ import java.util.List;
 import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 
 /**
+ * A ArrayList&lt;TicTunnel&gt; extended by information on a potentially selected tunnel.
  * Created by pelzi on 28.01.16.
  */
-public class Tunnels extends ArrayList<TicTunnel> {
+public class Tunnels extends ArrayList<TicTunnel> implements Cloneable {
+    // Version number for serialized state
+    static final long serialVersionUID =-9178679015599058965L;
     // the TicTunnel that is currently active/selected for activation
     private @Nullable TicTunnel activeTunnel;
 

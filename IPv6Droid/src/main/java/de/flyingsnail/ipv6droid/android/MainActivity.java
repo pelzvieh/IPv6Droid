@@ -43,12 +43,8 @@ import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.OutputStream;
-import java.util.List;
 
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.statusdetail.StatisticsActivity;
@@ -114,6 +110,10 @@ public class MainActivity extends Activity {
      * the VPN status.
      */
     private MenuItem refreshTunnelMenuItem;
+    /**
+     * An object implementing TunnelPersisting, i.e. a Binder-based DAO to persistent tunnel storage.
+     */
+    private TunnelPersisting tunnelPersisting;
 
 
     /**
@@ -153,6 +153,17 @@ public class MainActivity extends Activity {
         LocalBroadcastManager.getInstance(this).registerReceiver(statusReceiver,
                 statusIntentFilter);
 
+        // load tunnels list persisted from last session
+        tunnelPersisting = new TunnelPersistingFile(getApplicationContext());
+        try {
+            tunnels.setAll(tunnelPersisting.readTunnels());
+        } catch (FileNotFoundException e) {
+            Log.i(TAG, "Could not load persisted tunnels - probably first invocation", e);
+        } catch (IOException e) {
+            Log.e(TAG, "Could not load persisted tunnels", e);
+        }
+        statusReceiver.updateUi();
+
         // check login configuration and start Settings if not yet set.
         if (myPreferences.getString("tic_username", "").isEmpty() ||
                 myPreferences.getString("tic_password", "").isEmpty() ||
@@ -160,8 +171,6 @@ public class MainActivity extends Activity {
             openSettings();
         }
 
-        loadPersistedTunnel();
-        statusReceiver.updateUi();
         requestStatus();
     }
 
@@ -244,7 +253,11 @@ public class MainActivity extends Activity {
         // @todo writing back the tunnels list should not depend on a visible Activity getting paused.
         if (!tunnels.isEmpty() && tunnels.isTunnelActive() && statusReceiver.isTunnelProven()) {
             Log.i (TAG, "We have an updated tunnel list and will write it back to cache");
-            writePersistedTunnel();
+            try {
+                tunnelPersisting.writeTunnels(tunnels);
+            } catch (Exception e) {
+                Log.e(TAG, "Could not write tunnel information to private file", e);
+            }
         }
     }
 
@@ -310,50 +323,6 @@ public class MainActivity extends Activity {
                 break;
         }
     }
-
-    /** Read from a private file. If no such file exists, leave current list and selection untouched */
-    private void loadPersistedTunnel() {
-        // @todo move to a separate class, perhaps change persistence mechanism
-        TicTunnel tunnel;
-        List<TicTunnel> cachedTunnels;
-        try {
-            // open private file
-            InputStream is = openFileInput(FILE_LAST_TUNNEL);
-            ObjectInputStream os = new ObjectInputStream(is);
-            //noinspection unchecked
-            cachedTunnels = (List<TicTunnel>)os.readObject();
-            if (cachedTunnels instanceof Tunnels) {
-                tunnels.setAll((Tunnels) cachedTunnels);
-            } else {
-                // this is for reading the previous file format
-                int selected = os.readInt();
-                tunnel = cachedTunnels.get(selected);
-                tunnels.replaceTunnelList(cachedTunnels);
-                tunnels.setActiveTunnel(tunnel);
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Could not retrieve saved state of TicTunnel", e);
-            return;
-        }
-
-    }
-
-    /** Write to a private file. Format is: ArrayList&lt;TicTunnel&gt; tunnels; int selected; (old)
-     * or a Tunnels tunnels; int selected; (new) */
-    private void writePersistedTunnel() {
-        // @todo move to a separate class, perhaps change persistence mechanism
-        try {
-            OutputStream fs = openFileOutput(FILE_LAST_TUNNEL, MODE_PRIVATE);
-            ObjectOutputStream os = new ObjectOutputStream(fs);
-            os.writeObject(tunnels);
-            os.writeInt(tunnels.indexOf(tunnels.getActiveTunnel()));
-            os.close();
-            fs.close();
-        } catch (IOException e) {
-            Log.e(TAG, "Could not write tunnel information to private file", e);
-        }
-    }
-
 
 
     @Override

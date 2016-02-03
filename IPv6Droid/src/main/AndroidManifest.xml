@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~ Copyright (c) 2015 Dr. Andreas Feldner.
   ~
   ~     This program is free software; you can redistribute it and/or modify
@@ -22,7 +21,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="de.flyingsnail.ipv6droid"
     android:versionCode="32"
-    android:versionName="1.25" >
+    android:versionName="1.25">
 
     <uses-sdk
         android:minSdkVersion="14"
@@ -36,10 +35,10 @@
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
-        android:theme="@style/AppTheme" >
+        android:theme="@style/AppTheme">
         <activity
             android:name=".android.MainActivity"
-            android:label="@string/app_name" >
+            android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -49,7 +48,7 @@
 
         <service
             android:name=".android.AyiyaVpnService"
-            android:permission="android.permission.BIND_VPN_SERVICE" >
+            android:permission="android.permission.BIND_VPN_SERVICE">
             <intent-filter>
                 <action android:name="de.flyingsnail.ipv6droid.AyiyaVPN" />
             </intent-filter>
@@ -58,9 +57,9 @@
         <activity
             android:name=".android.SettingsActivity"
             android:label="@string/title_activity_settings"
+            android:launchMode="singleTop"
             android:parentActivityName=".android.MainActivity"
-            tools:ignore="UnusedAttribute"
-            android:launchMode="singleTop">
+            tools:ignore="UnusedAttribute">
 
             <!-- Parent activity meta-data to support 4.0 and lower -->
             <meta-data
@@ -70,8 +69,9 @@
         <activity
             android:name=".android.statusdetail.StatisticsActivity"
             android:label="@string/title_activity_statistics"
-            android:parentActivityName=".android.MainActivity"
-            android:launchMode="singleTop">
+            android:launchMode="singleTop"
+            android:parentActivityName=".android.MainActivity">
+
             <!-- Parent activity meta-data to support 4.0 and lower -->
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -85,6 +85,7 @@
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
