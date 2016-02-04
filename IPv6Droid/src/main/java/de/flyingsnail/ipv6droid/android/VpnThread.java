@@ -476,14 +476,14 @@ class VpnThread extends Thread {
                 // check current nativeRouting information for existing IPv6 default route
                 // then setup local tun and nativeRouting
                 Log.i(TAG, "Building new local TUN  object");
-                if (!routingConfiguration.isForceRouting() && ipv6DefaultExists()) {
-                    Log.i(TAG, "Detected existing IPv6, not setting routes to tunnel");
-                    vpnFD = builderNotRouted.establish();
-                    tunnelRouted = false;
-                } else {
+                if (isTunnelRoutingRequired()) {
                     Log.i(TAG, "No native IPv6 to use, setting routes to tunnel");
                     vpnFD = builder.establish();
                     tunnelRouted = true;
+                } else {
+                    Log.i(TAG, "Detected existing IPv6, not setting routes to tunnel");
+                    vpnFD = builderNotRouted.establish();
+                    tunnelRouted = false;
                 }
 
                 vpnStatus.setActivity(R.string.vpnservice_activity_localnet);
@@ -507,6 +507,10 @@ class VpnThread extends Thread {
         Log.i(TAG, "Tunnel thread gracefully shut down");
     }
 
+    private boolean isTunnelRoutingRequired() {
+        return routingConfiguration.isForceRouting() || !ipv6DefaultExists();
+    }
+
     /**
      * Check for existing IPv6 connectivity. We're using the nativeRouting info of the operating system.
      * @return true if there's existing IPv6 connectivity
@@ -525,14 +529,16 @@ class VpnThread extends Thread {
                     return true;
                 }
             }
+        } else {
+            return checkRouting();
         }
         return false;
     }
 
     /**
-     *     Android 4.4 has introduced a bug with VPN nativeRouting.
-     *     This methods tries to check if our device suffers from this problem.
-     *     @return true if nativeRouting is OK
+     *     This methods tries to check - without official API - if our device currently has
+     *     an IPV6 route set.
+     *     @return true if routing is OK
      */
     private boolean checkRouting() {
         try {
@@ -694,7 +700,7 @@ class VpnThread extends Thread {
         boolean timeoutSuspected = false;
         long lastPacketDelta = 0l;
         TicTunnel activeTunnel = tunnels.getActiveTunnel();
-        long heartbeatInterval = activeTunnel.getHeartbeatInterval() * 1000;
+        long heartbeatInterval = activeTunnel.getHeartbeatInterval() * 1000l;
         if (heartbeatInterval < 300000l && isNetworkMobile()) {
             Log.i(TAG, "Lifting heartbeat interval to 300 secs");
             heartbeatInterval = 300000l;
@@ -1010,32 +1016,51 @@ class VpnThread extends Thread {
     public void onConnectivityChange(@NonNull Intent intent) {
         Log.i(TAG, "Connectivity changed");
         if (!intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false)) {
+            // we *have* connectivity
             synchronized (vpnStatus) {
                 vpnStatus.notifyAll();
             }
+            // updat cached information
             updateNetworkDetails();
-        }
 
-        // check if our sockets are still valid
-        final Ayiya myAyiya = ayiya; // avoid race conditions
-        final CopyThread myInThread = inThread;
-        if (myAyiya != null && myInThread != null && myInThread.isAlive()) {
-            if (!myAyiya.isAlive()) {
-                Log.i(TAG, "ayiya object no longer functional after connectivity change - reconnecting");
+            // check if our routing is still valid, otherwise invalidate vpnFD
+            if (isTunnelRoutingRequired() ^ tunnelRouted) {
+                Log.i(TAG, "tunnel routing requirement changed, forcing re-build of local vpn socket");
                 new AsyncTask<Void, Void, Void>() {
                     @Override
                     protected Void doInBackground(Void... params) {
                         try {
+                            vpnFD.close();
                             cleanCopyThreads();
                         } catch (Throwable t) {
                             Log.e(TAG, "stopping copy threads failed", t);
                         }
                         return null;
                     }
-
                 }.execute();
-            }
-        }
+            }  // restart all routing
+
+            // check if our sockets are still valid
+            final Ayiya myAyiya = ayiya; // avoid race conditions
+            final CopyThread myInThread = inThread;
+            if (myAyiya != null && myInThread != null && myInThread.isAlive()) {
+                if (!myAyiya.isAlive()) {
+                    Log.i(TAG, "ayiya object no longer functional after connectivity change - reconnecting");
+                    new AsyncTask<Void, Void, Void>() {
+                        @Override
+                        protected Void doInBackground(Void... params) {
+                            try {
+                                cleanCopyThreads();
+                            } catch (Throwable t) {
+                                Log.e(TAG, "stopping copy threads failed", t);
+                            }
+                            return null;
+                        }
+
+                    }.execute();
+                }
+            } // vpn copy threads are still running
+        } // we have connectivity
     }
 
     /**
