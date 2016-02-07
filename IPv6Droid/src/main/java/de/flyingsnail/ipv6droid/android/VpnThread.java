@@ -365,7 +365,7 @@ class VpnThread extends Thread {
                 waitOnConnectivity();
 
                 // due to kitkat issue, check local health
-                if (routingConfiguration.isTryRoutingWorkaround() && !checkRouting()) {
+                if (routingConfiguration.isTryRoutingWorkaround() && tunnelRouted && !checkRouting()) {
                     Log.e(TAG, "Routing broken on this device, no default route is set for IPv6");
                     postToast(applicationContext, R.string.routingbroken, Toast.LENGTH_LONG);
                     try {

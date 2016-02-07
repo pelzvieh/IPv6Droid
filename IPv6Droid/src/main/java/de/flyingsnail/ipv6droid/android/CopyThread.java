@@ -156,6 +156,7 @@ class CopyThread extends Thread {
             int recvZero = 0;
             long lastWrite = new Date().getTime();
             stopCopy = false;
+            boolean packetReceived = false;
 
             // @TODO there *must* be a suitable utility class for that...?
             while (!stopCopy) {
@@ -166,8 +167,11 @@ class CopyThread extends Thread {
                 if (len > 0) {
                     out.write(packet, 0, len);
                     // statistics
-                    if (statisticsCollector.getPacketCount() == 0)
+                    if (!packetReceived) {
                         vpnThread.notifyFirstPacketReceived();
+                        packetReceived = true;
+                    }
+
                     statisticsCollector.updateStatistics (len);
 
                     recvZero = 0;
