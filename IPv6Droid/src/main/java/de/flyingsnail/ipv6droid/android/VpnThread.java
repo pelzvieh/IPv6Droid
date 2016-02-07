@@ -485,6 +485,8 @@ class VpnThread extends Thread {
                     vpnFD = builderNotRouted.establish();
                     tunnelRouted = false;
                 }
+                if (vpnFD == null)
+                    throw new ConnectionFailedException("App is not correctly prepared to use VpnService calls", null);
 
                 vpnStatus.setActivity(R.string.vpnservice_activity_localnet);
                 vpnStatus.setProgressPerCent(50);

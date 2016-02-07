@@ -62,13 +62,6 @@ public class MainActivity extends Activity {
     private static final int REQUEST_START_VPN = 1;
     private static final int REQUEST_SETTINGS = 2;
     private static final int REQUEST_STATISTICS = 3;
-    /**
-     * A String giving the file name for persisting tunnel information
-     */
-    private static final String FILE_LAST_TUNNEL = "last_tunnel";
-
-    /** The magic name of the Intent extra that signals that an automatic tunnel start is intended */
-    public static final String EXTRA_AUTOSTART = "AUTOSTART";
 
     /** A TextView that presents in natural language, what is going on */
     private TextView activity;
@@ -172,23 +165,6 @@ public class MainActivity extends Activity {
         }
 
         requestStatus();
-    }
-
-    /**
-     * The overriden method from Activity is called when we receive a start intent.
-     */
-    @Override
-    protected void onStart() {
-        super.onStart();
-        // @todo refactor to a common helper class that can be used directly from BootReceiver
-        Intent intent = getIntent();
-        SharedPreferences myPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-        boolean autostart = myPreferences.getBoolean("autostart", false);
-        boolean onBoot = intent.getBooleanExtra(MainActivity.EXTRA_AUTOSTART, false);
-        if (onBoot && autostart) {
-            startVPN(null);
-            finish(); // close this Activity, as it was opened automatically at boot
-        }
     }
 
     /**

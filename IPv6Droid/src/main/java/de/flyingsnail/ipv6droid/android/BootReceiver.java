@@ -23,25 +23,51 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.VpnService;
 import android.preference.PreferenceManager;
+import android.util.Log;
+
+import java.io.IOException;
 
 /**
- * This provides a callback function, asking MainActivity to start the VPN tunnel when it receives a boot completed
+ * This provides a callback function, asking AyiyaVpnService to start the VPN tunnel when it receives a boot completed
  * message.
  */
 public class BootReceiver extends BroadcastReceiver {
+    private final String TAG = BootReceiver.class.getName();
     public BootReceiver() {
     }
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        Log.i(TAG, "BootReceiver received intent: " + intent.getAction());
         SharedPreferences myPrefs = PreferenceManager.getDefaultSharedPreferences(context);
-        if (intent.getAction().equals(Intent.ACTION_BOOT_COMPLETED) &&
-                myPrefs.getBoolean("autostart", false)) {
-            Intent i = new Intent(context, MainActivity.class);
-            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            i.putExtra(MainActivity.EXTRA_AUTOSTART, true);
-            context.startActivity(i);
+        if (myPrefs.getBoolean("autostart", false)) {
+            TunnelPersisting tunnelPersisting = new TunnelPersistingFile(context);
+            try {
+                Tunnels tunnels = tunnelPersisting.readTunnels();
+                if (tunnels.isTunnelActive()) {
+                    Log.i(TAG, "Starting last used tunnel \"on boot\"");
+                    Log.d(TAG, "Preparing to use VpnService");
+                    // Start system-managed intent for VPN
+                    Intent systemVpnIntent = VpnService.prepare(context);
+                    if (systemVpnIntent == null) {
+                        Log.d(TAG, "No explicit user consent required - going ahead!");
+                        Intent i = new Intent(context, AyiyaVpnService.class);
+                        // Android's Parcel system doesn't handle subclasses well, so...
+                        i.putExtra(AyiyaVpnService.EXTRA_CACHED_TUNNELS, tunnels.getAndroidSerializable());
+                        context.startService(i);
+                        Log.d(TAG, "Sent service start intent");
+                    } else
+                        Log.i(TAG, "User must consent to starting this VPN - no autostart possible");
+
+                } else {
+                    Log.i(TAG, "Autostart \"on boot\" is configured, but no tunnel persisted to be working.");
+                }
+
+            } catch (IOException e) {
+                Log.e(TAG, "Unable to load list of persisted tunnels - no autostart possible", e);
+            }
         }
     }
 }
