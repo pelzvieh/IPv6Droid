@@ -341,7 +341,15 @@ public class MainActivity extends Activity {
     }
 
     private void forceTunnelReload(View clickedView) {
+        int checked = tunnelListView.getCheckedItemPosition();
+        if (checked != AdapterView.INVALID_POSITION)
+            tunnelListView.setItemChecked(checked, false);
         tunnels.clear();
+        try {
+            tunnelPersisting.writeTunnels(tunnels);
+        } catch (IOException e) {
+            Log.wtf(TAG, "Could not write empty tunnel list to persistent configuration", e);
+        }
         startVPN(clickedView);
     }
 

@@ -1028,7 +1028,7 @@ class VpnThread extends Thread {
             synchronized (vpnStatus) {
                 vpnStatus.notifyAll();
             }
-            // updat cached information
+            // update cached information
             updateNetworkDetails();
 
             // check if our routing is still valid, otherwise invalidate vpnFD
