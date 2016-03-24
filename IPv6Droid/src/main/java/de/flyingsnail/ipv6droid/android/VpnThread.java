@@ -251,8 +251,15 @@ class VpnThread extends Thread {
                 if (tunnels == null || !tunnels.isTunnelActive()) {
                     // some status reporting...
                     vpnStatus.setActivity(R.string.vpnservice_activity_query_tic);
-                    readTunnelFromTIC(); // ensures tunnels to be set and isTunnelActive to be true
-
+                    readTunnelFromTIC(); // ensures tunnels to be set, preserves active tunnel if still valid
+                    vpnStatus.setTunnels(tunnels);
+                    // check for active tunnel
+                    if (!tunnels.isTunnelActive()) {
+                        if (tunnels.isEmpty())
+                            throw new ConnectionFailedException("No suitable tunnels found", null);
+                        else
+                            throw new ConnectionFailedException("You must select a tunnel from list", null);
+                    }
                 } else {
                     Log.i(TAG, "Using cached TicTunnel instead of contacting TIC");
                 }
@@ -388,7 +395,7 @@ class VpnThread extends Thread {
                 lastStartAttempt = new Date();
 
                 // setup tunnel to PoP
-                Log.i(TAG, "Building new ayiya object");
+                Log.i(TAG, "Connecting ayiya object");
                 ayiya.connect();
                 vpnStatus.setProgressPerCent(75);
                 vpnStatus.setActivity(R.string.vpnservice_activity_ping_pop);
@@ -751,8 +758,9 @@ class VpnThread extends Thread {
                             continue;
                         }
                         if (tunnelChanged) {
-                            // TIC had new data - signal an IO problem to rebuild tunnel
-                            throw new IOException("Packet receiving had timeout and TIC information changed");
+                            vpnStatus.setTunnels(tunnels); // update tunnel list in MainActivity
+                            // TIC had new data - signal a configuration problem to rebuild tunnel
+                            throw new ConnectionFailedException("TIC information changed", null);
                         } else {
                             throw new ConnectionFailedException("This TIC tunnel doesn't receive data", null);
                         }
@@ -814,12 +822,10 @@ class VpnThread extends Thread {
             if (!activeTunnelValid) {
                 // previous activeTunnel no longer present!
                 tunnelChanged = true;
-                if (tunnels.isEmpty())
-                    throw new ConnectionFailedException("No suitable tunnels found", null);
-                else if (tunnels.size()>1)
-                    throw new ConnectionFailedException("You must select a tunnel from list", null);
-                else
+                if (tunnels.size() == 1) {
                     tunnels.setActiveTunnel(tunnels.get(0));
+                    vpnStatus.setTunnels(tunnels);
+                }
             }
         } finally {
             tic.close();
