@@ -345,6 +345,7 @@ public class MainActivity extends Activity {
         if (checked != AdapterView.INVALID_POSITION)
             tunnelListView.setItemChecked(checked, false);
         tunnels.clear();
+        ((ArrayAdapter<TicTunnel>)(tunnelListView.getAdapter())).notifyDataSetChanged();
         try {
             tunnelPersisting.writeTunnels(tunnels);
         } catch (IOException e) {
@@ -408,8 +409,10 @@ public class MainActivity extends Activity {
                 MainActivity.this.activity.setText(getResources().getString(statusReport.getActivity()));
 
             // read tunnel information, if updated
-            if (statusReport.getTunnels() != null)
+            if (statusReport.getTunnels() != null) {
                 tunnels.setAll(statusReport.getTunnels());
+                ((ArrayAdapter<TicTunnel>)(tunnelListView.getAdapter())).notifyDataSetChanged();
+            }
 
             // show tunnel information
             if (!tunnels.isEmpty()) {
