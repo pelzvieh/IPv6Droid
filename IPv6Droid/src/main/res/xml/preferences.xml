@@ -41,7 +41,7 @@
             android:summaryOff="@string/pref_summary_autostart_off"
             android:summaryOn="@string/pref_summary_autostart_on"
             android:defaultValue="false" />
-
+        
     </PreferenceCategory>
     <PreferenceCategory
         android:title="@string/pref_header_routes"

@@ -29,7 +29,10 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
+import java.net.Inet4Address;
+import java.net.InetAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -143,8 +146,21 @@ public class Tic {
             if (socket != null) {
                 throw new IllegalStateException("This Tic is already connected.");
             }
-            // unencrypted TCP connection
-            socket = new Socket(config.getServer(), TIC_PORT);
+            // unencrypted TCP connection to an Inet4Address
+            InetAddress[] serverAddresses = Inet4Address.getAllByName(config.getServer());
+            for (InetAddress serverAddress: serverAddresses) {
+                if (serverAddress instanceof Inet4Address) {
+                    try {
+                        socket = new Socket(serverAddress, TIC_PORT);
+                        break;
+                    } catch (IOException e) {
+                        Log.i(TAG, "connect: failed to setup Socket with resolved address "+serverAddress.getHostAddress());
+                    }
+                }
+            }
+            if (socket == null)
+                throw new UnknownHostException("Didn't resolve to an IPv4 address: " + config.getServer());
+            socket.setSoTimeout(10000);
 
             initLineReaderAndWriter();
 

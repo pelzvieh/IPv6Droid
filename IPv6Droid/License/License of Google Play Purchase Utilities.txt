@@ -1,0 +1,6 @@
+The project contains Java classes provided by Google, incorporated into the project as described
+under https://developer.android.com/training/in-app-billing/preparing-iab-app.html
+
+These classes form a sort of convenience library for using the Google billing API and are licensed
+by Google under the Apache license. The classes are contained in the package
+ de.flyingsnail.ipv6droid.util.

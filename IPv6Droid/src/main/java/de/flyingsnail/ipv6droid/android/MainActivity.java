@@ -47,6 +47,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.googlesubscription.SubscribeTunnel;
 import de.flyingsnail.ipv6droid.android.statusdetail.StatisticsActivity;
 import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 
@@ -60,7 +61,7 @@ public class MainActivity extends Activity {
      */
     private static final String TAG = MainActivity.class.getName();
     private static final int REQUEST_START_VPN = 1;
-    private static final int REQUEST_SETTINGS = 2;
+    // private static final int REQUEST_SETTINGS = 2;
     private static final int REQUEST_STATISTICS = 3;
 
     /** A TextView that presents in natural language, what is going on */
@@ -161,7 +162,7 @@ public class MainActivity extends Activity {
         if (myPreferences.getString("tic_username", "").isEmpty() ||
                 myPreferences.getString("tic_password", "").isEmpty() ||
                 myPreferences.getString("tic_host", "").isEmpty()) {
-            openSettings();
+            openFirstTimeSetup();
         }
 
         requestStatus();
@@ -237,14 +238,35 @@ public class MainActivity extends Activity {
         }
     }
 
-    /**
-     * Start the system-managed setup of VPN
-     */
-    public void openSettings () {
-        // Start system-managed intent for VPN
-        Intent settingsIntent = new Intent(this, SettingsActivity.class);
-        startActivityForResult(settingsIntent, REQUEST_SETTINGS);
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // check login configuration and start first time setup activity if not yet set.
+        SharedPreferences myPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+
+        if (myPreferences.getString("tic_username", "").isEmpty() ||
+                myPreferences.getString("tic_password", "").isEmpty() ||
+                myPreferences.getString("tic_host", "").isEmpty()) {
+            openFirstTimeSetup();
+        }
+        // update status
+        requestStatus();
     }
+
+    /**
+     * Start the settings setup activity via Intent.
+     */
+    private void openSettings () {
+        Intent settingsIntent = new Intent(this, SettingsActivity.class);
+        startActivity(settingsIntent);
+    }
+
+    private void openFirstTimeSetup() {
+        Intent setupIntent = new Intent(this, SubscribeTunnel.class);
+        startActivity(setupIntent);
+    }
+
+
 
     /**
      * Start the detached statistics view
@@ -411,7 +433,10 @@ public class MainActivity extends Activity {
             // read tunnel information, if updated
             if (statusReport.getTunnels() != null) {
                 tunnels.setAll(statusReport.getTunnels());
-                ((ArrayAdapter<TicTunnel>)(tunnelListView.getAdapter())).notifyDataSetChanged();
+                ArrayAdapter<TicTunnel> tunnelAdapter = (ArrayAdapter<TicTunnel>)(tunnelListView.getAdapter());
+                tunnelAdapter.clear();
+                tunnelAdapter.addAll(tunnels);
+                tunnelAdapter.notifyDataSetChanged();
             }
 
             // show tunnel information

@@ -21,15 +21,12 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="de.flyingsnail.ipv6droid"
     android:versionCode="34"
-    android:versionName="1.30">
-
-    <uses-sdk
-        android:minSdkVersion="14"
-        android:targetSdkVersion="N" />
+    android:versionName="1.50">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="com.android.vending.BILLING" />
 
     <application
         android:allowBackup="true"
@@ -90,6 +87,22 @@
             </intent-filter>
         </receiver>
 
+        <activity
+            android:name=".android.googlesubscription.SubscribeTunnel"
+            android:label="@string/title_activity_subscribe_tunnel"
+            android:parentActivityName=".android.MainActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="de.flyingsnail.ipv6droid.android.MainActivity" />
+        </activity>
+        <activity
+            android:name=".android.subscription.InitialSetup"
+            android:label="@string/title_activity_initial_setup"
+            android:parentActivityName=".android.MainActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="de.flyingsnail.ipv6droid.android.MainActivity" />
+        </activity>
     </application>
 
 </manifest>

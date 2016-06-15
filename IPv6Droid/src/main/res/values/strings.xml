@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~ Copyright (c) 2015 Dr. Andreas Feldner.
   ~
   ~     This program is free software; you can redistribute it and/or modify
@@ -63,4 +62,12 @@
     <string name="statistics_time_of_burst">Duration of burst</string>
     <string name="statistics_packets_per_burst">Packets per burst</string>
     <string name="statistics_bytes_per_burst">Bytes per burst</string>
+    <string name="title_activity_subscribe_tunnel">SubscribeTunnel</string>
+    <string name="title_activity_initial_setup">Initial Setup</string>
+    <string name="subscription_label">Subscribe to IPv6 tunnel service</string>
+    <string name="manual_setup_label">Set up using existing credentials</string>
+    <string name="user_has_subscription">You are subscribed</string>
+    <string name="user_has_unparsable_subscription_status">Could not understand subscription status</string>
+    <string name="subscribe_to_tunnel_service">Subscribe to Tunnel Service</string>
+    <string name="user_not_subscribed">Not subscribed</string>
 </resources>

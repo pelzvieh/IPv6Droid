@@ -226,7 +226,7 @@ public class Ayiya {
      */
     public synchronized void connect() throws IOException, ConnectionFailedException {
         if (socket != null) {
-            throw new IllegalStateException("This Tic is already connected.");
+            throw new IllegalStateException("This AYIYA is already connected.");
         }
 
         // UDP connection

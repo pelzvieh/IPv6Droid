@@ -861,6 +861,7 @@ class VpnThread extends Thread {
             try {
                 desc = tic.describeTunnel(id);
             } catch (TunnelNotAcceptedException e) {
+                Log.e(TAG, "Tunnel not accepted", e);
                 continue;
             }
             if (desc.isValid() && desc.isEnabled() && "ayiya".equals(desc.getType())){
