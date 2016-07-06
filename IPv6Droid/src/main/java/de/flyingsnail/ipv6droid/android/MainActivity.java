@@ -63,6 +63,9 @@ public class MainActivity extends Activity {
     private static final int REQUEST_START_VPN = 1;
     // private static final int REQUEST_SETTINGS = 2;
     private static final int REQUEST_STATISTICS = 3;
+    public static final String TIC_USERNAME = "tic_username";
+    public static final String TIC_PASSWORD = "tic_password";
+    public static final String TIC_HOST = "tic_host";
 
     /** A TextView that presents in natural language, what is going on */
     private TextView activity;
@@ -131,10 +134,10 @@ public class MainActivity extends Activity {
         tunnelListView = (ListView) findViewById(R.id.tunnelList);
         causeView = (TextView) findViewById(R.id.cause);
         tunnels = new Tunnels();
-        tunnelListView.setAdapter(new ArrayAdapter<TicTunnel>(MainActivity.this,
-                        R.layout.tunnellist_template,
-                        tunnels)
-        );
+        ArrayAdapter<TicTunnel> adapter = new ArrayAdapter<TicTunnel>(MainActivity.this,
+                R.layout.tunnellist_template);
+        adapter.addAll(tunnels);
+        tunnelListView.setAdapter(adapter);
         if (statusReceiver == null)
             statusReceiver = new StatusReceiver();
         //if (lastEvents == null)
@@ -159,9 +162,9 @@ public class MainActivity extends Activity {
         statusReceiver.updateUi();
 
         // check login configuration and start Settings if not yet set.
-        if (myPreferences.getString("tic_username", "").isEmpty() ||
-                myPreferences.getString("tic_password", "").isEmpty() ||
-                myPreferences.getString("tic_host", "").isEmpty()) {
+        if (myPreferences.getString(TIC_USERNAME, "").isEmpty() ||
+                myPreferences.getString(TIC_PASSWORD, "").isEmpty() ||
+                myPreferences.getString(TIC_HOST, "").isEmpty()) {
             openFirstTimeSetup();
         }
 
@@ -244,9 +247,9 @@ public class MainActivity extends Activity {
         // check login configuration and start first time setup activity if not yet set.
         SharedPreferences myPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
-        if (myPreferences.getString("tic_username", "").isEmpty() ||
-                myPreferences.getString("tic_password", "").isEmpty() ||
-                myPreferences.getString("tic_host", "").isEmpty()) {
+        if (myPreferences.getString(TIC_USERNAME, "").isEmpty() ||
+                myPreferences.getString(TIC_PASSWORD, "").isEmpty() ||
+                myPreferences.getString(TIC_HOST, "").isEmpty()) {
             openFirstTimeSetup();
         }
         // update status
@@ -346,6 +349,10 @@ public class MainActivity extends Activity {
                 forceTunnelReload(item.getActionView());
                 return true;
 
+            case R.id.action_subscribe:
+                openFirstTimeSetup();
+                return true;
+
             case R.id.action_show_statistics:
                 openStatistics();
                 return true;
@@ -392,6 +399,8 @@ public class MainActivity extends Activity {
         private void updateUi () {
             int imageRes = R.drawable.off;
             VpnStatusReport.Status status = statusReport.getStatus();
+            Log.i(TAG, "received status update: " + String.valueOf(statusReport));
+
             switch (status) {
                 case Connected:
                     imageRes = R.drawable.transmitting;
@@ -441,12 +450,14 @@ public class MainActivity extends Activity {
 
             // show tunnel information
             if (!tunnels.isEmpty()) {
+                Log.d(TAG, "Tunnels are set");
                 tunnelListView.setVisibility(View.VISIBLE);
 
                 int position = tunnels.indexOf(tunnels.getActiveTunnel());
                 if (position >= 0)
                   tunnelListView.setItemChecked(position, true);
             } else {
+                Log.d(TAG, "No tunnels are set");
                 tunnelListView.setVisibility(View.INVISIBLE);
             }
             Throwable cause = statusReport.getCause();
