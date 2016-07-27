@@ -118,6 +118,13 @@ public class TicTunnel implements Serializable {
     private Date creationDate = new Date();
 
     /**
+     * Default constructor. Required for json de-serialization.
+     */
+    public TicTunnel() {
+
+    }
+
+    /**
      * Constructor. All attributes apart from id created null.
      * @param id a String representing the id to use for querying the tic.
      */
@@ -213,6 +220,13 @@ public class TicTunnel implements Serializable {
         return "enabled".equals(getUserState()) && "enabled".equals(getAdminState());
     }
 
+    public void setEnabled(boolean enabled) {
+        if (enabled) {
+            setUserState("enabled");
+            setAdminState("enabled");
+        }
+    }
+
     public String getPassword() {
         return password;
     }
@@ -241,8 +255,25 @@ public class TicTunnel implements Serializable {
         return (mtu != 0) && (password != null) && (ipv4Pop != null) && (ipv6Pop != null);
     }
 
+    /** required for unmarshalling json */
+    public void setValid(boolean valid) {
+        if (valid != isValid())
+            throw new IllegalStateException("Impossible to set valid state");
+    }
+
     public Date getCreationDate() {
         return creationDate;
+    }
+
+    /** set ID. Required for json unmarshalling */
+    public void setId(String id) {
+        this.id = id;
+    }
+
+
+    /** Set the creation date. Required for unmarshalling from json. */
+    public void setCreationDate(Date creationDate) {
+        this.creationDate = creationDate;
     }
 
 

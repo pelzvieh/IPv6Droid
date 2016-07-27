@@ -442,20 +442,22 @@ public class MainActivity extends Activity {
             // read tunnel information, if updated
             if (statusReport.getTunnels() != null) {
                 tunnels.setAll(statusReport.getTunnels());
-                ArrayAdapter<TicTunnel> tunnelAdapter = (ArrayAdapter<TicTunnel>)(tunnelListView.getAdapter());
-                tunnelAdapter.clear();
-                tunnelAdapter.addAll(tunnels);
-                tunnelAdapter.notifyDataSetChanged();
             }
 
             // show tunnel information
             if (!tunnels.isEmpty()) {
                 Log.d(TAG, "Tunnels are set");
-                tunnelListView.setVisibility(View.VISIBLE);
+
+                ArrayAdapter<TicTunnel> tunnelAdapter = (ArrayAdapter<TicTunnel>)(tunnelListView.getAdapter());
+                tunnelAdapter.clear();
+                tunnelAdapter.addAll(tunnels);
+                tunnelAdapter.notifyDataSetChanged();
 
                 int position = tunnels.indexOf(tunnels.getActiveTunnel());
                 if (position >= 0)
                   tunnelListView.setItemChecked(position, true);
+
+                tunnelListView.setVisibility(View.VISIBLE);
             } else {
                 Log.d(TAG, "No tunnels are set");
                 tunnelListView.setVisibility(View.INVISIBLE);

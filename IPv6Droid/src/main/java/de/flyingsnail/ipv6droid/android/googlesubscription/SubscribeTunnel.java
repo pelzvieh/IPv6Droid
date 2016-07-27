@@ -26,10 +26,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -37,15 +41,19 @@ import android.widget.TextView;
 
 import com.android.vending.billing.IInAppBillingService;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.util.HashSet;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.MainActivity;
 import de.flyingsnail.ipv6droid.android.SettingsActivity;
+import de.flyingsnail.ipv6droid.android.TunnelPersisting;
+import de.flyingsnail.ipv6droid.android.TunnelPersistingFile;
+import de.flyingsnail.ipv6droid.android.Tunnels;
+import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
+import de.flyingsnail.ipv6server.restapi.SubscriptionsApi;
+import de.flyingsnail.ipv6server.svc.SubscriptionRejectedException;
 
 public class SubscribeTunnel extends Activity {
     private static final String TAG = SubscribeTunnel.class.getSimpleName();
@@ -54,10 +62,24 @@ public class SubscribeTunnel extends Activity {
     private static final int RC_BUY = 3;
 
     /**
+     * The client representing the SubscrptionsApi of the IPv6Server.
+     */
+    SubscriptionsApi subscriptionsClient = RestProxyFactory.createSubscriptionsClient();
+
+
+    /**
      * The proxy implementing the Google InAppBillingService interface. Is set asynchronously
      * by binding serviceCon.
      */
     private IInAppBillingService service;
+    private TextView purchasingInfoView;
+    private Button purchaseButton;
+
+    /**
+     * A list of TicTunnels associated with the current user's subscriptions
+     */
+    private List<TicTunnel> tunnels;
+
 
     /**
      * An instance implementing ServiceConnection by setting this object's service class when bound.
@@ -75,11 +97,10 @@ public class SubscribeTunnel extends Activity {
             service = IInAppBillingService.Stub.asInterface(serviceBind);
             purchaseButton.setEnabled(true); // we don't have a bound service yet
 
+            tunnels.clear();
             try {
-                subscriptions.addAll(getSubscriptions());
-                purchasingInfoView.setText(R.string.user_has_subscription);
-                purchasingInfoView.setTextColor(Color.BLACK);
-            } catch (RemoteException re) {
+                getTunnelsFromSubscription();
+            } catch (RemoteException e) {
                 purchasingInfoView.setText(R.string.user_has_unparsable_subscription_status);
                 purchasingInfoView.setTextColor(Color.RED);
                 Log.e(TAG, "Could not read existing subscriptions");
@@ -87,11 +108,60 @@ public class SubscribeTunnel extends Activity {
         }
     };
 
+    private void displayActiveSubscriptions() {
+        // Get a handler that can be used to post to the main thread
+        Handler mainHandler = new Handler(this.getMainLooper());
 
-    private TextView purchasingInfoView;
-    private Button purchaseButton;
+        Runnable updateView = new Runnable() {
+            @Override
+            public void run() {
+                if(tunnels.size() > 0) {
+                    purchasingInfoView.setText(getString(R.string.user_has_subscription) + " - " + tunnels.size());
+                    purchasingInfoView.setTextColor(Color.BLACK);
+                    purchaseButton.setEnabled(false);
 
-    private Set<Subscription> subscriptions;
+                    updatePreferences();
+
+                    updateCachedTunnelList();
+                } else {
+                    purchasingInfoView.setText(R.string.user_not_subscribed);
+                    purchasingInfoView.setTextColor(Color.BLACK);
+                    purchaseButton.setEnabled(true);
+                }
+            } // This is your code
+        };
+        mainHandler.post(updateView);
+    }
+
+    private void updateCachedTunnelList() {
+        // write tunnel list to cache
+        TunnelPersisting tp = new TunnelPersistingFile(this.getApplicationContext());
+        Tunnels cachedTunnels = new Tunnels();
+        try {
+            cachedTunnels = tp.readTunnels();
+        } catch (IOException e) {
+            Log.i(TAG, "No tunnel list yet cached");
+        }
+        cachedTunnels.replaceTunnelList(tunnels);
+        try {
+            tp.writeTunnels(cachedTunnels);
+        } catch (IOException e) {
+            Log.e(TAG, "Could not write cached tunnel list", e);
+        }
+    }
+
+    private void updatePreferences() {
+        // write username, server name and password preferences derived from the subscription
+        PreferenceManager.setDefaultValues(getApplicationContext(), R.xml.preferences, false);
+        SharedPreferences myPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences.Editor editor = myPreferences.edit();
+        //TODO chunk and cheapness!
+        editor.putString(MainActivity.TIC_USERNAME, "<googlesubscription>");
+        editor.putString(MainActivity.TIC_PASSWORD, "<googlesubscription>");
+        editor.putString(MainActivity.TIC_HOST, "<googlesubscription>");
+        editor.apply();
+    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -106,7 +176,7 @@ public class SubscribeTunnel extends Activity {
         purchasingInfoView = (TextView)findViewById(R.id.subscriptionStatus);
         purchaseButton = (Button) findViewById(R.id.subscribe);
 
-        subscriptions = new HashSet<Subscription>(1);
+        tunnels = new ArrayList<TicTunnel>();
         purchaseButton.setEnabled(false); // we don't have a bound service yet
 
         Intent serviceIntent =
@@ -117,43 +187,86 @@ public class SubscribeTunnel extends Activity {
     }
 
     /** Retrieve the active subscriptions by querying google play, then resolving the SKU list */
-    private Set<Subscription> getSubscriptions() throws RemoteException {
+    private void getTunnelsFromSubscription() throws RemoteException {
+        purchasingInfoView.setText(R.string.user_subscription_checking);
+        purchasingInfoView.setTextColor(Color.BLACK);
+        purchaseButton.setEnabled(false); // we don't want the user to purchase while we're checking
+
+
         Bundle activeSubs = service.getPurchases(3, getPackageName(),
                 "subs", null);
-        HashSet<Subscription> result = new HashSet<Subscription>(1);
         if (activeSubs.getInt("RESPONSE_CODE") == RESULT_OK) {
-            List<String> skus = activeSubs.getStringArrayList("INAPP_PURCHASE_ITEM_LIST");
-            List<String> skuData = activeSubs.getStringArrayList("INAPP_PURCHASE_DATA_LIST");
-            List<String> skuSignature = activeSubs.getStringArrayList("INAPP_DATA_SIGNATURE_LIST");
+            final List<String> skus = activeSubs.getStringArrayList("INAPP_PURCHASE_ITEM_LIST");
+            final List<String> skuData = activeSubs.getStringArrayList("INAPP_PURCHASE_DATA_LIST");
+            final List<String> skuSignature = activeSubs.getStringArrayList("INAPP_DATA_SIGNATURE_LIST");
 
+            // create api stub
             for (int index = 0; index < skus.size(); index++) {
-                Subscription subscription = Subscription.create(skus.get(index));
-                if (subscription != null) {
-                    subscription.setData(skuData.get(index));
-                    subscription.setSignature(skuSignature.get(index));
-                    result.add(subscription);
+                Log.d(TAG, "Examining index " + index + ",\n SKU " + skus.get(index)
+                        + ",\n Data '" + skuData.get(index) + "',\n signature '" + skuSignature.get(index));
+                try {
+                    if (SubscriptionBuilder.getSupportedSku().contains(skus.get(index))) {
+                        new AsyncTask<Integer, Void, Exception>() {
+                            @Override
+                            protected Exception doInBackground(Integer... params) {
+                                int index = params[0];
+                                List<TicTunnel> tunnels = null;
+                                try {
+                                    tunnels = subscriptionsClient.checkSubscriptionAndReturnTunnels(
+                                            skuData.get(index),
+                                            skuSignature.get(index)
+                                    );
+                                    SubscribeTunnel.this.tunnels.addAll(tunnels);
+                                    displayActiveSubscriptions();
+                                } catch (SubscriptionRejectedException e) {
+                                    Log.e(TAG, "Subscription info not accepted", e);
+                                    return e;
+                                } catch (IOException e) {
+                                    Log.e(TAG, "Cannot verify subscription", e);
+                                    return e;
+                                } catch (RuntimeException e) {
+                                    Log.e(TAG, "Cannot verify subscription", e);
+                                    return e;
+                                }
+                                return null;
+                            }
+
+                            @Override
+                            protected void onPostExecute(Exception e) {
+                                if (e instanceof IOException || e instanceof RuntimeException) {
+                                    purchasingInfoView.setText(R.string.technical_problem);
+                                    purchasingInfoView.setTextColor(Color.RED);
+                                }
+                            }
+
+                        }.execute(index);
+                    }
+                } catch (RuntimeException re) {
+                    Log.e(TAG, "unable to handle active subscription " + skus.get(index), re);
                 }
             }
-            // TODO verify purchases by call to IPv6Server.
-            // TODO set preferences accordingly, using developerPayload as username
-            // SharedPreferences myPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         }
-        return result;
     }
 
     public void onPurchaseSubsciption (View clickedView) throws RemoteException, IntentSender.SendIntentException {
         if (service != null) {
-            // TODO call IPv6Server to generate a new username, pass this as developerPayload
-            String developerPayload = "GoogleSubscriber-000-TEST";
-            Bundle bundle = service.getBuyIntent(3, getClass().getPackage().getName(),
-                    Subscription.getSupportedSku().get(0), "subs", developerPayload);
+            // TODO this *must* be done in an AsyncTask, or we get killed
+            try {
+                String developerPayload = subscriptionsClient.createNewPayload();
+                Bundle bundle = service.getBuyIntent(3, getPackageName(),
+                        SubscriptionBuilder.getSupportedSku().get(0), "subs", developerPayload);
 
-            PendingIntent pendingIntent = bundle.getParcelable("BUY_INTENT");
-            if (bundle.getInt("RESPONSE_CODE") == RESULT_OK && pendingIntent != null) {
-                // Start purchase flow (this brings up the Google Play UI).
-                // Result will be delivered through onActivityResult().
-                startIntentSenderForResult(pendingIntent.getIntentSender(), RC_BUY, new Intent(),
-                        Integer.valueOf(0), Integer.valueOf(0), Integer.valueOf(0));
+                PendingIntent pendingIntent = bundle.getParcelable("BUY_INTENT");
+                if (bundle.getInt("RESPONSE_CODE") == RESULT_OK && pendingIntent != null) {
+                    // Start purchase flow (this brings up the Google Play UI).
+                    // Result will be delivered through onActivityResult().
+                    startIntentSenderForResult(pendingIntent.getIntentSender(), RC_BUY, new Intent(),
+                            Integer.valueOf(0), Integer.valueOf(0), Integer.valueOf(0));
+                }
+            } catch (IOException e) {
+                Log.e(TAG, "Unable to read new payload from server", e);
+                purchasingInfoView.setText(R.string.technical_problem);
+                purchasingInfoView.setTextColor(Color.RED);
             }
         }
     }
@@ -178,33 +291,27 @@ public class SubscribeTunnel extends Activity {
             String dataSignature = data.getStringExtra("INAPP_DATA_SIGNATURE");
 
             if (resultCode == RESULT_OK && responseCode == RESULT_OK) {
-                // TODO refactor, this code is duplicated in Subscription
+                Log.i(TAG, "Purchase succeeded!");
+                Log.d(TAG, purchaseData);
+                Log.d(TAG, dataSignature);
+                List<TicTunnel> tunnels = null;
                 try {
-                    JSONObject jo = new JSONObject(purchaseData);
-                    String sku = jo.getString("productId");
-                    Subscription subscription = Subscription.create(sku);
-                    // TODO call IPv6Server to verify purchase signature
-
-                    if (subscription != null) {
-                        purchasingInfoView.setText(R.string.user_has_subscription);
-                        purchasingInfoView.setTextColor(Color.BLACK);
-                        subscription.setData(purchaseData);
-                        subscription.setSignature(dataSignature);
-                        subscriptions.add(subscription);
-                    } else
-                        purchasingInfoView.setText(R.string.user_has_unparsable_subscription_status);
-                }
-                catch (JSONException e) {
-                    purchasingInfoView.setText(R.string.user_has_unparsable_subscription_status);
-                    purchasingInfoView.setTextColor(Color.RED);
-                    Log.wtf(TAG, "Cannot parse JSON response from Google on subscription status", e);
+                    tunnels = subscriptionsClient.checkSubscriptionAndReturnTunnels(
+                            purchaseData,
+                            dataSignature
+                    );
+                    this.tunnels.addAll(tunnels);
+                    displayActiveSubscriptions();
+                } catch (SubscriptionRejectedException e) {
+                    Log.e(TAG, "Subscription information failed to verify", e);
+                } catch (IOException e) {
+                    Log.e(TAG, "Subscription not completed due to IO problem", e);
                 }
             } else {
-                purchasingInfoView.setText(R.string.user_has_unparsable_subscription_status);
-                purchasingInfoView.setTextColor(Color.RED);
-                Log.e(TAG, "Error reading subscription status");
+                Log.w(TAG, "Failed purchase, resultCode=" + resultCode + ", responseCode=" + responseCode);
             }
-        }
+        } else
+            Log.wtf(TAG, "Activity result for unknown request type: " + requestCode);
     }
 
     @Override

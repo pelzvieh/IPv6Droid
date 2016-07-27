@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2015 Dr. Andreas Feldner.
+/**
+ * Copyright (c) 2016 Dr. Andreas Feldner (pelzi).
  *
  *     This program is free software; you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
@@ -18,44 +18,39 @@
  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  */
 
+package de.flyingsnail.ipv6server.svc;
 
+/**
+ * An exception denoting a definitive falsification of a subscription claim.
+ * @author pelzi
+ *
+ */
+public class SubscriptionRejectedException extends Exception {
 
+  /**
+   * 
+   */
+  public SubscriptionRejectedException() {
+    super();
+    // TODO Auto-generated constructor stub
+  }
 
+  /**
+   * @param message
+   */
+  public SubscriptionRejectedException(String message) {
+    super(message);
+    // TODO Auto-generated constructor stub
+  }
 
+  /**
+   * @param cause
+   */
+  public SubscriptionRejectedException(Throwable cause) {
+    super(cause);
+    // TODO Auto-generated constructor stub
+  }
 
+  private static final long serialVersionUID = 1L;
 
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:2.1.2'
-    }
-}
-apply plugin: 'com.android.application'
-
-repositories {
-    mavenCentral()
-}
-
-android {
-    compileSdkVersion 23
-    buildToolsVersion '24.0.0-rc2'
-
-    defaultConfig {
-        minSdkVersion 14
-        targetSdkVersion 23
-    }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_6
-        targetCompatibility JavaVersion.VERSION_1_6
-    }
-    packagingOptions {
-        pickFirst  'META-INF/ASL2.0'
-    }
-}
-
-dependencies {
-    compile 'com.android.support:support-v4:23.3.0'
-    compile 'org.jboss.resteasy.mobile:resteasy-mobile:1.0.0'
 }

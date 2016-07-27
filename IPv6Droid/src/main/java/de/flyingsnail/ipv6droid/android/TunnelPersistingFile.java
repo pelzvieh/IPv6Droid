@@ -17,7 +17,7 @@ import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
  * Implements the TunnelPersisting interface for storing to a file.
  * Created by pelzi on 03.02.16.
  */
-class TunnelPersistingFile implements TunnelPersisting  {
+public class TunnelPersistingFile implements TunnelPersisting  {
     private Context context;
 
     /**

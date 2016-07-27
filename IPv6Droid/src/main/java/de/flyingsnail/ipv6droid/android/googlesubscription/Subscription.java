@@ -23,24 +23,12 @@
 
 package de.flyingsnail.ipv6droid.android.googlesubscription;
 
-import android.support.annotation.Nullable;
-import android.util.Log;
-
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Base class for all subscription types.
  * That said, we currently have only one subscription type.
  * Created by pelzi on 15.06.16.
  */
 public class Subscription {
-    private static final String SKU_TUNNEL_SUBSCRIPTION = "android.test.purchased";//"TUNNELSUB";
-    private static final String TAG = Subscription.class.getSimpleName();
-
     private String signature;
     private String sku;
     private String orderId;
@@ -68,30 +56,6 @@ public class Subscription {
         return developerPayload;
     }
 
-    @Nullable
-    public static Subscription create(String sku) {
-        if (SKU_TUNNEL_SUBSCRIPTION.equals(sku))
-            return new Subscription();
-        else
-            return null;
-    }
-
-    public void setData(String data) {
-        try {
-            JSONObject jo = new JSONObject(data);
-            sku = jo.getString("productId");
-            orderId = jo.getString("orderId");
-            purchaseTime = jo.getInt("purchaseTime");
-            purchaseToken = jo.getString("purchaseToken");
-            developerPayload = jo.getString("developerPayload");
-            // TODO call IPv6Server to verify purchase signature
-        }
-        catch (JSONException e) {
-            Log.wtf(TAG, "Cannot parse JSON response from Google on subscription status", e);
-        }
-
-    }
-
     public void setSignature(String signature) {
         this.signature = signature;
     }
@@ -100,13 +64,35 @@ public class Subscription {
         return signature;
     }
 
-    public String getSKU() {
-        return SKU_TUNNEL_SUBSCRIPTION;
+    public void setSku(String sku) {
+        this.sku = sku;
     }
 
-    public static List<String> getSupportedSku() {
-        ArrayList<String> result = new ArrayList<String>(1);
-        result.add(SKU_TUNNEL_SUBSCRIPTION);
-        return result;
+    public void setOrderId(String orderId) {
+        this.orderId = orderId;
+    }
+
+    public void setPurchaseTime(int purchaseTime) {
+        this.purchaseTime = purchaseTime;
+    }
+
+    public void setPurchaseToken(String purchaseToken) {
+        this.purchaseToken = purchaseToken;
+    }
+
+    public void setDeveloperPayload(String developerPayload) {
+        this.developerPayload = developerPayload;
+    }
+
+    @Override
+    public String toString() {
+        return "Subscription{" +
+                "signature='" + signature + '\'' +
+                ", sku='" + sku + '\'' +
+                ", orderId='" + orderId + '\'' +
+                ", purchaseTime=" + purchaseTime +
+                ", purchaseToken='" + purchaseToken + '\'' +
+                ", developerPayload='" + developerPayload + '\'' +
+                '}';
     }
 }

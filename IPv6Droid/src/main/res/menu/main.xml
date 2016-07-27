@@ -44,6 +44,11 @@
         android:title="@string/action_help"
         android:orderInCategory="50"
         android:showAsAction="never" />
+    <!-- Subscribe, should always be in the overflow -->
+    <item android:id="@+id/action_subscribe"
+        android:title="@string/action_subscribe"
+        android:orderInCategory="99"
+        android:showAsAction="never" />
     <!-- Settings, should always be in the overflow -->
     <item android:id="@+id/action_settings"
         android:title="@string/action_settings"

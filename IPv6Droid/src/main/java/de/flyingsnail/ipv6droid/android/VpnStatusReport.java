@@ -294,7 +294,8 @@ public class VpnStatusReport implements Serializable, Cloneable {
     public String toString() {
         // @todo internationalize
         return "changed to " + status.toString() + ", " +
-                (getActiveTunnel() == null ? "no tunnel" : "tunnel " + getActiveTunnel().getTunnelName()) +
+                (tunnels == null ? "no tunnel" : (String.valueOf(tunnels.size()) + " tunnels")) + ", " +
+                (getActiveTunnel() == null ? "none active" : "active " + getActiveTunnel().getTunnelName()) +
                 (cause == null ? "" : ", cause class " + cause.getClass().getName());
     }
 }

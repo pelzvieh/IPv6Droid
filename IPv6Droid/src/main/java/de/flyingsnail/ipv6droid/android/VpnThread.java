@@ -824,7 +824,6 @@ class VpnThread extends Thread {
                 tunnelChanged = true;
                 if (tunnels.size() == 1) {
                     tunnels.setActiveTunnel(tunnels.get(0));
-                    vpnStatus.setTunnels(tunnels);
                 }
             }
         } finally {

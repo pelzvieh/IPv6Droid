@@ -48,12 +48,21 @@
     <string name="headline_received">von Provider</string>
     <string name="headline_transmitted">von Gerät</string>
     <string name="action_show_statistics">Statistiken</string>
+    <string name="title_activity_initial_setup">Ersteinrichtung</string>
+    <string name="title_activity_subscribe_tunnel">Tunnel abonnieren</string>
     <string name="title_activity_statistics">Statistik</string>
     <string name="statistics_timestamp">Stand von</string>
     <string name="copythreadexception">Kopierablauf ist auf einen Fehler gelaufen</string>
     <string name="unexpected_runtime_exception">Unerwartetes Problem, Tunnel bricht ab</string>
     <string name="ayiyavpnservice_destroyed">"AyiyaVpnService wird zerstört"</string>
     <string name="ayiyavpnservice_revoked">"AyiyaVpnServices Genehmigung zum VPN-Betrieb zurückgezogen"</string>
+    <string name="subscription_label">IPv6-Tunneldienst abonnieren</string>
+    <string name="manual_setup_label">Vorhandenen Tunnel einrichten</string>
+    <string name="user_has_subscription">Sie haben Tunnel abonniert</string>
+    <string name="user_has_unparsable_subscription_status">Unverständlicher Abo-Status</string>
+    <string name="subscribe_to_tunnel_service">IPv6-Tunneldienst abonnieren</string>
+    <string name="user_not_subscribed">Kein Tunnel-Abonnement</string>
+    <string name="action_subscribe">Abonnieren</string>
     <string name="statistics_isrouted">Tunnel geroutet</string>
     <string name="statistics_isrouted_yes">ja</string>
     <string name="statistics_isrouted_no">nein</string>
@@ -63,4 +72,6 @@
     <string name="statistics_time_of_burst">Aktivitäts-Dauer</string>
     <string name="statistics_packets_per_burst">Pakete pro Aktivität</string>
     <string name="statistics_bytes_per_burst">Bytes pro Aktivität</string>
+    <string name="technical_problem">Subscription failed - temporary problem contacting server</string>
+    <string name="user_subscription_checking">Checking user subscription...</string>
 </resources>
