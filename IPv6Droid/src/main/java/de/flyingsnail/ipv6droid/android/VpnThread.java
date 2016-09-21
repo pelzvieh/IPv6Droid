@@ -808,6 +808,8 @@ class VpnThread extends Thread {
         }
 
         // Initialize new Tic object
+        // @todo extract as public method that allows the Android Activity to actively query tunnels
+        // @todo generalize to cope with Google Subscriptions token alternatively to ticConfig
         Tic tic = new Tic(ticConfig, contextInfo);
         try {
             tic.connect();

@@ -60,7 +60,7 @@ public class Ayiya {
     private static final String TAG = Ayiya.class.getName();
 
     /** The port number for AYIYA */
-    public static final int PORT = 5072;
+    public int port = 5072;
 
     // @todo I'm afraid I missed an official source for this kind of constants
     private static final byte IPPROTO_IPv6 = 41;
@@ -231,7 +231,7 @@ public class Ayiya {
 
         // UDP connection
         socket = new DatagramSocket();
-        socket.connect(ipv4Pop, PORT);
+        socket.connect(ipv4Pop, port);
         socket.setSoTimeout(0); // no read timeout
         //socket.setSoTimeout(10000); // 10 secs. read timeout
 
@@ -616,6 +616,15 @@ public class Ayiya {
             socket.close();
         }
         socket = null; // it's useless anyway
+    }
+
+    /**
+     * Configure this AYIYA to use a different UDP port on IPv4.
+     * @todo this should eventually become an attribute of TicTunnel
+     * @param port an int giving the port number to use.
+     */
+    public void setPort(int port) {
+        this.port = port;
     }
 
 }

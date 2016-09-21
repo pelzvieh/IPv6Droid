@@ -53,7 +53,6 @@ import de.flyingsnail.ipv6droid.android.TunnelPersistingFile;
 import de.flyingsnail.ipv6droid.android.Tunnels;
 import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 import de.flyingsnail.ipv6server.restapi.SubscriptionsApi;
-import de.flyingsnail.ipv6server.svc.SubscriptionRejectedException;
 
 public class SubscribeTunnel extends Activity {
     private static final String TAG = SubscribeTunnel.class.getSimpleName();
@@ -205,6 +204,7 @@ public class SubscribeTunnel extends Activity {
                 Log.d(TAG, "Examining index " + index + ",\n SKU " + skus.get(index)
                         + ",\n Data '" + skuData.get(index) + "',\n signature '" + skuSignature.get(index));
                 try {
+                    // @TODO extract to ayiya package, handle skuData and skuSignature as alternative credentials
                     if (SubscriptionBuilder.getSupportedSku().contains(skus.get(index))) {
                         new AsyncTask<Integer, Void, Exception>() {
                             @Override
@@ -218,12 +218,6 @@ public class SubscribeTunnel extends Activity {
                                     );
                                     SubscribeTunnel.this.tunnels.addAll(tunnels);
                                     displayActiveSubscriptions();
-                                } catch (SubscriptionRejectedException e) {
-                                    Log.e(TAG, "Subscription info not accepted", e);
-                                    return e;
-                                } catch (IOException e) {
-                                    Log.e(TAG, "Cannot verify subscription", e);
-                                    return e;
                                 } catch (RuntimeException e) {
                                     Log.e(TAG, "Cannot verify subscription", e);
                                     return e;
@@ -238,7 +232,6 @@ public class SubscribeTunnel extends Activity {
                                     purchasingInfoView.setTextColor(Color.RED);
                                 }
                             }
-
                         }.execute(index);
                     }
                 } catch (RuntimeException re) {
@@ -250,24 +243,35 @@ public class SubscribeTunnel extends Activity {
 
     public void onPurchaseSubsciption (View clickedView) throws RemoteException, IntentSender.SendIntentException {
         if (service != null) {
-            // TODO this *must* be done in an AsyncTask, or we get killed
-            try {
-                String developerPayload = subscriptionsClient.createNewPayload();
-                Bundle bundle = service.getBuyIntent(3, getPackageName(),
-                        SubscriptionBuilder.getSupportedSku().get(0), "subs", developerPayload);
+            new AsyncTask<Void, Void, Exception>() {
+                @Override
+                protected Exception doInBackground(Void... voids) {
+                    try {
+                        String developerPayload = subscriptionsClient.createNewPayload();
+                        Bundle bundle = service.getBuyIntent(3, getPackageName(),
+                                SubscriptionBuilder.getSupportedSku().get(0), "subs", developerPayload);
 
-                PendingIntent pendingIntent = bundle.getParcelable("BUY_INTENT");
-                if (bundle.getInt("RESPONSE_CODE") == RESULT_OK && pendingIntent != null) {
-                    // Start purchase flow (this brings up the Google Play UI).
-                    // Result will be delivered through onActivityResult().
-                    startIntentSenderForResult(pendingIntent.getIntentSender(), RC_BUY, new Intent(),
-                            Integer.valueOf(0), Integer.valueOf(0), Integer.valueOf(0));
+                        PendingIntent pendingIntent = bundle.getParcelable("BUY_INTENT");
+                        if (bundle.getInt("RESPONSE_CODE") == RESULT_OK && pendingIntent != null) {
+                            // Start purchase flow (this brings up the Google Play UI).
+                            // Result will be delivered through onActivityResult().
+                            startIntentSenderForResult(pendingIntent.getIntentSender(), RC_BUY, new Intent(),
+                                    Integer.valueOf(0), Integer.valueOf(0), Integer.valueOf(0));
+                        }
+                    } catch (Exception e) {
+                        return e;
+                    }
+                    return null;
                 }
-            } catch (IOException e) {
-                Log.e(TAG, "Unable to read new payload from server", e);
-                purchasingInfoView.setText(R.string.technical_problem);
-                purchasingInfoView.setTextColor(Color.RED);
-            }
+                @Override
+                protected void onPostExecute(Exception e) {
+                    if (e instanceof IOException || e instanceof RuntimeException) {
+                        purchasingInfoView.setText(R.string.technical_problem);
+                        purchasingInfoView.setTextColor(Color.RED);
+                    }
+                }
+
+            }.execute();
         }
     }
 
@@ -302,10 +306,8 @@ public class SubscribeTunnel extends Activity {
                     );
                     this.tunnels.addAll(tunnels);
                     displayActiveSubscriptions();
-                } catch (SubscriptionRejectedException e) {
+                } catch (RuntimeException e) {
                     Log.e(TAG, "Subscription information failed to verify", e);
-                } catch (IOException e) {
-                    Log.e(TAG, "Subscription not completed due to IO problem", e);
                 }
             } else {
                 Log.w(TAG, "Failed purchase, resultCode=" + resultCode + ", responseCode=" + responseCode);

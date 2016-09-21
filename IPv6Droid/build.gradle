@@ -18,18 +18,12 @@
  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  */
 
-
-
-
-
-
-
 buildscript {
     repositories {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:2.1.2'
+        classpath 'com.android.tools.build:gradle:2.2.0'
     }
 }
 apply plugin: 'com.android.application'
@@ -39,12 +33,12 @@ repositories {
 }
 
 android {
-    compileSdkVersion 23
-    buildToolsVersion '24.0.0-rc2'
+    compileSdkVersion 24
+    buildToolsVersion '24.0.2'
 
     defaultConfig {
         minSdkVersion 14
-        targetSdkVersion 23
+        targetSdkVersion 24
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_6
@@ -52,10 +46,12 @@ android {
     }
     packagingOptions {
         pickFirst  'META-INF/ASL2.0'
+        pickFirst  'META-INF/LICENSE'
     }
 }
 
 dependencies {
-    compile 'com.android.support:support-v4:23.3.0'
+    compile 'com.android.support:support-v4:24.2.1'
     compile 'org.jboss.resteasy.mobile:resteasy-mobile:1.0.0'
+    compile 'com.android.support:support-annotations:24.2.1'
 }

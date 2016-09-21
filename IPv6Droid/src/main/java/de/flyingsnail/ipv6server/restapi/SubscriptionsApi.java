@@ -51,7 +51,7 @@ public interface SubscriptionsApi {
      */
   @GET
   @Path("/new")
-  String createNewPayload() throws IOException;
+  String createNewPayload();
   /**
    * Check validity of supplied Subscription object that supposedly is filled from
    * Google Play API. If valid, return the list of tunnels associated with this subscription.
@@ -74,6 +74,6 @@ public interface SubscriptionsApi {
   @Path("/check")
   List<TicTunnel> checkSubscriptionAndReturnTunnels(
           @FormParam("data") String subscriptionData,
-          @FormParam("signature") String signature) throws SubscriptionRejectedException, IOException;
+          @FormParam("signature") String signature);
 
 }

@@ -137,6 +137,9 @@ public class TicTunnel implements Serializable {
     }
 
     public void setIPv4Pop(String ipv4Pop) throws UnknownHostException {
+        Log.d(TAG, "setting ipv4 of POP to " + ipv4Pop);
+        if (ipv4Pop == null)
+            ipv4Pop = "185.101.92.120"; // todo correct in server!!
         this.ipv4Pop = (Inet4Address)Inet4Address.getByName (ipv4Pop);
     }
 
@@ -258,7 +261,7 @@ public class TicTunnel implements Serializable {
     /** required for unmarshalling json */
     public void setValid(boolean valid) {
         if (valid != isValid())
-            throw new IllegalStateException("Impossible to set valid state");
+            Log.wtf(TAG, "Impossible to set valid state");
     }
 
     public Date getCreationDate() {
