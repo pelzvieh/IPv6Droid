@@ -58,7 +58,7 @@
     <string name="ayiyavpnservice_revoked">"AyiyaVpnServices Genehmigung zum VPN-Betrieb zurückgezogen"</string>
     <string name="subscription_label">IPv6-Tunneldienst abonnieren</string>
     <string name="manual_setup_label">Vorhandenen Tunnel einrichten</string>
-    <string name="user_has_subscription">Sie haben Tunnel abonniert</string>
+    <string name="user_has_subscription">Sie haben %d Tunnel abonniert</string>
     <string name="user_has_unparsable_subscription_status">Unverständlicher Abo-Status</string>
     <string name="subscribe_to_tunnel_service">IPv6-Tunneldienst abonnieren</string>
     <string name="user_not_subscribed">Kein Tunnel-Abonnement</string>
@@ -73,5 +73,11 @@
     <string name="statistics_packets_per_burst">Pakete pro Aktivität</string>
     <string name="statistics_bytes_per_burst">Bytes pro Aktivität</string>
     <string name="technical_problem">Subscription failed - temporary problem contacting server</string>
-    <string name="user_subscription_checking">Checking user subscription...</string>
+    <string name="user_subscription_checking">Frage Abo-Daten ab...</string>
+    <string name="user_subscription_verifying">Überprüfe Abo-Angaben...</string>
+    <string name="user_subscription_failed">Überprüfung fehlgeschlagen (%s)</string>
+    <string name="user_subscription_starting_wizard">Google Abo wird gestartet...</string>
+    <string name="user_subscription_purchase_done">Vielen Dank für den Kauf! Richte Tunnel ein...</string>
+    <string name="user_subscription_aborted">Schade, das Abo wurde nicht abgeschlossen.</string>
+
 </resources>

@@ -66,11 +66,16 @@
     <string name="title_activity_initial_setup">Initial Setup</string>
     <string name="subscription_label">Subscribe to IPv6 tunnel service</string>
     <string name="manual_setup_label">Set up using existing credentials</string>
-    <string name="user_has_subscription">You are subscribed</string>
+    <string name="user_has_subscription">You are subscribed to %d tunnels</string>
     <string name="user_has_unparsable_subscription_status">Could not understand subscription status</string>
     <string name="subscribe_to_tunnel_service">Subscribe to Tunnel Service</string>
     <string name="user_not_subscribed">Not subscribed</string>
     <string name="action_subscribe">Subscribe</string>
     <string name="technical_problem">Subscription failed - temporary problem contacting server</string>
     <string name="user_subscription_checking">Checking user subscription...</string>
+    <string name="user_subscription_verifying">Verifying subscription...</string>
+    <string name="user_subscription_failed">Verification failed (%s)</string>
+    <string name="user_subscription_starting_wizard">Starting Google subscription wizard...</string>
+    <string name="user_subscription_purchase_done">Thank you for purchasing! Provisioning your tunnels...</string>
+    <string name="user_subscription_aborted">Subscription not successful, we\'re sorry.</string>
 </resources>

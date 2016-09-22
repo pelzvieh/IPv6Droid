@@ -57,7 +57,7 @@ import de.flyingsnail.ipv6server.restapi.SubscriptionsApi;
 public class SubscribeTunnel extends Activity {
     private static final String TAG = SubscribeTunnel.class.getSimpleName();
 
-    private static final int RESULT_OK = 0;
+    private static final int RESPONSE_CODE_OK = 0;
     private static final int RC_BUY = 3;
 
     /**
@@ -94,7 +94,7 @@ public class SubscribeTunnel extends Activity {
         public void onServiceConnected(ComponentName name,
                                        IBinder serviceBind) {
             service = IInAppBillingService.Stub.asInterface(serviceBind);
-            purchaseButton.setEnabled(true); // we don't have a bound service yet
+            purchaseButton.setEnabled(true);
 
             tunnels.clear();
             try {
@@ -115,7 +115,7 @@ public class SubscribeTunnel extends Activity {
             @Override
             public void run() {
                 if(tunnels.size() > 0) {
-                    purchasingInfoView.setText(getString(R.string.user_has_subscription) + " - " + tunnels.size());
+                    purchasingInfoView.setText(String.format(getString(R.string.user_has_subscription), tunnels.size()));
                     purchasingInfoView.setTextColor(Color.BLACK);
                     purchaseButton.setEnabled(false);
 
@@ -190,59 +190,79 @@ public class SubscribeTunnel extends Activity {
         purchasingInfoView.setText(R.string.user_subscription_checking);
         purchasingInfoView.setTextColor(Color.BLACK);
         purchaseButton.setEnabled(false); // we don't want the user to purchase while we're checking
+        boolean foundRelevantSubscription = false; // if we're through the subscriptions w/o a tunnel subscription, we offer to subscribe
 
+        String continuationToken = null;
+        do {
+            // loop on INAPP_CONTINUATION_TOKEN
+            Bundle activeSubs = service.getPurchases(3, getPackageName(),
+                    "subs", continuationToken);
+            if (activeSubs.getInt("RESPONSE_CODE") == RESPONSE_CODE_OK) {
+                final List<String> skus = activeSubs.getStringArrayList("INAPP_PURCHASE_ITEM_LIST");
+                final List<String> skuData = activeSubs.getStringArrayList("INAPP_PURCHASE_DATA_LIST");
+                final List<String> skuSignature = activeSubs.getStringArrayList("INAPP_DATA_SIGNATURE_LIST");
+                continuationToken = activeSubs.getString("INAPP_CONTINUATION_TOKEN", null);
 
-        Bundle activeSubs = service.getPurchases(3, getPackageName(),
-                "subs", null);
-        if (activeSubs.getInt("RESPONSE_CODE") == RESULT_OK) {
-            final List<String> skus = activeSubs.getStringArrayList("INAPP_PURCHASE_ITEM_LIST");
-            final List<String> skuData = activeSubs.getStringArrayList("INAPP_PURCHASE_DATA_LIST");
-            final List<String> skuSignature = activeSubs.getStringArrayList("INAPP_DATA_SIGNATURE_LIST");
+                purchasingInfoView.setText(R.string.user_subscription_verifying);
 
-            // create api stub
-            for (int index = 0; index < skus.size(); index++) {
-                Log.d(TAG, "Examining index " + index + ",\n SKU " + skus.get(index)
-                        + ",\n Data '" + skuData.get(index) + "',\n signature '" + skuSignature.get(index));
-                try {
-                    // @TODO extract to ayiya package, handle skuData and skuSignature as alternative credentials
-                    if (SubscriptionBuilder.getSupportedSku().contains(skus.get(index))) {
-                        new AsyncTask<Integer, Void, Exception>() {
-                            @Override
-                            protected Exception doInBackground(Integer... params) {
-                                int index = params[0];
-                                List<TicTunnel> tunnels = null;
-                                try {
-                                    tunnels = subscriptionsClient.checkSubscriptionAndReturnTunnels(
-                                            skuData.get(index),
-                                            skuSignature.get(index)
-                                    );
-                                    SubscribeTunnel.this.tunnels.addAll(tunnels);
-                                    displayActiveSubscriptions();
-                                } catch (RuntimeException e) {
-                                    Log.e(TAG, "Cannot verify subscription", e);
-                                    return e;
+                // create api stub
+                for (int index = 0; index < skus.size(); index++) {
+                    Log.d(TAG, "Examining index " + index + ",\n SKU " + skus.get(index)
+                            + ",\n Data '" + skuData.get(index) + "',\n signature '" + skuSignature.get(index));
+                    try {
+                        // @TODO extract to ayiya package, handle skuData and skuSignature as alternative credentials
+                        if (SubscriptionBuilder.getSupportedSku().contains(skus.get(index))) {
+                            // this one is relevant!
+                            foundRelevantSubscription = true;
+                            new AsyncTask<Integer, Void, Exception>() {
+                                @Override
+                                protected Exception doInBackground(Integer... params) {
+                                    int index = params[0];
+                                    List<TicTunnel> tunnels = null;
+                                    try {
+                                        tunnels = subscriptionsClient.checkSubscriptionAndReturnTunnels(
+                                                skuData.get(index),
+                                                skuSignature.get(index)
+                                        );
+                                        SubscribeTunnel.this.tunnels.addAll(tunnels);
+                                        displayActiveSubscriptions();
+                                    } catch (RuntimeException e) {
+                                        Log.e(TAG, "Cannot verify subscription", e);
+                                        return e;
+                                    }
+                                    return null;
                                 }
-                                return null;
-                            }
 
-                            @Override
-                            protected void onPostExecute(Exception e) {
-                                if (e instanceof IOException || e instanceof RuntimeException) {
-                                    purchasingInfoView.setText(R.string.technical_problem);
-                                    purchasingInfoView.setTextColor(Color.RED);
+                                @Override
+                                protected void onPostExecute(Exception e) {
+                                    if (e != null) {
+                                        purchasingInfoView.setTextColor(Color.RED);
+
+                                        if (e instanceof IOException || e instanceof RuntimeException) {
+                                            purchasingInfoView.setText(R.string.technical_problem);
+                                        } else {
+                                            purchasingInfoView.setText(String.format(getString(R.string.user_subscription_failed), e.getMessage()));
+                                        }
+                                    }
                                 }
-                            }
-                        }.execute(index);
+                            }.execute(index);
+                        }
+                    } catch (RuntimeException re) {
+                        Log.e(TAG, "unable to handle active subscription " + skus.get(index), re);
                     }
-                } catch (RuntimeException re) {
-                    Log.e(TAG, "unable to handle active subscription " + skus.get(index), re);
                 }
             }
-        }
+        } while (continuationToken != null);
+
+        // if we had no luck with this guy's subscriptions, still we need to update the Activity state
+        displayActiveSubscriptions();
     }
 
     public void onPurchaseSubsciption (View clickedView) throws RemoteException, IntentSender.SendIntentException {
         if (service != null) {
+            purchaseButton.setEnabled(false); // gegen ungeduldige Benutzer
+            purchasingInfoView.setText(R.string.user_subscription_starting_wizard);
+
             new AsyncTask<Void, Void, Exception>() {
                 @Override
                 protected Exception doInBackground(Void... voids) {
@@ -252,7 +272,7 @@ public class SubscribeTunnel extends Activity {
                                 SubscriptionBuilder.getSupportedSku().get(0), "subs", developerPayload);
 
                         PendingIntent pendingIntent = bundle.getParcelable("BUY_INTENT");
-                        if (bundle.getInt("RESPONSE_CODE") == RESULT_OK && pendingIntent != null) {
+                        if (bundle.getInt("RESPONSE_CODE") == RESPONSE_CODE_OK && pendingIntent != null) {
                             // Start purchase flow (this brings up the Google Play UI).
                             // Result will be delivered through onActivityResult().
                             startIntentSenderForResult(pendingIntent.getIntentSender(), RC_BUY, new Intent(),
@@ -265,9 +285,10 @@ public class SubscribeTunnel extends Activity {
                 }
                 @Override
                 protected void onPostExecute(Exception e) {
-                    if (e instanceof IOException || e instanceof RuntimeException) {
+                    if (e != null) {
                         purchasingInfoView.setText(R.string.technical_problem);
                         purchasingInfoView.setTextColor(Color.RED);
+                        purchaseButton.setEnabled(true);
                     }
                 }
 
@@ -294,7 +315,8 @@ public class SubscribeTunnel extends Activity {
             String purchaseData = data.getStringExtra("INAPP_PURCHASE_DATA");
             String dataSignature = data.getStringExtra("INAPP_DATA_SIGNATURE");
 
-            if (resultCode == RESULT_OK && responseCode == RESULT_OK) {
+            if (resultCode == Activity.RESULT_OK && responseCode == RESPONSE_CODE_OK) {
+                purchasingInfoView.setText(R.string.user_subscription_purchase_done);
                 Log.i(TAG, "Purchase succeeded!");
                 Log.d(TAG, purchaseData);
                 Log.d(TAG, dataSignature);
@@ -308,9 +330,14 @@ public class SubscribeTunnel extends Activity {
                     displayActiveSubscriptions();
                 } catch (RuntimeException e) {
                     Log.e(TAG, "Subscription information failed to verify", e);
+                    purchasingInfoView.setText(R.string.technical_problem);
+                    purchasingInfoView.setTextColor(Color.RED);
                 }
             } else {
                 Log.w(TAG, "Failed purchase, resultCode=" + resultCode + ", responseCode=" + responseCode);
+                purchasingInfoView.setText(R.string.user_subscription_aborted);
+                purchasingInfoView.setTextColor(Color.RED);
+                purchaseButton.setEnabled(true);
             }
         } else
             Log.wtf(TAG, "Activity result for unknown request type: " + requestCode);
