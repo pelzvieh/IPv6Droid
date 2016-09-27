@@ -117,6 +117,9 @@ public class TicTunnel implements Serializable {
     /** The timestamp of this tunnel's creation */
     private Date creationDate = new Date();
 
+    /** The timestamp of this tunnel's expiration */
+    private Date expiryDate = null;
+
     /**
      * Default constructor. Required for json de-serialization.
      */
@@ -277,6 +280,19 @@ public class TicTunnel implements Serializable {
     /** Set the creation date. Required for unmarshalling from json. */
     public void setCreationDate(Date creationDate) {
         this.creationDate = creationDate;
+    }
+
+
+    public Date getExpiryDate() {
+        return expiryDate;
+    }
+
+    public void setExpiryDate(Date expiry) {
+        expiryDate = expiry;
+    }
+
+    public void setExpiryMillis(long expiry) {
+        this.expiryDate = new Date(expiry);
     }
 
 

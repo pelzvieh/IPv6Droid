@@ -34,6 +34,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.preference.PreferenceManager;
+import android.support.v4.util.Pair;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -94,7 +95,6 @@ public class SubscribeTunnel extends Activity {
         public void onServiceConnected(ComponentName name,
                                        IBinder serviceBind) {
             service = IInAppBillingService.Stub.asInterface(serviceBind);
-            purchaseButton.setEnabled(true);
 
             tunnels.clear();
             try {
@@ -210,7 +210,6 @@ public class SubscribeTunnel extends Activity {
                     Log.d(TAG, "Examining index " + index + ",\n SKU " + skus.get(index)
                             + ",\n Data '" + skuData.get(index) + "',\n signature '" + skuSignature.get(index));
                     try {
-                        // @TODO extract to ayiya package, handle skuData and skuSignature as alternative credentials
                         if (SubscriptionBuilder.getSupportedSku().contains(skus.get(index))) {
                             // this one is relevant!
                             foundRelevantSubscription = true;
@@ -277,7 +276,8 @@ public class SubscribeTunnel extends Activity {
                             // Result will be delivered through onActivityResult().
                             startIntentSenderForResult(pendingIntent.getIntentSender(), RC_BUY, new Intent(),
                                     Integer.valueOf(0), Integer.valueOf(0), Integer.valueOf(0));
-                        }
+                        } else
+                            return new RuntimeException ("Subscription service returned " + pendingIntent);
                     } catch (Exception e) {
                         return e;
                     }
@@ -289,6 +289,7 @@ public class SubscribeTunnel extends Activity {
                         purchasingInfoView.setText(R.string.technical_problem);
                         purchasingInfoView.setTextColor(Color.RED);
                         purchaseButton.setEnabled(true);
+                        Log.e(TAG, "Exception on checking purchase", e);
                     }
                 }
 
@@ -311,30 +312,51 @@ public class SubscribeTunnel extends Activity {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == RC_BUY) {
-            int responseCode = data.getIntExtra("RESPONSE_CODE", 0);
-            String purchaseData = data.getStringExtra("INAPP_PURCHASE_DATA");
-            String dataSignature = data.getStringExtra("INAPP_DATA_SIGNATURE");
+            if (resultCode == Activity.RESULT_OK && data != null) {
+                int responseCode = data.getIntExtra("RESPONSE_CODE", 0);
+                String purchaseData = data.getStringExtra("INAPP_PURCHASE_DATA");
+                String dataSignature = data.getStringExtra("INAPP_DATA_SIGNATURE");
 
-            if (resultCode == Activity.RESULT_OK && responseCode == RESPONSE_CODE_OK) {
-                purchasingInfoView.setText(R.string.user_subscription_purchase_done);
-                Log.i(TAG, "Purchase succeeded!");
-                Log.d(TAG, purchaseData);
-                Log.d(TAG, dataSignature);
-                List<TicTunnel> tunnels = null;
-                try {
-                    tunnels = subscriptionsClient.checkSubscriptionAndReturnTunnels(
-                            purchaseData,
-                            dataSignature
-                    );
-                    this.tunnels.addAll(tunnels);
-                    displayActiveSubscriptions();
-                } catch (RuntimeException e) {
-                    Log.e(TAG, "Subscription information failed to verify", e);
-                    purchasingInfoView.setText(R.string.technical_problem);
+                if (responseCode == RESPONSE_CODE_OK) {
+                    purchasingInfoView.setText(R.string.user_subscription_purchase_done);
+                    Log.i(TAG, "Purchase succeeded!");
+                    Log.d(TAG, purchaseData);
+                    Log.d(TAG, dataSignature);
+                    new AsyncTask<Pair<String, String>, Void, List<TicTunnel>>() {
+                        @Override
+                        protected List<TicTunnel> doInBackground(Pair<String, String>... params) {
+                            Pair<String, String> purchase = params[0];
+                            try {
+                                List<TicTunnel> tunnels = subscriptionsClient.checkSubscriptionAndReturnTunnels(
+                                        purchase.first,
+                                        purchase.second
+                                );
+                                return tunnels;
+                            } catch (Exception e) {
+                                Log.w(TAG, "Subscription information failed to verify", e);
+                                return null;
+                            }
+                        }
+
+                        @Override
+                        protected void onPostExecute(List<TicTunnel> newTunnels) {
+                            if (newTunnels != null) {
+                                tunnels.addAll(newTunnels);
+                                displayActiveSubscriptions();
+                            } else {
+                                purchasingInfoView.setText(R.string.technical_problem);
+                                purchasingInfoView.setTextColor(Color.RED);
+                            }
+                        }
+                    }.execute(new Pair<String, String>(purchaseData, dataSignature));
+                } else {
+                    Log.w(TAG, "Failed purchase, resultCode=" + resultCode + ", responseCode=" + responseCode);
+                    purchasingInfoView.setText(R.string.user_subscription_aborted);
                     purchasingInfoView.setTextColor(Color.RED);
+                    purchaseButton.setEnabled(true);
                 }
             } else {
-                Log.w(TAG, "Failed purchase, resultCode=" + resultCode + ", responseCode=" + responseCode);
+                Log.w(TAG, "Failed purchase, resultCode=" + resultCode);
                 purchasingInfoView.setText(R.string.user_subscription_aborted);
                 purchasingInfoView.setTextColor(Color.RED);
                 purchaseButton.setEnabled(true);
