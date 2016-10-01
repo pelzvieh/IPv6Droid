@@ -161,12 +161,7 @@ public class MainActivity extends Activity {
         }
         statusReceiver.updateUi();
 
-        // check login configuration and start Settings if not yet set.
-        if (myPreferences.getString(TIC_USERNAME, "").isEmpty() ||
-                myPreferences.getString(TIC_PASSWORD, "").isEmpty() ||
-                myPreferences.getString(TIC_HOST, "").isEmpty()) {
-            openFirstTimeSetup();
-        }
+        redirectIfRequired();
 
         requestStatus();
     }
@@ -244,16 +239,44 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        redirectIfRequired();
+
+        // update status
+        requestStatus();
+    }
+
+    /**
+     * Launches the subscription/setup intent if current setup is not operationable.
+     */
+    private void redirectIfRequired() {
         // check login configuration and start first time setup activity if not yet set.
         SharedPreferences myPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
         if (myPreferences.getString(TIC_USERNAME, "").isEmpty() ||
                 myPreferences.getString(TIC_PASSWORD, "").isEmpty() ||
-                myPreferences.getString(TIC_HOST, "").isEmpty()) {
-            openFirstTimeSetup();
+                myPreferences.getString(TIC_HOST, "").isEmpty() ||
+                !checkCachedTunnelAvailability()) {
+            openSubscriptionOverview();
         }
-        // update status
-        requestStatus();
+    }
+
+    /**
+     * Test if there are cached tunnels, and if the cached tunnels are expired today.
+     * @return true if there are non-expired tunnels, false if there are no tunnels, or some expired.
+     */
+    private boolean checkCachedTunnelAvailability() {
+        if (tunnels.size() == 0) {
+            Log.i(TAG, "No tunnels are cached");
+            return false;
+        }
+        for (TicTunnel tunnel: tunnels) {
+            if (!tunnel.isEnabled()) {
+                Log.i(TAG, String.format("Tunnel %s (%s) is expired", tunnel.getTunnelName(), tunnel.getTunnelId()));
+                return false; // one tunnel is expired or disabled
+            }
+        }
+        Log.i(TAG, "Valid tunnels are in cache");
+        return true; // all tunnels are enabled
     }
 
     /**
@@ -264,7 +287,7 @@ public class MainActivity extends Activity {
         startActivity(settingsIntent);
     }
 
-    private void openFirstTimeSetup() {
+    private void openSubscriptionOverview () {
         Intent setupIntent = new Intent(this, SubscribeTunnel.class);
         startActivity(setupIntent);
     }
@@ -350,7 +373,7 @@ public class MainActivity extends Activity {
                 return true;
 
             case R.id.action_subscribe:
-                openFirstTimeSetup();
+                openSubscriptionOverview();
                 return true;
 
             case R.id.action_show_statistics:
@@ -387,10 +410,6 @@ public class MainActivity extends Activity {
     private class StatusReceiver extends BroadcastReceiver {
         /** The last received status report - including a updatedTunnelList if that was read for that update */
         private VpnStatusReport statusReport = new VpnStatusReport(null);
-
-        private StatusReceiver() {
-            updateUi();
-        }
 
         public boolean isTunnelProven() {
             return statusReport.isTunnelProvedWorking();

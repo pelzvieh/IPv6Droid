@@ -114,6 +114,7 @@ public class SubscribeTunnel extends Activity {
         Runnable updateView = new Runnable() {
             @Override
             public void run() {
+                Log.d(TAG, "Updating display state with current state");
                 if(tunnels.size() > 0) {
                     purchasingInfoView.setText(String.format(getString(R.string.user_has_subscription), tunnels.size()));
                     purchasingInfoView.setTextColor(Color.BLACK);
@@ -185,7 +186,11 @@ public class SubscribeTunnel extends Activity {
 
     }
 
-    /** Retrieve the active subscriptions by querying google play, then resolving the SKU list */
+    /**
+     * Retrieve the active subscriptions by querying google play, then resolving the SKU list. Then
+     * verify the subscription with the server and get the list of provisiond tunnels.
+     * This re-populates the tunnels field of this SubscribeTunnel activity.
+     */
     private void getTunnelsFromSubscription() throws RemoteException {
         purchasingInfoView.setText(R.string.user_subscription_checking);
         purchasingInfoView.setTextColor(Color.BLACK);
@@ -223,8 +228,15 @@ public class SubscribeTunnel extends Activity {
                                                 skuData.get(index),
                                                 skuSignature.get(index)
                                         );
-                                        SubscribeTunnel.this.tunnels.addAll(tunnels);
-                                        displayActiveSubscriptions();
+                                        Log.d(TAG, String.format("Successfully retrieved %d tunnels from server", tunnels.size()));
+                                        // add only valid tunnels to save case distinction all through
+                                        // the app
+                                        for (TicTunnel tunnel: tunnels) {
+                                            if (tunnel.isEnabled()) {
+                                                SubscribeTunnel.this.tunnels.add(tunnel);
+                                                Log.d(TAG, String.format("Added valid tunnel %s", tunnel.getTunnelId()));
+                                            }
+                                        }
                                     } catch (RuntimeException e) {
                                         Log.e(TAG, "Cannot verify subscription", e);
                                         return e;
@@ -242,6 +254,8 @@ public class SubscribeTunnel extends Activity {
                                         } else {
                                             purchasingInfoView.setText(String.format(getString(R.string.user_subscription_failed), e.getMessage()));
                                         }
+                                    } else {
+                                        displayActiveSubscriptions();
                                     }
                                 }
                             }.execute(index);
@@ -254,7 +268,8 @@ public class SubscribeTunnel extends Activity {
         } while (continuationToken != null);
 
         // if we had no luck with this guy's subscriptions, still we need to update the Activity state
-        displayActiveSubscriptions();
+        if (!foundRelevantSubscription)
+            displayActiveSubscriptions();
     }
 
     public void onPurchaseSubsciption (View clickedView) throws RemoteException, IntentSender.SendIntentException {

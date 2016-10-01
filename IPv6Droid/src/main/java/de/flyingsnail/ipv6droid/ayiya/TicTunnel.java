@@ -223,9 +223,23 @@ public class TicTunnel implements Serializable {
      * @return true if both user and admin enabled this tunnel.
      */
     public boolean isEnabled() {
-        return "enabled".equals(getUserState()) && "enabled".equals(getAdminState());
+        Date expiry = getExpiryDate();
+        boolean state =
+                "enabled".equals(getUserState())
+                        && "enabled".equals(getAdminState());
+        if (!state)
+            return false;
+        else if (expiry == null)
+            return true;
+        else
+            return new Date().before(expiry);
     }
 
+    /**
+     * Sets the explicit enabled states (user and admin enabled) to enabled. However, will not
+     * reset expiry date, so isEnabled might be false after calling setEnabled(true).
+     * @param enabled
+     */
     public void setEnabled(boolean enabled) {
         if (enabled) {
             setUserState("enabled");
