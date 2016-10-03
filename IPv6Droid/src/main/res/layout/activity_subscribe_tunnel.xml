@@ -17,8 +17,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/subscribe_to_tunnel_service"
-        android:onClick="onPurchaseSubsciption (SubscribeTunnel)"
-        android:id="@+id/subscribe" />
+        android:id="@+id/subscribe"
+        android:onClick="onPurchaseSubsciption" />
 
     <TextView
         android:layout_width="wrap_content"

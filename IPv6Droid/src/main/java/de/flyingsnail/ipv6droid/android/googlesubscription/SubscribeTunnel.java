@@ -24,7 +24,6 @@ import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentSender;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -272,7 +271,7 @@ public class SubscribeTunnel extends Activity {
             displayActiveSubscriptions();
     }
 
-    public void onPurchaseSubsciption (View clickedView) throws RemoteException, IntentSender.SendIntentException {
+    public void onPurchaseSubsciption (View clickedView) {
         if (service != null) {
             purchaseButton.setEnabled(false); // gegen ungeduldige Benutzer
             purchasingInfoView.setText(R.string.user_subscription_starting_wizard);
