@@ -44,7 +44,9 @@ import android.widget.Toast;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.Serializable;
+import java.io.StringWriter;
 
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.statistics.Statistics;
@@ -76,6 +78,10 @@ public class AyiyaVpnService extends VpnService {
      * A pre-constructed notification builder for building user notifications.
      */
     private NotificationCompat.Builder errorNotificationBuilder;
+    /**
+     * A pre-constructed notification builder for building the ongoing notification that the tunnel is running.
+     */
+    private NotificationCompat.Builder ongoingNotificationBuilder;
 
     /**
      * We're only ever displaying one error notification, this is its ID.
@@ -91,7 +97,6 @@ public class AyiyaVpnService extends VpnService {
      * A flag that keeps track if the VPN is inteded to run or not.
      */
     private boolean vpnShouldRun = false;
-    private NotificationCompat.Builder ongoingNotificationBuilder;
     private TunnelPersisting tunnelPersisting;
     private Tunnels cachedTunnels;
 
@@ -113,6 +118,7 @@ public class AyiyaVpnService extends VpnService {
         ongoingNotificationBuilder.setOngoing(true);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             ongoingNotificationBuilder.setVisibility(Notification.VISIBILITY_PUBLIC);
+            ongoingNotificationBuilder.setLocalOnly(true); // not interesting on connected devices
         }
 
         // register receivers of broadcasts
@@ -316,6 +322,10 @@ public class AyiyaVpnService extends VpnService {
         NotificationCompat.BigTextStyle bigTextStyle = new NotificationCompat.BigTextStyle();
         bigTextStyle.setBigContentTitle(getString(resourceId) + ": " + e.getClass());
         bigTextStyle.setSummaryText(e.getLocalizedMessage());
+        StringWriter sw = new StringWriter();
+        e.printStackTrace(new PrintWriter(sw));
+        sw.flush();
+        bigTextStyle.bigText(sw.getBuffer());
         errorNotificationBuilder.setStyle(bigTextStyle);
 
         NotificationManager notificationManager =

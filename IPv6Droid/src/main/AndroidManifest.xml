@@ -98,14 +98,6 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="de.flyingsnail.ipv6droid.android.MainActivity" />
         </activity>
-        <activity
-            android:name=".android.subscription.InitialSetup"
-            android:label="@string/title_activity_initial_setup"
-            android:parentActivityName=".android.MainActivity">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value="de.flyingsnail.ipv6droid.android.MainActivity" />
-        </activity>
     </application>
 
 </manifest>
