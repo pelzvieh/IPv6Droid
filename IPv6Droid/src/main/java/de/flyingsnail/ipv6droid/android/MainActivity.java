@@ -255,7 +255,8 @@ public class MainActivity extends Activity {
         if (myPreferences.getString(TIC_USERNAME, "").isEmpty() ||
                 myPreferences.getString(TIC_PASSWORD, "").isEmpty() ||
                 myPreferences.getString(TIC_HOST, "").isEmpty() ||
-                !checkCachedTunnelAvailability()) {
+                (myPreferences.getString(TIC_USERNAME, "").equals("<googlesubscription>")
+                        && !checkCachedTunnelAvailability())) {
             openSubscriptionOverview();
         }
     }
