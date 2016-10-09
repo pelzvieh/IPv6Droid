@@ -272,51 +272,51 @@ public class SubscribeTunnel extends Activity {
     }
 
     public void onPurchaseSubsciption (final View clickedView) {
-        if (service != null) {
-            purchaseButton.setEnabled(false); // gegen ungeduldige Benutzer
-            purchasingInfoView.setText(R.string.user_subscription_starting_wizard);
+        purchaseButton.setEnabled(false); // gegen ungeduldige Benutzer
+        purchasingInfoView.setText(R.string.user_subscription_starting_wizard);
 
-            new AsyncTask<Void, Void, Exception>() {
-                @Override
-                protected Exception doInBackground(Void... voids) {
-                    String developerPayload = null;
+        new AsyncTask<Void, Void, Exception>() {
+            @Override
+            protected Exception doInBackground(Void... voids) {
+                String developerPayload = null;
+                try {
+                    developerPayload = subscriptionsClient.createNewPayload();
+                    if (service == null) // should not happen because purchaseButton is enabled only after successful connection
+                        throw new IllegalStateException("InAppSubscriptionService not bound");
+                    final Bundle bundle = service.getBuyIntent(3, getPackageName(),
+                            SubscriptionBuilder.getSupportedSku().get(0), "subs", developerPayload);
+
+                    final PendingIntent pendingIntent = bundle.getParcelable("BUY_INTENT");
+                    if (bundle.getInt("RESPONSE_CODE") == RESPONSE_CODE_OK && pendingIntent != null) {
+                        // Start purchase flow (this brings up the Google Play UI).
+                        // Result will be delivered through onActivityResult().
+                        startIntentSenderForResult(pendingIntent.getIntentSender(), RC_BUY, new Intent(),
+                                Integer.valueOf(0), Integer.valueOf(0), Integer.valueOf(0));
+                    } else
+                        return new RuntimeException ("Subscription service returned " + pendingIntent);
+                } catch (Exception e) {
+                    return e;
+                } finally {
                     try {
-                        developerPayload = subscriptionsClient.createNewPayload();
-                        final Bundle bundle = service.getBuyIntent(3, getPackageName(),
-                                SubscriptionBuilder.getSupportedSku().get(0), "subs", developerPayload);
-
-                        final PendingIntent pendingIntent = bundle.getParcelable("BUY_INTENT");
-                        if (bundle.getInt("RESPONSE_CODE") == RESPONSE_CODE_OK && pendingIntent != null) {
-                            // Start purchase flow (this brings up the Google Play UI).
-                            // Result will be delivered through onActivityResult().
-                            startIntentSenderForResult(pendingIntent.getIntentSender(), RC_BUY, new Intent(),
-                                    Integer.valueOf(0), Integer.valueOf(0), Integer.valueOf(0));
-                        } else
-                            return new RuntimeException ("Subscription service returned " + pendingIntent);
+                        if (developerPayload != null)
+                            subscriptionsClient.deleteUnusedPayload(developerPayload);
                     } catch (Exception e) {
-                        return e;
-                    } finally {
-                        try {
-                            if (developerPayload != null)
-                                subscriptionsClient.deleteUnusedPayload(developerPayload);
-                        } catch (Exception e) {
-                            Log.w(TAG, "Failed to revoke payload " + developerPayload, e);
-                        }
-                    }
-                    return null;
-                }
-                @Override
-                protected void onPostExecute(final Exception e) {
-                    if (e != null) {
-                        purchasingInfoView.setText(R.string.technical_problem);
-                        purchasingInfoView.setTextColor(Color.RED);
-                        purchaseButton.setEnabled(true);
-                        Log.e(TAG, "Exception on checking purchase", e);
+                        Log.w(TAG, "Failed to revoke payload " + developerPayload, e);
                     }
                 }
+                return null;
+            }
+            @Override
+            protected void onPostExecute(final Exception e) {
+                if (e != null) {
+                    purchasingInfoView.setText(R.string.technical_problem);
+                    purchasingInfoView.setTextColor(Color.RED);
+                    purchaseButton.setEnabled(true);
+                    Log.e(TAG, "Exception on checking purchase", e);
+                }
+            }
 
-            }.execute();
-        }
+        }.execute();
     }
 
     /**
