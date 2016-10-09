@@ -20,6 +20,7 @@
 
 package de.flyingsnail.ipv6droid.ayiya;
 
+import android.annotation.SuppressLint;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -293,6 +294,7 @@ public class Tic {
         return tunnelDesc;
     }
 
+    @SuppressLint("Assert")
     private String requestResponse (String request) throws IOException, ConnectionFailedException {
         assert (in != null && out != null);
         out.write(request);
@@ -311,6 +313,7 @@ public class Tic {
      * @throws IOException
      * @throws ConnectionFailedException
      */
+    @SuppressLint("Assert")
     private void protocolStepWelcome() throws IOException, ConnectionFailedException {
         assert (in != null);
         // fetch the welcome

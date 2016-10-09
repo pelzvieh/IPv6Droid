@@ -20,6 +20,7 @@
 
 package de.flyingsnail.ipv6droid.ayiya;
 
+import android.annotation.SuppressLint;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
@@ -308,6 +309,7 @@ public class Ayiya {
              // this should be equiv. to C bitfield behaviour in big-endian machines
     }
 
+    @SuppressLint("Assert")
     private byte[] buildAyiyaStruct(byte[] payload, OpCode opcode, byte nextHeader) throws NoSuchAlgorithmException {
         byte[] retval = new byte[payload.length + OVERHEAD];
         ByteBuffer bb = ByteBuffer.wrap (retval);
@@ -496,6 +498,7 @@ public class Ayiya {
      * @throws IOException in case of network problems (probably temporary in nature)
      * @throws TunnelBrokenException in case that this tunnel is no longer usable and must be restarted
      */
+    @SuppressLint("Assert")
     public void write(byte[] payload) throws IOException, TunnelBrokenException {
         if (socket == null)
             throw new IllegalStateException("write(byte[]) called on unconnected Ayiya");

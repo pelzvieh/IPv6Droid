@@ -124,7 +124,6 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
 
         PreferenceManager.setDefaultValues(getApplicationContext(), R.xml.preferences, false);
-        SharedPreferences myPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
         // init handles to GUI elements
         activity = (TextView) findViewById(R.id.statusText);

@@ -86,12 +86,12 @@ public class AyiyaVpnService extends VpnService {
     /**
      * We're only ever displaying one error notification, this is its ID.
      */
-    private final int exceptionNotificationID = 0xdeadbeef;
+    private static final int exceptionNotificationID = 0xdeadbeef;
 
     /**
      * The ID of the ongoing notification that our service is running
      */
-    private final int ongoingNotificationId = 0xaffe;
+    private static final int ongoingNotificationId = 0xaffe;
 
     /**
      * A flag that keeps track if the VPN is inteded to run or not.

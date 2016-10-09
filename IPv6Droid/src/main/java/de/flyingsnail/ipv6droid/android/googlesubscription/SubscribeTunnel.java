@@ -33,6 +33,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.preference.PreferenceManager;
+import android.support.annotation.Nullable;
 import android.support.v4.util.Pair;
 import android.util.Log;
 import android.view.View;
@@ -40,6 +41,9 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import com.android.vending.billing.IInAppBillingService;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -167,6 +171,7 @@ public class SubscribeTunnel extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_subscribe_tunnel);
         try {
+            //noinspection ConstantConditions
             getActionBar().setDisplayHomeAsUpEnabled(true);
         } catch (NullPointerException npe) {
             Log.d(TAG, "No action bar", npe);
@@ -207,6 +212,13 @@ public class SubscribeTunnel extends Activity {
                 final List<String> skuSignature = activeSubs.getStringArrayList("INAPP_DATA_SIGNATURE_LIST");
                 continuationToken = activeSubs.getString("INAPP_CONTINUATION_TOKEN", null);
 
+                if (skus == null || skuData == null || skuSignature == null)
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
+                        throw new RemoteException("service returned null as one of the expected arrays");
+                    } else {
+                        throw new RemoteException();
+                    }
+
                 purchasingInfoView.setText(R.string.user_subscription_verifying);
 
                 // create api stub
@@ -221,7 +233,7 @@ public class SubscribeTunnel extends Activity {
                                 @Override
                                 protected Exception doInBackground(Integer... params) {
                                     int index = params[0];
-                                    List<TicTunnel> tunnels = null;
+                                    List<TicTunnel> tunnels;
                                     try {
                                         tunnels = subscriptionsClient.checkSubscriptionAndReturnTunnels(
                                                 skuData.get(index),
@@ -292,17 +304,17 @@ public class SubscribeTunnel extends Activity {
                         // Result will be delivered through onActivityResult().
                         startIntentSenderForResult(pendingIntent.getIntentSender(), RC_BUY, new Intent(),
                                 Integer.valueOf(0), Integer.valueOf(0), Integer.valueOf(0));
+                        // this is async, so at this point, we still need a valid developerPayload...
                     } else
                         return new RuntimeException ("Subscription service returned " + pendingIntent);
                 } catch (Exception e) {
-                    return e;
-                } finally {
                     try {
                         if (developerPayload != null)
                             subscriptionsClient.deleteUnusedPayload(developerPayload);
-                    } catch (Exception e) {
-                        Log.w(TAG, "Failed to revoke payload " + developerPayload, e);
+                    } catch (Exception e1) {
+                        Log.w(TAG, "Failed to revoke payload " + developerPayload, e1);
                     }
+                    return e;
                 }
                 return null;
             }
@@ -373,18 +385,34 @@ public class SubscribeTunnel extends Activity {
                     }.execute(new Pair<String, String>(purchaseData, dataSignature));
                 } else {
                     Log.w(TAG, "Failed purchase, resultCode=" + resultCode + ", responseCode=" + responseCode);
-                    purchasingInfoView.setText(R.string.user_subscription_aborted);
-                    purchasingInfoView.setTextColor(Color.RED);
-                    purchaseButton.setEnabled(true);
+                    String developerPayload = null;
+                    try {
+                        JSONObject jsonObject = new JSONObject(purchaseData);
+                        developerPayload = jsonObject.getString("developerPayload");
+                    } catch (JSONException e) {
+                        Log.wtf(TAG, "Could not parse purchaseData string");
+                    }
+                    purchaseFailed(developerPayload);
                 }
             } else {
                 Log.w(TAG, "Failed purchase, resultCode=" + resultCode);
-                purchasingInfoView.setText(R.string.user_subscription_aborted);
-                purchasingInfoView.setTextColor(Color.RED);
-                purchaseButton.setEnabled(true);
+                purchaseFailed(null);
             }
         } else
             Log.wtf(TAG, "Activity result for unknown request type: " + requestCode);
+    }
+
+    private void purchaseFailed(@Nullable final String developerPayload) {
+        purchasingInfoView.setText(R.string.user_subscription_aborted);
+        purchasingInfoView.setTextColor(Color.RED);
+        purchaseButton.setEnabled(true);
+        try {
+            if (developerPayload != null)
+                subscriptionsClient.deleteUnusedPayload(developerPayload);
+        } catch (Exception e1) {
+            Log.w(TAG, "Failed to revoke payload " + developerPayload, e1);
+        }
+
     }
 
     @Override

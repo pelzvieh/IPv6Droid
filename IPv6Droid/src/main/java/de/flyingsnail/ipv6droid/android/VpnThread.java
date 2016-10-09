@@ -20,6 +20,7 @@
 
 package de.flyingsnail.ipv6droid.android;
 
+import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.PendingIntent;
 import android.content.Context;
@@ -165,15 +166,15 @@ class VpnThread extends Thread {
     /**
      * An int used to tag socket traffic initiated from the parent thread
      */
-    private final int TAG_PARENT_THREAD=0x01;
+    private static final int TAG_PARENT_THREAD=0x01;
     /**
      * An int used to tag socket traffic initiated from the copy thread PoP->Local
      */
-    private final int TAG_INCOMING_THREAD=0x02;
+    private static final int TAG_INCOMING_THREAD=0x02;
     /**
      * An int used to tag socket traffic initiated from the copy thread Local->PoP
      */
-    private final int TAG_OUTGOING_THREAD=0x03;
+    private static final int TAG_OUTGOING_THREAD=0x03;
     /**
      * The system service ConnectivityManager
      */
@@ -270,6 +271,7 @@ class VpnThread extends Thread {
                 // build vpn device on local machine
                 builder = ayiyaVpnService.createBuilder();
                 TicTunnel activeTunnel = tunnels.getActiveTunnel();
+                //noinspection ConstantConditions
                 configureBuilderFromTunnelSpecification(builder, activeTunnel, false);
                 builderNotRouted = ayiyaVpnService.createBuilder();
                 configureBuilderFromTunnelSpecification(builderNotRouted, activeTunnel, true);
@@ -424,6 +426,7 @@ class VpnThread extends Thread {
                 vpnStatus.setCause(null);
 
                 // now do a ping on IPv6 level. This should involve receiving one packet
+                //noinspection ConstantConditions
                 if (tunnels.getActiveTunnel().getIpv6Pop().isReachable(10000)) {
                     postToast(applicationContext, R.string.vpnservice_tunnel_up, Toast.LENGTH_SHORT);
                     /* by laws of logic, a successful ping on IPv6 *must* already have set the flag
@@ -709,7 +712,7 @@ class VpnThread extends Thread {
         boolean timeoutSuspected = false;
         long lastPacketDelta = 0l;
         TicTunnel activeTunnel = tunnels.getActiveTunnel();
-        long heartbeatInterval = activeTunnel.getHeartbeatInterval() * 1000l;
+        @SuppressWarnings("ConstantConditions") long heartbeatInterval = activeTunnel.getHeartbeatInterval() * 1000l;
         if (heartbeatInterval < 300000l && isNetworkMobile()) {
             Log.i(TAG, "Lifting heartbeat interval to 300 secs");
             heartbeatInterval = 300000l;
@@ -993,6 +996,7 @@ class VpnThread extends Thread {
      * Read out current statistics values
      * @return the Statistics object with current values
      */
+    @SuppressLint("Assert")
     public synchronized Statistics getStatistics() {
         Log.d(VpnThread.TAG, "getStatistics() called");
         if (!isTunnelUp()) {

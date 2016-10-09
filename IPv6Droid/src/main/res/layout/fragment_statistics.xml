@@ -217,7 +217,7 @@
             android:textIsSelectable="true"
             android:layout_gravity="right"
             android:paddingLeft="10dp"
-            android:singleLine="true" />
+            android:maxLines="1" />
     </TableRow>
 
     <TableRow>

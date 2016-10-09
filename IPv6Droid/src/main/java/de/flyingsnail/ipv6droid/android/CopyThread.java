@@ -60,8 +60,6 @@ class CopyThread extends Thread {
     private final long packetBundlingPeriod;
     // The maximum size of packet buffer
     private final static int MAX_PACKET_BUFFER_LENGTH = 10;
-    // the actual size of packet buffer
-    private final int packetBufferLength;
     // the outgoing packet queue
     private final Queue<byte[]> packetQueue;
     // the pool of unused packet buffers
@@ -95,11 +93,11 @@ class CopyThread extends Thread {
         this.ayiyaVpnService = ayiyaVpnService;
         this.vpnThread = vpnThread;
         this.packetBundlingPeriod = packetBundlingPeriod;
-        this.packetBufferLength = (packetBundlingPeriod > 0) ? MAX_PACKET_BUFFER_LENGTH : 0;
+        int packetBufferLength = (packetBundlingPeriod > 0) ? MAX_PACKET_BUFFER_LENGTH : 0;
         this.statisticsCollector = statisticsCollector;
         // allocate packet buffer
         packetQueue = new ArrayBlockingQueue<byte[]>(packetBufferLength == 0 ? 1 : packetBufferLength);
-        bufferPool = new ArrayBlockingQueue<byte[]>(packetBufferLength+1);
+        bufferPool = new ArrayBlockingQueue<byte[]>(packetBufferLength +1);
         for (int i = 0; i <= packetBufferLength; i++)
             bufferPool.add(new byte[32767]);
     }
