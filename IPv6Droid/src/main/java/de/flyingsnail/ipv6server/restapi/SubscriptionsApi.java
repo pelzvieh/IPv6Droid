@@ -27,15 +27,18 @@ import java.io.IOException;
 import java.util.List;
 
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
 import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 import de.flyingsnail.ipv6server.svc.SubscriptionRejectedException;
+
 
 @Path("/subscriptions")
 @Produces(MediaType.APPLICATION_JSON)
@@ -48,10 +51,21 @@ public interface SubscriptionsApi {
    *
    * @return the String representing the unique payload
    * @throws IOException in case of communication problems with the server.
-     */
+   */
   @GET
   @Path("/new")
-  String createNewPayload();
+  String createNewPayload() throws IOException;
+  
+  /**
+   * Invalidate a payload (if it is not already used). The client indicates by this call
+   * that it is about to forget this payload anyway, so no further calls involving this
+   * payload will occur.
+   * @throws IOException in case of communication problems with the server.
+   */
+  @DELETE
+  @Path("/{payload}")
+  void deleteUnusedPayload(@PathParam("payload") String payload) throws IOException;
+  
   /**
    * Check validity of supplied Subscription object that supposedly is filled from
    * Google Play API. If valid, return the list of tunnels associated with this subscription.
@@ -74,6 +88,5 @@ public interface SubscriptionsApi {
   @Path("/check")
   List<TicTunnel> checkSubscriptionAndReturnTunnels(
           @FormParam("data") String subscriptionData,
-          @FormParam("signature") String signature);
-
+          @FormParam("signature") String signature) throws SubscriptionRejectedException, IOException;
 }

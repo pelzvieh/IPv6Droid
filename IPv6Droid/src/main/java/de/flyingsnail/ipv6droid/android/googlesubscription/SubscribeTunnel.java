@@ -236,7 +236,7 @@ public class SubscribeTunnel extends Activity {
                                                 Log.d(TAG, String.format("Added valid tunnel %s", tunnel.getTunnelId()));
                                             }
                                         }
-                                    } catch (RuntimeException e) {
+                                    } catch (Exception e) {
                                         Log.e(TAG, "Cannot verify subscription", e);
                                         return e;
                                     }
@@ -271,7 +271,7 @@ public class SubscribeTunnel extends Activity {
             displayActiveSubscriptions();
     }
 
-    public void onPurchaseSubsciption (View clickedView) {
+    public void onPurchaseSubsciption (final View clickedView) {
         if (service != null) {
             purchaseButton.setEnabled(false); // gegen ungeduldige Benutzer
             purchasingInfoView.setText(R.string.user_subscription_starting_wizard);
@@ -279,12 +279,13 @@ public class SubscribeTunnel extends Activity {
             new AsyncTask<Void, Void, Exception>() {
                 @Override
                 protected Exception doInBackground(Void... voids) {
+                    String developerPayload = null;
                     try {
-                        String developerPayload = subscriptionsClient.createNewPayload();
-                        Bundle bundle = service.getBuyIntent(3, getPackageName(),
+                        developerPayload = subscriptionsClient.createNewPayload();
+                        final Bundle bundle = service.getBuyIntent(3, getPackageName(),
                                 SubscriptionBuilder.getSupportedSku().get(0), "subs", developerPayload);
 
-                        PendingIntent pendingIntent = bundle.getParcelable("BUY_INTENT");
+                        final PendingIntent pendingIntent = bundle.getParcelable("BUY_INTENT");
                         if (bundle.getInt("RESPONSE_CODE") == RESPONSE_CODE_OK && pendingIntent != null) {
                             // Start purchase flow (this brings up the Google Play UI).
                             // Result will be delivered through onActivityResult().
@@ -294,11 +295,18 @@ public class SubscribeTunnel extends Activity {
                             return new RuntimeException ("Subscription service returned " + pendingIntent);
                     } catch (Exception e) {
                         return e;
+                    } finally {
+                        try {
+                            if (developerPayload != null)
+                                subscriptionsClient.deleteUnusedPayload(developerPayload);
+                        } catch (Exception e) {
+                            Log.w(TAG, "Failed to revoke payload " + developerPayload, e);
+                        }
                     }
                     return null;
                 }
                 @Override
-                protected void onPostExecute(Exception e) {
+                protected void onPostExecute(final Exception e) {
                     if (e != null) {
                         purchasingInfoView.setText(R.string.technical_problem);
                         purchasingInfoView.setTextColor(Color.RED);

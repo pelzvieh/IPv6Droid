@@ -99,6 +99,7 @@ public class AyiyaVpnService extends VpnService {
     private boolean vpnShouldRun = false;
     private TunnelPersisting tunnelPersisting;
     private Tunnels cachedTunnels;
+    private boolean errorNotification;
 
     public AyiyaVpnService() {
         cachedTunnels = null;
@@ -332,6 +333,20 @@ public class AyiyaVpnService extends VpnService {
                 (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         // mId allows you to update the notification later on.
         notificationManager.notify(exceptionNotificationID, errorNotificationBuilder.build());
+        errorNotification = true;
+    }
+
+    /**
+     * Cancel an error notification, if currently active.
+     */
+    private void notifyUserOfErrorCancel() {
+        if (errorNotification) {
+            NotificationManager notificationManager =
+                    (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            // mId allows you to update the notification later on.
+            notificationManager.cancel(exceptionNotificationID);
+            errorNotification = false;
+        }
     }
 
     /**
@@ -443,17 +458,19 @@ public class AyiyaVpnService extends VpnService {
                 // update persistent notification
                 displayOngoingNotification(statusReport);
                 // write back persisted tunnels if tunnel works and list was changed
-                if (statusReport.isTunnelProvedWorking() &&
-                        (cachedTunnels == null || !cachedTunnels.equals(statusReport.getTunnels()))) {
-                    cachedTunnels = statusReport.getTunnels();
-                    try {
-                        if (cachedTunnels != null)
-                            tunnelPersisting.writeTunnels(cachedTunnels);
-                    } catch (IOException e) {
-                        Log.e(TAG, "Couldn't write tunnels to file", e);
+                if (statusReport.isTunnelProvedWorking()) {
+                    notifyUserOfErrorCancel();
+
+                    if (cachedTunnels == null || !cachedTunnels.equals(statusReport.getTunnels())) {
+                        cachedTunnels = statusReport.getTunnels();
+                        try {
+                            if (cachedTunnels != null)
+                                tunnelPersisting.writeTunnels(cachedTunnels);
+                        } catch (IOException e) {
+                            Log.e(TAG, "Couldn't write tunnels to file", e);
+                        }
                     }
                 }
-
             }
         }
     }
