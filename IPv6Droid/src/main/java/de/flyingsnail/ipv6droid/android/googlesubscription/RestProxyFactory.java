@@ -38,6 +38,6 @@ public class RestProxyFactory {
         RegisterBuiltin.register(ResteasyProviderFactory.getInstance());
     }
     public static SubscriptionsApi createSubscriptionsClient() {
-        return ProxyFactory.create(SubscriptionsApi.class, "https://ipv6server.nsupdate.info/services/services/");
+        return ProxyFactory.create(SubscriptionsApi.class, "https://flyingsnail.de/services/services/");
     }
 }
