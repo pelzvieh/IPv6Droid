@@ -81,6 +81,8 @@ public class MainActivity extends Activity {
     private TextView causeView;
     /** The Tunnels object that holds the list of available tunnels plus the currently selected one */
     private Tunnels tunnels;
+    /** A TextView that will show a warning that sixxs.net tunnels will no longer work */
+    private TextView sixxsWarning;
 /*    private TicTunnel selectedTunnel;
     private List<TicTunnel> availableTunnels;*/
     //@todo maintaining the event list in an Activity is nonsense, as it would receive events only when visible
@@ -132,6 +134,7 @@ public class MainActivity extends Activity {
         redundantStartButton = (Button) findViewById(R.id.redundant_start_button);
         tunnelListView = (ListView) findViewById(R.id.tunnelList);
         causeView = (TextView) findViewById(R.id.cause);
+        sixxsWarning = (TextView) findViewById(R.id.sixxsWarning);
         tunnels = new Tunnels();
         ArrayAdapter<TicTunnel> adapter = new ArrayAdapter<TicTunnel>(MainActivity.this,
                 R.layout.tunnellist_template);
@@ -246,16 +249,28 @@ public class MainActivity extends Activity {
 
     /**
      * Launches the subscription/setup intent if current setup is not operationable.
+     *
+     * Additionally, shows a warning about SixXS closing if this service is currently used.
      */
     private void redirectIfRequired() {
         // check login configuration and start first time setup activity if not yet set.
         SharedPreferences myPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
+        final String host = myPreferences.getString(TIC_HOST, "");
+
+        // this warning should be removed by about 2018.
+        if ("tic.sixxs.net".equalsIgnoreCase(host)) {
+            sixxsWarning.setVisibility(View.VISIBLE);
+        } else {
+            sixxsWarning.setVisibility(View.INVISIBLE);
+            sixxsWarning.setHeight(0);
+        }
+
         if (myPreferences.getString(TIC_USERNAME, "").isEmpty() ||
                 myPreferences.getString(TIC_PASSWORD, "").isEmpty() ||
-                myPreferences.getString(TIC_HOST, "").isEmpty() ||
+                host.isEmpty() ||
                 (myPreferences.getString(TIC_USERNAME, "").equals("<googlesubscription>")
-                        && !checkCachedTunnelAvailability())) {
+                        && !checkCachedTunnelAvailability()) ) {
             openSubscriptionOverview();
         }
     }
