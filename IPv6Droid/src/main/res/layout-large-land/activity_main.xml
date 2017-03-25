@@ -45,27 +45,41 @@
             tools:layout="@layout/fragment_statistics" />
     </FrameLayout>
 
-    <ProgressBar
-        android:id="@+id/progressBar"
+    <TextView
+        android:id="@+id/sixxsWarning"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:max="100"
-        android:layout_below="@+id/statusText"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="false"
+        android:text="@string/main_activity_caution_sixxs_ends"
         android:layout_toLeftOf="@id/statistics"
-        android:indeterminate="true"
-        style="@android:style/Widget.ProgressBar.Horizontal"
-        android:visibility="invisible"/>
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:textColor="@android:color/holo_red_dark"
+        android:textStyle="bold"
+        android:visibility="visible" />
 
     <TextView
         android:id="@+id/statusText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceSmall"
-        android:layout_alignParentTop="true"
+        android:layout_alignParentTop="false"
         android:layout_toLeftOf="@id/statistics"
+        android:layout_below="@id/sixxsWarning"
         android:text="@string/main_activity_please_start"
         android:visibility="invisible"
         android:layout_alignLeft="@+id/progressBar" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:max="100"
+        android:layout_below="@id/statusText"
+        android:layout_toLeftOf="@id/statistics"
+        android:indeterminate="true"
+        style="@android:style/Widget.ProgressBar.Horizontal"
+        android:visibility="invisible"/>
 
     <ImageView
         android:id="@+id/androidRobot"
@@ -117,8 +131,9 @@
     <FrameLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_toLeftOf="@+id/statistics"
+        android:layout_alignParentTop="false"
+        android:layout_below="@id/sixxsWarning"
+        android:layout_toLeftOf="@id/statistics"
         android:layout_alignParentLeft="true"
         >
         <Button

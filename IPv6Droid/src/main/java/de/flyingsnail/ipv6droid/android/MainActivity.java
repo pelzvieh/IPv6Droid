@@ -135,6 +135,7 @@ public class MainActivity extends Activity {
         tunnelListView = (ListView) findViewById(R.id.tunnelList);
         causeView = (TextView) findViewById(R.id.cause);
         sixxsWarning = (TextView) findViewById(R.id.sixxsWarning);
+        if (sixxsWarning == null) throw new AssertionError();
         tunnels = new Tunnels();
         ArrayAdapter<TicTunnel> adapter = new ArrayAdapter<TicTunnel>(MainActivity.this,
                 R.layout.tunnellist_template);
