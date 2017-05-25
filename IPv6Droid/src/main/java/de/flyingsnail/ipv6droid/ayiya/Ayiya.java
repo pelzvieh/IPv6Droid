@@ -615,7 +615,6 @@ public class Ayiya {
      */
     public synchronized void close() {
         if (socket != null && !socket.isClosed()) {
-            socket.disconnect();
             socket.close();
         }
         socket = null; // it's useless anyway
