@@ -197,6 +197,7 @@ public class AyiyaVpnService extends VpnService {
             Log.d(TAG, "stopVpn - requestTunnelClose");
             thread.requestTunnelClose();
         }
+        thread = null;
     }
 
     /**
@@ -224,7 +225,6 @@ public class AyiyaVpnService extends VpnService {
             protected Void doInBackground(Void... params) {
                 Log.d (TAG, "Start async closing of VPN");
                 stopVpn();
-                thread = null;
                 return null;
             }
         }.execute();
@@ -381,7 +381,6 @@ public class AyiyaVpnService extends VpnService {
                         protected Void doInBackground(Void... params) {
                             Log.d(TAG, "async close thread starting");
                             stopVpn();
-                            thread = null;
                             return null;
                         }
                     }.execute();
