@@ -116,14 +116,14 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
     private void bindToStatistics() {
         Intent intent = new Intent(getActivity(), AyiyaVpnService.class);
         intent.setAction(AyiyaVpnService.STATISTICS_INTERFACE);
-        if (!getActivity().getApplicationContext().bindService(intent, this, 0))
+        if (!getActivity().bindService(intent, this, 0))
             Log.e(StatisticsFragment.TAG, "Bind request to statistics interface failed");
     }
 
     @Override
     public void onDestroy() {
         Log.d(TAG, "onDestroy started");
-        getActivity().getApplicationContext().unbindService(this);
+        getActivity().unbindService(this);
 
         if (updaterFuture != null) {
             updaterFuture.cancel(true);

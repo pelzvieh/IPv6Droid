@@ -20,8 +20,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="de.flyingsnail.ipv6droid"
-    android:versionCode="42"
-    android:versionName="1.55">
+    android:versionCode="46"
+    android:versionName="1.57a">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -30,6 +30,9 @@
 
     <!-- We also work on devices with classic touchpad or mouse -->
     <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
+
+    <!-- recommended from https://android-developers.googleblog.com/2017/03/update-your-app-to-take-advantage-of.html -->
+    <meta-data android:name="android.max_aspect" android:value="2.1" />
 
     <application
         android:allowBackup="true"
@@ -41,7 +44,6 @@
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
@@ -50,7 +52,7 @@
             android:name=".android.AyiyaVpnService"
             android:permission="android.permission.BIND_VPN_SERVICE">
             <intent-filter>
-                <action android:name="de.flyingsnail.ipv6droid.AyiyaVPN" />
+                <action android:name="android.net.VpnService" />
             </intent-filter>
         </service>
 
@@ -85,7 +87,6 @@
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.QUICKBOOT_POWERON" />
-
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>

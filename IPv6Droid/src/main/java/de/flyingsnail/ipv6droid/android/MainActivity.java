@@ -207,7 +207,7 @@ public class MainActivity extends Activity {
 
         // Start system-managed intent for VPN
         Intent systemVpnIntent = VpnService.prepare(clickedView == null ?
-                getApplicationContext() : clickedView.getContext());
+                this : clickedView.getContext());
         if (systemVpnIntent != null) {
             startActivityForResult(systemVpnIntent, REQUEST_START_VPN);
         } else {
@@ -353,7 +353,7 @@ public class MainActivity extends Activity {
         switch (requestCode) {
             case REQUEST_START_VPN:
                 if (resultCode == RESULT_OK) {
-                    Intent intent = new Intent(this, AyiyaVpnService.class);
+                    Intent intent = new Intent(this, AyiyaVpnService.class).setAction("android.net.VpnService");
                     if (tunnels.isTunnelActive()) {
                         // Android's Parcel system doesn't handle subclasses well, so...
                         intent.putExtra(AyiyaVpnService.EXTRA_CACHED_TUNNELS, tunnels.getAndroidSerializable());

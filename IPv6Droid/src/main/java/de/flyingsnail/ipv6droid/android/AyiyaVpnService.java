@@ -22,13 +22,16 @@ package de.flyingsnail.ipv6droid.android;
 
 import android.app.Notification;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
+import android.net.LinkProperties;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.net.VpnService;
 import android.os.AsyncTask;
 import android.os.Binder;
@@ -38,6 +41,7 @@ import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.TaskStackBuilder;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
@@ -70,9 +74,10 @@ public class AyiyaVpnService extends VpnService {
     private VpnThread thread;
 
     // broadcast receivers
-    private final ConnectivityReceiver connectivityReceiver = new ConnectivityReceiver();
+    private ConnectivityReceiver connectivityReceiver;
     private final CommandReceiver commandReceiver = new CommandReceiver();
     private final StatusReceiver statusReceiver = new StatusReceiver();
+    private ConnectivityManager.NetworkCallback networkCallback;
 
     /**
      * A pre-constructed notification builder for building user notifications.
@@ -124,7 +129,7 @@ public class AyiyaVpnService extends VpnService {
 
         // register receivers of broadcasts
         registerLocalCommandReceiver();
-        registerGlobalConnectivityReceiver();
+        registerConnectivityReceiver();
 
         // register receiver for status updates to update the notification status
         IntentFilter statusIntentFilter = new IntentFilter(VpnStatusReport.BC_STATUS);
@@ -208,10 +213,50 @@ public class AyiyaVpnService extends VpnService {
         Log.i(TAG, "Prepare destruction of VpnService");
         stopVpn();
         notifyUserOfError(R.string.ayiyavpnservice_destroyed, new Exception(""));
-        unregisterGlobalConnectivityReceiver();
+        unregisterConnectivityReceiver();
         unregisterLocalCommandReceiver();
         LocalBroadcastManager.getInstance(this).unregisterReceiver(statusReceiver);
         super.onDestroy();
+    }
+
+    /**
+     * Register to be called in event of internet available.
+     */
+    private void registerConnectivityReceiver() {
+        if (Build.VERSION.SDK_INT >= 23) {
+            NetworkRequest.Builder builder = new NetworkRequest.Builder().
+                    addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).
+                    addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN);
+            NetworkRequest request = builder.build();
+
+            networkCallback = new ConnectivityManager.NetworkCallback () {
+                @Override
+                public void onAvailable(Network network) {
+                    onConnectivityChange(true);
+                }
+
+                @Override
+                public void onLinkPropertiesChanged(Network network, LinkProperties linkProperties) {
+                    onConnectivityChange(true);
+                }
+
+                @Override
+                public void onLost(Network network) {
+                    onConnectivityChange(false);
+                }
+            };
+            getSystemService(ConnectivityManager.class).registerNetworkCallback(
+                    request, networkCallback
+            );
+        } else registerGlobalConnectivityReceiver();
+    }
+
+    private void unregisterConnectivityReceiver() {
+        if (Build.VERSION.SDK_INT >= 23) {
+            getSystemService(ConnectivityManager.class).unregisterNetworkCallback(
+                    networkCallback
+            );
+        } else unregisterGlobalConnectivityReceiver();
     }
 
     /**
@@ -233,11 +278,13 @@ public class AyiyaVpnService extends VpnService {
     }
 
     /**
-     * Register the instance of connectivityReceiver for global CONNECTIVITY_ACTIONs.
+     * Register an instance of connectivityReceiver for global CONNECTIVITY_ACTIONs.
+     * Generally obsolete, will only be used on Android versions prior to 23.
      */
     private void registerGlobalConnectivityReceiver() {
+        connectivityReceiver = new ConnectivityReceiver();
         final IntentFilter intentFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
-        getApplicationContext().registerReceiver(connectivityReceiver, intentFilter);
+        registerReceiver(connectivityReceiver, intentFilter);
         Log.d(TAG, "registered CommandReceiver for global broadcasts");
     }
 
@@ -245,7 +292,7 @@ public class AyiyaVpnService extends VpnService {
      * Revert registerGlobalConnectivityReceiver().
      */
     private void unregisterGlobalConnectivityReceiver() {
-        getApplicationContext().unregisterReceiver(connectivityReceiver);
+        unregisterReceiver(connectivityReceiver);
         Log.d(TAG, "un-registered CommandReceiver for global broadcasts");
     }
 
@@ -281,10 +328,15 @@ public class AyiyaVpnService extends VpnService {
     @Override
     public IBinder onBind(Intent intent) {
         if (STATISTICS_INTERFACE.equals(intent.getAction())) {
-            Log.i(AyiyaVpnService.TAG, "Bind request to statistics interface received");
+            Log.i(TAG, "Bind request to statistics interface received");
             return new StatisticsBinder();
+        } else if (SERVICE_INTERFACE.equals(intent.getAction())) {
+            Log.i(TAG, "Bind request to android.net.VpnService");
+            IBinder superBinder = super.onBind(intent);
+            Log.d(TAG, "super returned IBinder " + String.valueOf (superBinder));
+            return superBinder;
         } else
-            return super.onBind(intent);
+            return null;
     }
 
     /**
@@ -295,14 +347,11 @@ public class AyiyaVpnService extends VpnService {
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(getApplicationContext())
                 .setSmallIcon(R.drawable.ic_notification);
 
-        Intent settingsIntent = new Intent(getApplicationContext(), intentClass);
-        // the following code is adopted directly from developer.android.com
-        PendingIntent resultPendingIntent = PendingIntent.getActivity(
-                getApplicationContext(),
-                0,
-                settingsIntent,
-                0);
-        notificationBuilder.setContentIntent(resultPendingIntent);
+        Intent settingsIntent = new Intent(this, intentClass);
+        TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
+        stackBuilder.addNextIntentWithParentStack(settingsIntent);
+
+        notificationBuilder.setContentIntent(stackBuilder.getPendingIntent(0, 0));
         return notificationBuilder;
     }
 
@@ -396,9 +445,10 @@ public class AyiyaVpnService extends VpnService {
     }
 
     /**
-     * Inner class to handle connectivity changes
+     * Inner class to handle connectivity changes.
+     * Generally obsolete, will only be used on Android versions prior to 23.
      */
-    public class ConnectivityReceiver extends BroadcastReceiver {
+    public class ConnectivityReceiver extends BroadcastReceiver  {
         private ConnectivityReceiver() {
         }
 
@@ -406,11 +456,16 @@ public class AyiyaVpnService extends VpnService {
         public void onReceive(Context context, @NonNull Intent intent) {
             String action = intent.getAction();
             if (action.equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
-                if (thread != null && thread.isAlive())
-                    thread.onConnectivityChange(intent);
+                onConnectivityChange(!intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false));
             }
         }
     }
+
+    private void onConnectivityChange(boolean connected) {
+        if (thread != null && thread.isAlive())
+            thread.onConnectivityChange(connected);
+    }
+
 
     private TicConfiguration loadTicConfiguration(SharedPreferences myPreferences) {
         return new TicConfiguration(myPreferences.getString("tic_username", ""),

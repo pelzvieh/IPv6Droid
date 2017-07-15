@@ -331,20 +331,21 @@ class VpnThread extends Thread {
                 Log.e(TAG, "Cannot close ayiya object", e);
             }
         }
-
     }
     /**
      * Request copy threads to close, close ayiya object and VPN socket.
      */
     private synchronized void cleanAll() {
-        cleanCopyThreads();
         try {
             if (vpnFD != null) {
                 vpnFD.close();
+                Log.i(TAG, "VPN closed");
             }
         } catch (Exception e) {
             Log.e(TAG, "Cannot close local socket", e);
         }
+        // close internet facing socket and stop copy threads
+        cleanCopyThreads();
         vpnStatus.setStatus (VpnStatusReport.Status.Idle);
         vpnFD = null;
     }
@@ -372,6 +373,11 @@ class VpnThread extends Thread {
                 // ensure we're online
                 vpnStatus.setActivity(R.string.vpnservice_activity_reconnect);
                 waitOnConnectivity();
+
+                // Re-Check if we should close down, as this can easily happen when waiting on connectivity
+                if (closeTunnel) {
+                    break;
+                }
 
                 // due to kitkat issue, check local health
                 if (routingConfiguration.isTryRoutingWorkaround() && tunnelRouted && !checkRouting()) {
@@ -457,6 +463,8 @@ class VpnThread extends Thread {
                 outThread = null;
             }
         }
+        Log.i(VpnThread.TAG, "refreshRemoteEnd loop terminated - " +
+                (closeTunnel ? "explicit close down requested" : "TUN device invalid"));
     }
 
     /**
@@ -696,7 +704,7 @@ class VpnThread extends Thread {
     }
 
     /**
-     * This loop monitors the two copy threads and generates heartbeats in half the heartbeat
+     * This loop monitors the two copy threads and generates heartbeats in the heartbeat
      * interval. It detects tunnel defects by a number of means and exits by one of its
      * declared exceptions when either it is no longer intended to run or the given ayiya doesn't
      * seem to work any more. It just exits if one of the copy threads terminated (see there).
@@ -1025,11 +1033,11 @@ class VpnThread extends Thread {
     /**
      * Notify all threads waiting on a status change.
      * This is safe to call from the main thread.
-     * @param intent the intent that was broadcast to flag the status change.
+     * @param connected the boolean indicating if the new network situation has connectivity
      */
-    public void onConnectivityChange(@NonNull Intent intent) {
+    public void onConnectivityChange(boolean connected) {
         Log.i(TAG, "Connectivity changed");
-        if (!intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false)) {
+        if (connected) {
             // we *have* connectivity
             synchronized (vpnStatus) {
                 vpnStatus.notifyAll();
@@ -1045,6 +1053,7 @@ class VpnThread extends Thread {
                     protected Void doInBackground(Void... params) {
                         try {
                             vpnFD.close();
+                            Log.i(TAG, "VPN closed");
                             cleanCopyThreads();
                         } catch (Throwable t) {
                             Log.e(TAG, "stopping copy threads failed", t);
