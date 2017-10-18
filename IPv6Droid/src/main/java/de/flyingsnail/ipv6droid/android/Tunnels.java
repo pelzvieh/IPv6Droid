@@ -22,6 +22,7 @@ package de.flyingsnail.ipv6droid.android;
 
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.util.Log;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -39,6 +40,7 @@ public class Tunnels extends ArrayList<TicTunnel> implements Cloneable {
     static final long serialVersionUID =-9178679015599058965L;
     // the TicTunnel that is currently active/selected for activation
     private @Nullable TicTunnel activeTunnel;
+    static final String TAG = Tunnels.class.getSimpleName();
 
     /**
      * A Serializable for the whole purpose to have a Serializable for which Android didn't implement
@@ -166,6 +168,27 @@ public class Tunnels extends ArrayList<TicTunnel> implements Cloneable {
             throw new IllegalArgumentException("Attempt to set an active tunnel that is not contained in the tunnel list");
         this.activeTunnel = activeTunnel;
     }
+
+    /**
+     * Test if there are cached tunnels, and if the cached tunnels are expired today.
+     * @return true if there are non-expired tunnels, false if there are no tunnels, or some expired.
+     */
+    public boolean checkCachedTunnelAvailability() {
+        if (size() == 0) {
+            Log.i(TAG, "No tunnels are cached");
+            return false;
+        }
+        for (TicTunnel tunnel: this) {
+            if (!tunnel.isEnabled()) {
+                Log.i(TAG, String.format("Tunnel %s (%s) is expired", tunnel.getTunnelName(), tunnel.getTunnelId()));
+                return false; // one tunnel is expired or disabled
+            }
+        }
+        Log.i(TAG, "All tunnels in cache are valid");
+        return true; // all tunnels are enabled
+    }
+
+
 
     @Override
     public boolean equals(Object o) {

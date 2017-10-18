@@ -55,7 +55,6 @@ import java.io.StringWriter;
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.statistics.Statistics;
 import de.flyingsnail.ipv6droid.android.statusdetail.StatisticsActivity;
-import de.flyingsnail.ipv6droid.ayiya.TicConfiguration;
 
 /**
  * The Android service controlling the VpnThread.
@@ -155,7 +154,6 @@ public class AyiyaVpnService extends VpnService {
         if (thread == null || !thread.isIntendedToRun()) {
             // Build the configuration object from the saved shared preferences.
             SharedPreferences myPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-            TicConfiguration ticConfiguration = loadTicConfiguration(myPreferences);
             RoutingConfiguration routingConfiguration = loadRoutingConfiguration(myPreferences);
             Log.d(TAG, "retrieved configuration");
 
@@ -171,7 +169,7 @@ public class AyiyaVpnService extends VpnService {
             }
 
             // Start a new session by creating a new thread.
-            thread = new VpnThread(this, cachedTunnels, ticConfiguration, routingConfiguration, SESSION_NAME);
+            thread = new VpnThread(this, cachedTunnels, routingConfiguration, SESSION_NAME);
             startVpn();
             displayOngoingNotification(null);
         } else {
@@ -466,12 +464,6 @@ public class AyiyaVpnService extends VpnService {
             thread.onConnectivityChange(connected);
     }
 
-
-    private TicConfiguration loadTicConfiguration(SharedPreferences myPreferences) {
-        return new TicConfiguration(myPreferences.getString("tic_username", ""),
-                myPreferences.getString("tic_password", ""),
-                myPreferences.getString("tic_host", ""));
-    }
 
     private RoutingConfiguration loadRoutingConfiguration(SharedPreferences myPreferences) {
         boolean workaround = myPreferences.getBoolean("routes_workaround", false) &&

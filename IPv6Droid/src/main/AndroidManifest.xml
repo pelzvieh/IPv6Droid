@@ -92,7 +92,7 @@
         </receiver>
 
         <activity
-            android:name=".android.googlesubscription.SubscribeTunnel"
+            android:name=".android.googlesubscription.SubscribeTunnelActivity"
             android:label="@string/title_activity_subscribe_tunnel"
             android:parentActivityName=".android.MainActivity">
             <meta-data

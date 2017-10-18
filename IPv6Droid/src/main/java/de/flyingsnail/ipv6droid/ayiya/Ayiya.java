@@ -22,6 +22,7 @@ package de.flyingsnail.ipv6droid.ayiya;
 
 import android.annotation.SuppressLint;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import java.io.IOException;
@@ -87,6 +88,9 @@ public class Ayiya {
 
     /** The sha1 hash of the tunnel password */
     private byte[] hashedPassword;
+
+    /** Expiration time of supplied tunnel */
+    private final @Nullable Date expiry;
 
     /** The socket to the PoP */
     private DatagramSocket socket = null;
@@ -199,6 +203,7 @@ public class Ayiya {
         ipv6Local = tunnel.getIpv6Endpoint();
         ipv6Pop = tunnel.getIpv6Pop();
         mtu = tunnel.getMtu();
+        expiry = tunnel.getExpiryDate();
 
         // we only need the hash of the password
         try {
@@ -289,6 +294,9 @@ public class Ayiya {
             throw new IOException("beat() called on unconnected Ayiya");
         if (!socket.isConnected())
             throw new TunnelBrokenException("Socket to PoP is not connected", null);
+        if (expiry != null && expiry.before(new Date())) {
+            throw new TunnelBrokenException("Tunnel expiry date reached", null);
+        }
         byte[] ayiyaPacket;
         try {
             ayiyaPacket = buildAyiyaStruct(new byte[0], OpCode.NOOP,  IPPROTO_NONE);

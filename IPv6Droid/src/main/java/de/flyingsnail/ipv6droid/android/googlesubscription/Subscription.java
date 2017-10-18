@@ -29,6 +29,7 @@ package de.flyingsnail.ipv6droid.android.googlesubscription;
  * Created by pelzi on 15.06.16.
  */
 public class Subscription {
+    public static final String GOOGLESUBSCRIPTION = "<googlesubscription>";
     private String signature;
     private String sku;
     private String orderId;

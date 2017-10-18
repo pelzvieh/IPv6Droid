@@ -47,7 +47,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import de.flyingsnail.ipv6droid.R;
-import de.flyingsnail.ipv6droid.android.googlesubscription.SubscribeTunnel;
+import de.flyingsnail.ipv6droid.android.googlesubscription.SubscribeTunnelActivity;
+import de.flyingsnail.ipv6droid.android.googlesubscription.Subscription;
 import de.flyingsnail.ipv6droid.android.statusdetail.StatisticsActivity;
 import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 
@@ -270,29 +271,10 @@ public class MainActivity extends Activity {
         if (myPreferences.getString(TIC_USERNAME, "").isEmpty() ||
                 myPreferences.getString(TIC_PASSWORD, "").isEmpty() ||
                 host.isEmpty() ||
-                (myPreferences.getString(TIC_USERNAME, "").equals("<googlesubscription>")
-                        && !checkCachedTunnelAvailability()) ) {
+                (myPreferences.getString(TIC_USERNAME, "").equals(Subscription.GOOGLESUBSCRIPTION)
+                        && !tunnels.checkCachedTunnelAvailability()) ) {
             openSubscriptionOverview();
         }
-    }
-
-    /**
-     * Test if there are cached tunnels, and if the cached tunnels are expired today.
-     * @return true if there are non-expired tunnels, false if there are no tunnels, or some expired.
-     */
-    private boolean checkCachedTunnelAvailability() {
-        if (tunnels.size() == 0) {
-            Log.i(TAG, "No tunnels are cached");
-            return false;
-        }
-        for (TicTunnel tunnel: tunnels) {
-            if (!tunnel.isEnabled()) {
-                Log.i(TAG, String.format("Tunnel %s (%s) is expired", tunnel.getTunnelName(), tunnel.getTunnelId()));
-                return false; // one tunnel is expired or disabled
-            }
-        }
-        Log.i(TAG, "Valid tunnels are in cache");
-        return true; // all tunnels are enabled
     }
 
     /**
@@ -304,7 +286,7 @@ public class MainActivity extends Activity {
     }
 
     private void openSubscriptionOverview () {
-        Intent setupIntent = new Intent(this, SubscribeTunnel.class);
+        Intent setupIntent = new Intent(this, SubscribeTunnelActivity.class);
         startActivity(setupIntent);
     }
 

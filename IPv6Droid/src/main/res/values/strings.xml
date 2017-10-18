@@ -74,7 +74,7 @@
     <string name="technical_problem">Subscription failed - temporary problem contacting server</string>
     <string name="user_subscription_checking">Checking user subscription…</string>
     <string name="user_subscription_verifying">Verifying subscription…</string>
-    <string name="user_subscription_failed">Verification failed (%s)</string>
+    <string name="user_subscription_failed">Verification failed</string>
     <string name="user_subscription_starting_wizard">Starting Google subscription wizard…</string>
     <string name="user_subscription_purchase_done">Thank you for purchasing! Provisioning your tunnels…</string>
     <string name="user_subscription_aborted">Subscription not successful, we\'re sorry.</string>

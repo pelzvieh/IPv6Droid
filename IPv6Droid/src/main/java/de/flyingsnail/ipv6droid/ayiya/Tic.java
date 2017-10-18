@@ -147,10 +147,6 @@ public class Tic {
             if (socket != null) {
                 throw new IllegalStateException("This Tic is already connected.");
             }
-            // todo implement proper handling of googlesubscription re-check
-            if ("<googlesubscription>".equals(config.getServer())) {
-                throw new ConnectionFailedException("Google subscription managed tunnels cannot be verified by TIC", null);
-            }
             // unencrypted TCP connection to an Inet4Address
             InetAddress[] serverAddresses = Inet4Address.getAllByName(config.getServer());
             for (InetAddress serverAddress: serverAddresses) {
