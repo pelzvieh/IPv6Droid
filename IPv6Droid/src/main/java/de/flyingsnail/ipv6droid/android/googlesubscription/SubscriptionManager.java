@@ -102,7 +102,10 @@ public class SubscriptionManager {
         Intent serviceIntent =
                 new Intent("com.android.vending.billing.InAppBillingService.BIND");
         serviceIntent.setPackage("com.android.vending");
-        originatingContext.bindService(serviceIntent, serviceConn, Context.BIND_AUTO_CREATE);
+        if (!originatingContext.bindService(serviceIntent, serviceConn, Context.BIND_AUTO_CREATE)) {
+            Log.e(TAG, "bindService failed");
+            listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.NO_SERVICE);
+        }
     }
 
     /**

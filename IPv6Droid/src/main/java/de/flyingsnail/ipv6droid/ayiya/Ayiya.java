@@ -187,7 +187,20 @@ public class Ayiya {
         ECHO_RESPONSE,	/* Echo Response */
         MOTD,	/* MOTD */
         QUERY_REQUEST,	/* Query Request */
-        QUERY_RESPONSE	/* Query Response */
+        QUERY_RESPONSE,	/* Query Response */
+        FORWARD_RESPONSE /* Resonse to a forward request - flyingsnail extension not present in original protocol */
+    }
+
+    /**
+     * The error codes sent as responses of unsuccessful packages
+     * @author pelzi
+     *
+     */
+    enum ErrorCode {
+        INVALID_OPERATION, /* no valid opcode was supplied */
+        INVALID_PACKET, /* sent packet does not meet the ayiya specs */
+        AUTHENTICATION_FAILED, /* MAC did not macth package content */
+        TIMED_OUT /* tunnel not refreshed in time */
     }
 
 
@@ -260,6 +273,7 @@ public class Ayiya {
         close();
         connect();
     }
+
     /**
      * Tell if a valid response has already been received by this instance.
      * @return true if any valid response was already received.
@@ -412,7 +426,21 @@ public class Ayiya {
                 if (opCode == OpCode.ECHO_RESPONSE) {
                     Log.i(TAG, "Received valid echo response");
                 }
+                if (opCode == OpCode.FORWARD_RESPONSE) {
+                    Log.w(TAG, "Received error code from peer");
+                    ErrorCode error = getErrorCode(bb.array(), bb.arrayOffset(), bb.limit());
+                    switch (error) {
+                        case AUTHENTICATION_FAILED:
+                               throw new TunnelBrokenException("Received error code authentication failed from peer", null);
+                        default:
+                            invalidPacketCounter++;
+                    }
+                }
             } else {
+                if (checkErrorPacket(bb.array(), bb.arrayOffset(), bb.limit())) {
+                    Log.i(TAG, "Received low-level error packet, aborting tunnel");
+                    throw new TunnelBrokenException("Server unwilling to serve us", null);
+                }
                 invalidPacketCounter++;
             }
         }
@@ -429,6 +457,20 @@ public class Ayiya {
         try {
             int opCodeOrdinal = packet[2+offset] &0xF;
             return OpCode.values()[opCodeOrdinal];
+        } catch (IndexOutOfBoundsException e) {
+            return null;
+        }
+    }
+
+    private ErrorCode getErrorCode (byte[] packet, int offset, int bytecount) {
+        if (bytecount < 3) {
+            Log.e(TAG, "Received too short package");
+            return null;
+        }
+
+        try {
+            int opCodeOrdinal = packet[OVERHEAD+offset];
+            return ErrorCode.values()[opCodeOrdinal];
         } catch (IndexOutOfBoundsException e) {
             return null;
         }
@@ -501,7 +543,37 @@ public class Ayiya {
     }
 
     /**
-     * Writes a packet to the tunel.
+     * Check if a packet is a low-level error message from the server.
+     *
+     * @param packet the byte[] to check
+     * @param offset the int giving the offset into the array to start
+     * @param bytecount the int giving the number of bytes to consider
+     * @return true if the packet is a special error-message from the server.
+     */
+    private boolean checkErrorPacket(byte[] packet, int offset, int bytecount) {
+        // check if the size includes at least a full ayiya header
+        if (bytecount != 4) {
+            Log.w(TAG, "Received strange packet, not a low-level error packet (wrong length)");
+            return false;
+        }
+
+        // check "magic" bytes
+        if (packet[offset + 0] == 0 && packet[offset + 2] == 0 && packet [offset + 3] == 0) {
+            ErrorCode errorCode = getErrorCode(packet, offset + 1, 1);
+            if (errorCode == null) {
+                Log.w(TAG, "Received strange packet, correct length and magic bytes, but unkown error code");
+                return false;
+            } else {
+                Log.e(TAG, "Received low-level error message from server, error code is " + errorCode);
+                return true;
+            }
+        } else {
+            Log.w(TAG, "Received strange packet, correct length but no magic bytes");
+            return false;
+        }
+    }
+    /**
+     * Writes a packet to the tunnel.
      * @param payload the payload to send (an IP packet itself...)
      * @throws IOException in case of network problems (probably temporary in nature)
      * @throws TunnelBrokenException in case that this tunnel is no longer usable and must be restarted

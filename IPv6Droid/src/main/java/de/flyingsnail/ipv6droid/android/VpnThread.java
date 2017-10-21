@@ -255,7 +255,7 @@ class VpnThread extends Thread {
                 if (tunnels == null || !tunnels.checkCachedTunnelAvailability() || !tunnels.isTunnelActive()) {
                     // some status reporting...
                     vpnStatus.setActivity(R.string.vpnservice_activity_query_tic);
-                    readTunnelFromTIC(); // ensures tunnels to be set, preserves active tunnel if still valid
+                    readTunnels(); // ensures tunnels to be set, preserves active tunnel if still valid
                     vpnStatus.setTunnels(tunnels);
                     // check for active tunnel
                     if (!tunnels.isTunnelActive()) {
@@ -766,7 +766,7 @@ class VpnThread extends Thread {
                             > TIC_RECHECK_BLOCKED_MILLISECONDS) {
                         boolean tunnelChanged;
                         try {
-                            tunnelChanged = readTunnelFromTIC(); // no need to update activeTunnel - we're going to quit
+                            tunnelChanged = readTunnels(); // no need to update activeTunnel - we're going to quit
                         } catch (IOException ioe) {
                             Log.i (VpnThread.TAG, "TIC and Ayiya both disturbed - assuming network problems", ioe);
                             continue;
@@ -807,7 +807,7 @@ class VpnThread extends Thread {
      * @throws ConnectionFailedException if some permanent problem exists with TIC and the current config
      * @throws IOException if some (hopefully transient) technical problem came up.
      */
-    private boolean readTunnelFromTIC() throws ConnectionFailedException, IOException {
+    private boolean readTunnels() throws ConnectionFailedException, IOException {
         boolean tunnelChanged = false;
 
         List<TicTunnel> availableTunnels = tunnelReader.queryTunnels();

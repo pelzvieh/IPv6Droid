@@ -69,21 +69,24 @@ public class SubscribeTunnelActivity extends Activity implements SubscriptionChe
         Runnable updateView = new Runnable() {
             @Override
             public void run() {
-                Log.d(TAG, "Updating display state with current state");
-                int nrTunnels = subscriptionManager.getTunnels().size();
-                if(nrTunnels > 0) {
-                    purchasingInfoView.setText(String.format(getString(R.string.user_has_subscription), nrTunnels));
-                    purchasingInfoView.setTextColor(Color.BLACK);
-                    purchaseButton.setEnabled(false);
+                final SubscriptionManager mySubscriptionManager = subscriptionManager;
+                if (mySubscriptionManager != null) { // check if parent object wasn't destroyed
+                    Log.d(TAG, "Updating display state with current state");
+                    int nrTunnels = mySubscriptionManager.getTunnels().size();
+                    if (nrTunnels > 0) {
+                        purchasingInfoView.setText(String.format(getString(R.string.user_has_subscription), nrTunnels));
+                        purchasingInfoView.setTextColor(Color.BLACK);
+                        purchaseButton.setEnabled(false);
 
-                    updatePreferences();
-
-                    updateCachedTunnelList();
-                } else {
-                    purchasingInfoView.setText(R.string.user_not_subscribed);
-                    purchasingInfoView.setTextColor(Color.BLACK);
-                    purchaseButton.setEnabled(true);
-                }
+                        // update caches
+                        updatePreferences();
+                        updateCachedTunnelList();
+                    } else {
+                        purchasingInfoView.setText(R.string.user_not_subscribed);
+                        purchasingInfoView.setTextColor(Color.BLACK);
+                        purchaseButton.setEnabled(true);
+                    }
+                } // if the parent object has not been destroy'ed yet
             } // This is your code
         };
         mainHandler.post(updateView);
@@ -132,17 +135,20 @@ public class SubscribeTunnelActivity extends Activity implements SubscriptionChe
         purchasingInfoView = (TextView)findViewById(R.id.subscriptionStatus);
         purchaseButton = (Button) findViewById(R.id.subscribe);
 
-        subscriptionManager = new SubscriptionManager(this, this);
         purchasingInfoView.setText(R.string.user_subscription_checking);
         purchasingInfoView.setTextColor(Color.BLACK);
         purchaseButton.setEnabled(false); // we don't have a bound service yet
 
+        subscriptionManager = new SubscriptionManager(this, this);
     }
 
     public void onPurchaseSubsciption (final View clickedView) {
         purchaseButton.setEnabled(false); // gegen ungeduldige Benutzer
-        purchasingInfoView.setText(R.string.user_subscription_starting_wizard);
-        subscriptionManager.initiatePurchase();
+        SubscriptionManager mySubscriptionManager = this.subscriptionManager; // avoid race condition
+        if (mySubscriptionManager != null) {
+            purchasingInfoView.setText(R.string.user_subscription_starting_wizard);
+            mySubscriptionManager.initiatePurchase();
+        }
     }
 
     /**
@@ -171,6 +177,8 @@ public class SubscribeTunnelActivity extends Activity implements SubscriptionChe
                 purchasingInfoView.setTextColor(Color.RED);
                 break;
             case NO_SERVICE:
+                purchasingInfoView.setText(R.string.user_subscription_failed);
+                purchasingInfoView.setTextColor(Color.RED);
                 purchaseButton.setEnabled(false); // we don't have a bound service anymore
                 break;
             case CHECK_FAILED:
@@ -203,7 +211,8 @@ public class SubscribeTunnelActivity extends Activity implements SubscriptionChe
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        subscriptionManager.handlePurchaseActivityResult(requestCode, resultCode, data);
+        if (subscriptionManager != null) // The Activity might have been destroyed after click on purchase...
+          subscriptionManager.handlePurchaseActivityResult(requestCode, resultCode, data);
     }
 
     @Override
