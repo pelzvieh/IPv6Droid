@@ -23,7 +23,6 @@
 
 package de.flyingsnail.ipv6droid.android.googlesubscription;
 
-import android.support.annotation.Nullable;
 import android.util.Log;
 
 import org.json.JSONException;
@@ -31,6 +30,8 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import androidx.annotation.Nullable;
 
 public class SubscriptionBuilder {
     static final String SKU_TUNNEL_SUBSCRIPTION = "de.flyingsnail.ipv6.tunnelsub";

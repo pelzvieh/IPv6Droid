@@ -21,8 +21,6 @@
 package de.flyingsnail.ipv6droid.ayiya;
 
 import android.annotation.SuppressLint;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.util.Log;
 
 import java.io.IOException;
@@ -40,6 +38,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Date;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /**
  * AYIYA - Anything In Anything
@@ -261,7 +262,7 @@ public class Ayiya {
             throw new ConnectionFailedException("Tunnel broken right from scratch", e);
         }
 
-        Log.i(TAG, "Ayiya tunnel to POP IP " + ipv4Pop + "created.");
+        Log.i(TAG, "Ayiya tunnel to POP IP " + ipv4Pop + " created.");
     }
 
     /**
@@ -698,6 +699,7 @@ public class Ayiya {
             socket.close();
         }
         socket = null; // it's useless anyway
+        Log.i(TAG, "Ayiya tunnel closed");
     }
 
     /**

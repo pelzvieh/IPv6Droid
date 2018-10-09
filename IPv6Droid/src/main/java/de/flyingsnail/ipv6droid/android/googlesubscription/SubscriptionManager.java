@@ -33,13 +33,11 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.util.Pair;
 import android.util.Log;
 
 import com.android.vending.billing.IInAppBillingService;
 
+import org.jboss.resteasy.spi.ResteasyProviderFactory;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -47,6 +45,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.util.Pair;
 import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 import de.flyingsnail.ipv6server.restapi.SubscriptionsApi;
 
@@ -59,10 +60,15 @@ public class SubscriptionManager {
     private static final int RESPONSE_CODE_OK = 0;
     private static final int RC_BUY = 3;
 
+    static {
+        // add exception handler to client factory
+        ResteasyProviderFactory pf = ResteasyProviderFactory.getInstance();
+        pf.addClientErrorInterceptor(new SubscriptionErrorInterceptor());
+    }
     /**
      * The client representing the SubscrptionsApi of the IPv6Server.
      */
-    SubscriptionsApi subscriptionsClient = RestProxyFactory.createSubscriptionsClient();
+    SubscriptionsApi subscriptionsClient;
 
 
     /**
@@ -98,6 +104,8 @@ public class SubscriptionManager {
         tunnels = new ArrayList<TicTunnel>();
         listener = resultListener;
         originatingContext = context;
+
+        subscriptionsClient = RestProxyFactory.createSubscriptionsClient();
 
         Intent serviceIntent =
                 new Intent("com.android.vending.billing.InAppBillingService.BIND");

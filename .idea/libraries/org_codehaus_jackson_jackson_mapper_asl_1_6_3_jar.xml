@@ -1,5 +1,5 @@
 <component name="libraryTable">
-  <library name="jackson-mapper-asl-1.6.3">
+  <library name="org.codehaus.jackson:jackson-mapper-asl:1.6.3@jar">
     <CLASSES>
       <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.codehaus.jackson/jackson-mapper-asl/1.6.3/401018ca417fd6241dfb4cc40aca7fe47a55bd3e/jackson-mapper-asl-1.6.3.jar!/" />
     </CLASSES>

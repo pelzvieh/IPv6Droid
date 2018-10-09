@@ -28,13 +28,13 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.preference.PreferenceManager;
-import android.support.annotation.NonNull;
 import android.util.Log;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import androidx.annotation.NonNull;
 import de.flyingsnail.ipv6droid.ayiya.ConnectionFailedException;
 import de.flyingsnail.ipv6droid.ayiya.Tic;
 import de.flyingsnail.ipv6droid.ayiya.TicConfiguration;

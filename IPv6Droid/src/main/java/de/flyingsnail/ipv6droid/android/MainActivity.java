@@ -28,9 +28,9 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.net.VpnService;
+import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -46,6 +46,7 @@ import android.widget.TextView;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.googlesubscription.SubscribeTunnelActivity;
 import de.flyingsnail.ipv6droid.android.googlesubscription.Subscription;
@@ -340,7 +341,11 @@ public class MainActivity extends Activity {
                         // Android's Parcel system doesn't handle subclasses well, so...
                         intent.putExtra(AyiyaVpnService.EXTRA_CACHED_TUNNELS, tunnels.getAndroidSerializable());
                     }
-                    startService(intent);
+                    if (Build.VERSION.SDK_INT >= 26) {
+                        startForegroundService(intent);
+                    } else {
+                        startService(intent);
+                    }
                 }
                 break;
         }

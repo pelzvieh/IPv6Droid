@@ -19,9 +19,9 @@
  */
 package de.flyingsnail.ipv6droid.android;
 
-import android.support.annotation.NonNull;
-
 import java.io.IOException;
+
+import androidx.annotation.NonNull;
 
 /**
  * An object implementing TunnelPersisting allows to read and update a tunnels list

@@ -79,4 +79,8 @@
     <string name="user_subscription_purchase_done">Thank you for purchasing! Provisioning your tunnels…</string>
     <string name="user_subscription_aborted">Subscription not successful, we\'re sorry.</string>
     <string name="main_activity_caution_sixxs_ends">Caution: your configuration is about to stop working after 2017-06-06, because SixXS is shutting down its service!</string>
+    <string name="channel_errors_name">IPv6 Errors</string>
+    <string name="channel_status_name">IPv6 Status</string>
+    <string name="channel_errors_description">Error messages from IPv6 tunnel</string>
+    <string name="channel_status_description">Current status of IPv6 tunnel</string>
 </resources>

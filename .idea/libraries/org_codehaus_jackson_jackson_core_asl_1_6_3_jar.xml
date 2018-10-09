@@ -1,5 +1,5 @@
 <component name="libraryTable">
-  <library name="jackson-core-asl-1.6.3">
+  <library name="org.codehaus.jackson:jackson-core-asl:1.6.3@jar">
     <CLASSES>
       <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.codehaus.jackson/jackson-core-asl/1.6.3/fb554331f1347f696075cef17939a82dcdbf334f/jackson-core-asl-1.6.3.jar!/" />
     </CLASSES>

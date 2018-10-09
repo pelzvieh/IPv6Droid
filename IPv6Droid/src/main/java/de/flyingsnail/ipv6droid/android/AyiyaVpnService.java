@@ -20,7 +20,7 @@
 
 package de.flyingsnail.ipv6droid.android;
 
-import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -38,11 +38,6 @@ import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.TaskStackBuilder;
-import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -52,9 +47,17 @@ import java.io.PrintWriter;
 import java.io.Serializable;
 import java.io.StringWriter;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
+import androidx.core.app.TaskStackBuilder;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.statistics.Statistics;
 import de.flyingsnail.ipv6droid.android.statusdetail.StatisticsActivity;
+
+import static android.app.Notification.PRIORITY_LOW;
 
 /**
  * The Android service controlling the VpnThread.
@@ -68,6 +71,8 @@ public class AyiyaVpnService extends VpnService {
     public static final String EXTRA_CACHED_TUNNELS = AyiyaVpnService.class.getName() + ".CACHED_TUNNEL";
 
     public static final String STATISTICS_INTERFACE = AyiyaVpnService.class.getPackage().getName() + ".Statistics";
+    private static final String CHANNEL_ERRORS_ID = "deadbeef";
+    private static final String CHANNEL_STATUS_ID = "42";
 
     // the thread doing the work
     private VpnThread thread;
@@ -116,13 +121,14 @@ public class AyiyaVpnService extends VpnService {
         super.onCreate();
 
         // create notification builders
-        errorNotificationBuilder = createNotificationBuilder(SettingsActivity.class);
+        createNotificationChannels();
+        errorNotificationBuilder = createNotificationBuilder(SettingsActivity.class, CHANNEL_ERRORS_ID);
 
-        ongoingNotificationBuilder = createNotificationBuilder(StatisticsActivity.class);
+        ongoingNotificationBuilder = createNotificationBuilder(StatisticsActivity.class, CHANNEL_STATUS_ID);
         ongoingNotificationBuilder.setContentTitle(getString(R.string.app_name));
         ongoingNotificationBuilder.setOngoing(true);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            ongoingNotificationBuilder.setVisibility(Notification.VISIBILITY_PUBLIC);
+            ongoingNotificationBuilder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
             ongoingNotificationBuilder.setLocalOnly(true); // not interesting on connected devices
         }
 
@@ -152,6 +158,9 @@ public class AyiyaVpnService extends VpnService {
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.i(TAG, "received start command");
         if (thread == null || !thread.isIntendedToRun()) {
+            // become user visible
+            displayOngoingNotification(null);
+
             // Build the configuration object from the saved shared preferences.
             SharedPreferences myPreferences = PreferenceManager.getDefaultSharedPreferences(this);
             RoutingConfiguration routingConfiguration = loadRoutingConfiguration(myPreferences);
@@ -171,7 +180,6 @@ public class AyiyaVpnService extends VpnService {
             // Start a new session by creating a new thread.
             thread = new VpnThread(this, cachedTunnels, routingConfiguration, SESSION_NAME);
             startVpn();
-            displayOngoingNotification(null);
         } else {
             Log.i(TAG, "VpnThread not started again - already running");
             Toast.makeText(getApplicationContext(),
@@ -282,6 +290,7 @@ public class AyiyaVpnService extends VpnService {
     private void registerGlobalConnectivityReceiver() {
         connectivityReceiver = new ConnectivityReceiver();
         final IntentFilter intentFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
+
         registerReceiver(connectivityReceiver, intentFilter);
         Log.d(TAG, "registered CommandReceiver for global broadcasts");
     }
@@ -338,12 +347,39 @@ public class AyiyaVpnService extends VpnService {
     }
 
     /**
+     * Create the notification channels for our two types of notifications
+     */
+    private void createNotificationChannels() {
+        // Create the NotificationChannel, but only on API 26+ because
+        // the NotificationChannel class is new and not in the support library
+        if (Build.VERSION.SDK_INT >= 26) {
+            NotificationChannel channelErrors = new NotificationChannel(
+                    CHANNEL_ERRORS_ID,
+                    getString(R.string.channel_errors_name),
+                    NotificationManager.IMPORTANCE_HIGH);
+            channelErrors.setDescription(getString(R.string.channel_errors_description));
+            NotificationChannel channelStatus = new NotificationChannel(
+                    CHANNEL_STATUS_ID,
+                    getString(R.string.channel_status_name),
+                    NotificationManager.IMPORTANCE_LOW);
+            channelStatus.setDescription(getString(R.string.channel_status_description));
+            // Register the channel with the system; you can't change the importance
+            // or other notification behaviors after this
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channelErrors);
+            notificationManager.createNotificationChannel(channelStatus);
+        }
+    }
+
+    /**
      * Prepare errorNotificationBuilder to build a notification from this service. Called from the
      * two specific notification display helper methods.
      */
-    private NotificationCompat.Builder createNotificationBuilder(Class intentClass) {
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(getApplicationContext())
-                .setSmallIcon(R.drawable.ic_notification);
+    private NotificationCompat.Builder createNotificationBuilder(Class intentClass, String channelId) {
+        NotificationCompat.Builder notificationBuilder =
+                new NotificationCompat.Builder(getApplicationContext(), channelId)
+                        .setSmallIcon(R.drawable.ic_notification)
+                        .setPriority(PRIORITY_LOW);
 
         Intent settingsIntent = new Intent(this, intentClass);
         TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
@@ -376,8 +412,7 @@ public class AyiyaVpnService extends VpnService {
         bigTextStyle.bigText(sw.getBuffer());
         errorNotificationBuilder.setStyle(bigTextStyle);
 
-        NotificationManager notificationManager =
-                (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
         // mId allows you to update the notification later on.
         notificationManager.notify(exceptionNotificationID, errorNotificationBuilder.build());
         errorNotification = true;
@@ -388,8 +423,7 @@ public class AyiyaVpnService extends VpnService {
      */
     private void notifyUserOfErrorCancel() {
         if (errorNotification) {
-            NotificationManager notificationManager =
-                    (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
             // mId allows you to update the notification later on.
             notificationManager.cancel(exceptionNotificationID);
             errorNotification = false;
@@ -397,7 +431,7 @@ public class AyiyaVpnService extends VpnService {
     }
 
     /**
-     * A helper method to initialize and display a notification on the
+     * A helper method to initialize and display a notification on the notification drawer
      * @param statusReport a VpnStatusReport giving details about current VPN status
      */
     private void displayOngoingNotification(@Nullable VpnStatusReport statusReport) {
@@ -454,14 +488,20 @@ public class AyiyaVpnService extends VpnService {
         public void onReceive(Context context, @NonNull Intent intent) {
             String action = intent.getAction();
             if (action.equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
-                onConnectivityChange(!intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false));
+                onConnectivityChange(
+                        !intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false));
             }
         }
     }
 
-    private void onConnectivityChange(boolean connected) {
+    private void onConnectivityChange (final boolean connected) {
+        onConnectivityChange(connected, null);
+    }
+
+    private void onConnectivityChange(final boolean connected, @Nullable final LinkProperties newLinkProperties) {
+        Log.i(TAG, "Received connectivity change notification");
         if (thread != null && thread.isAlive())
-            thread.onConnectivityChange(connected);
+            thread.onConnectivityChange(connected, newLinkProperties);
     }
 
 

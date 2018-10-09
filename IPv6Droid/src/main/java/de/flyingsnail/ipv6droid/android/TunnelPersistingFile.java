@@ -1,7 +1,6 @@
 package de.flyingsnail.ipv6droid.android;
 
 import android.content.Context;
-import android.support.annotation.NonNull;
 import android.util.Log;
 
 import java.io.IOException;
@@ -11,6 +10,7 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.util.List;
 
+import androidx.annotation.NonNull;
 import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 
 /**

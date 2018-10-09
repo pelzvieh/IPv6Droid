@@ -38,8 +38,8 @@
     <string name="pref_summary_routes_default_on">Gesamter IPv6-Verkehr wird durch den Tunnel gleitet</string>
     <string name="pref_summary_routes_default_off">Nur der IPv6-Verkehr zum speziellen Subnetz wird durch den Tunnel geleitet</string>
     <string name="pref_title_routes_specific">Nur spezielles IPv6 Subnetz</string>
-    <string name="pref_title_routes_setnameservers">Google DNS-Dienst für Namensauflösung</string>
-    <string name="pref_summary_routes_setnameservers_on">Google-Server werden zur IPv6-Namensauflösung verwendet</string>
+    <string name="pref_title_routes_setnameservers">Öffentliche DNS-Dienste für Namensauflösung</string>
+    <string name="pref_summary_routes_setnameservers_on">Quad9- und Google-Server werden zur IPv6-Namensauflösung verwendet</string>
     <string name="pref_summary_routes_setnameservers_off">Standard-Server des Netzanbieters wird zur Namensauflösung verwendet</string>
     <string name="pref_title_routes_workaround">Routing-Bug in Android 4.4 umgehen</string>
     <string name="pref_summary_routes_workaround_on">Es wird versucht, einen Fehler in Android 4.4 durch eine eigene Routingtabelle zu umgehen. Erfordert root.</string>

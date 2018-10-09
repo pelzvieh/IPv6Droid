@@ -20,8 +20,6 @@
 
 package de.flyingsnail.ipv6droid.android;
 
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.util.Log;
 
 import java.io.Serializable;
@@ -29,6 +27,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 
 /**

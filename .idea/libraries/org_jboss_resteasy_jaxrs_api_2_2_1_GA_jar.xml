@@ -1,5 +1,5 @@
 <component name="libraryTable">
-  <library name="jaxrs-api-2.2.1.GA">
+  <library name="org.jboss.resteasy:jaxrs-api:2.2.1.GA@jar">
     <CLASSES>
       <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.jboss.resteasy/jaxrs-api/2.2.1.GA/e54157c62506fe314da82b1edf8ba99fcd0860f8/jaxrs-api-2.2.1.GA.jar!/" />
     </CLASSES>

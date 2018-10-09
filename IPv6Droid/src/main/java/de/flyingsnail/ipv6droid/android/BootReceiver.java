@@ -24,6 +24,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.VpnService;
+import android.os.Build;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
@@ -56,7 +57,12 @@ public class BootReceiver extends BroadcastReceiver {
                         Intent i = new Intent(context, AyiyaVpnService.class);
                         // Android's Parcel system doesn't handle subclasses well, so...
                         i.putExtra(AyiyaVpnService.EXTRA_CACHED_TUNNELS, tunnels.getAndroidSerializable());
-                        context.startService(i);
+
+                        if (Build.VERSION.SDK_INT >= 26) {
+                            context.startForegroundService(i);
+                        } else {
+                            context.startService(i);
+                        }
                         Log.d(TAG, "Sent service start intent");
                     } else
                         Log.i(TAG, "User must consent to starting this VPN - no autostart possible");

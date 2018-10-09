@@ -40,8 +40,8 @@
     <string name="pref_summary_routes_default_off">Use the VPN only for the specified specific IPv6 subnet</string>
     <string name="pref_title_routes_specific">Specific IPv6 subnet to route</string>
     <string name="pref_default_routes_specific" translatable="false"/>
-    <string name="pref_title_routes_setnameservers">Set Google DNS servers</string>
-    <string name="pref_summary_routes_setnameservers_on">Use Google name servers for hostname resolution</string>
+    <string name="pref_title_routes_setnameservers">Set public DNS servers</string>
+    <string name="pref_summary_routes_setnameservers_on">Use quad9 and Google name servers for hostname resolution</string>
     <string name="pref_summary_routes_setnameservers_off">Use native network\'s name servers for hostname resolution</string>
     <string name="pref_title_routes_workaround">Android 4.4 workaround</string>
     <string name="pref_summary_routes_workaround_on">Tries to cure routing bug in Android 4.4.x. Requires root.</string>

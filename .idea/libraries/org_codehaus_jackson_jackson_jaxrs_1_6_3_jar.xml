@@ -1,5 +1,5 @@
 <component name="libraryTable">
-  <library name="jackson-jaxrs-1.6.3">
+  <library name="org.codehaus.jackson:jackson-jaxrs:1.6.3@jar">
     <CLASSES>
       <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.codehaus.jackson/jackson-jaxrs/1.6.3/994f5b0d71f58469ef897c78851f6c27de5c233d/jackson-jaxrs-1.6.3.jar!/" />
     </CLASSES>

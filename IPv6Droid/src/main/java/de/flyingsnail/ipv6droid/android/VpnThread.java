@@ -26,6 +26,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
+import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.Network;
 import android.net.NetworkInfo;
@@ -36,8 +37,6 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Handler;
 import android.os.ParcelFileDescriptor;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.system.OsConstants;
 import android.util.Log;
 import android.widget.Toast;
@@ -52,14 +51,17 @@ import java.io.OutputStream;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.StringTokenizer;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.googlesubscription.SubscribeTunnelActivity;
 import de.flyingsnail.ipv6droid.android.statistics.Statistics;
 import de.flyingsnail.ipv6droid.android.statistics.TransmissionStatistics;
 import de.flyingsnail.ipv6droid.ayiya.AuthenticationFailedException;
@@ -86,7 +88,7 @@ class VpnThread extends Thread {
     /**
      * The IPv6 address of the Google DNS servers.
      */
-    private static final Inet6Address[] GOOGLE_DNS = new Inet6Address[2];
+    private static final Inet6Address[] PUBLIC_DNS = new Inet6Address[4];
     /**
      * An implementation of the TunnelReader interface
      */
@@ -95,10 +97,20 @@ class VpnThread extends Thread {
 
     static {
         try {
-            GOOGLE_DNS[0] = (Inet6Address)Inet6Address.getByAddress(
+            // quad9 primary 2620:fe::fe
+            PUBLIC_DNS[0] = (Inet6Address)Inet6Address.getByAddress(
+                    new byte[]{0x26,0x20,0x00,(byte)0xfe,0,0,0,0,0,0,0,0,0,0,0,(byte)0xfe}
+            );
+            // quad9 secondary 2620:fe::9
+            PUBLIC_DNS[1] = (Inet6Address)Inet6Address.getByAddress(
+                    new byte[]{0x26,0x20,0x00,(byte)0xfe,0,0,0,0,0,0,0,0,0,0,0,0x9}
+            );
+            // Google primary 2001:4860:4860::8888
+            PUBLIC_DNS[2] = (Inet6Address)Inet6Address.getByAddress(
                     new byte[]{0x20,0x01,0x48,0x60,0x48,0x60,0,0,0,0,0,0,0,0,(byte)0x88,(byte)0x88}
             );
-            GOOGLE_DNS[1] = (Inet6Address)Inet6Address.getByAddress(
+            // Google secondary 2001:4860:4860::8844
+            PUBLIC_DNS[3] = (Inet6Address)Inet6Address.getByAddress(
                     new byte[]{0x20,0x01,0x48,0x60,0x48,0x60,0,0,0,0,0,0,0,0,(byte)0x88,(byte)0x44}
             );
         } catch (UnknownHostException e) {
@@ -223,7 +235,7 @@ class VpnThread extends Thread {
         // resolve system service "ConnectivityManager"
         connectivityManager = (ConnectivityManager)applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE);
         // initialise nativeRouting info
-        updateNetworkDetails();
+        updateNetworkDetails(null);
         TunnelReader tr;
         try {
             tr = new TicTunnelReader(ayiyaVpnService);
@@ -321,15 +333,20 @@ class VpnThread extends Thread {
      * Request copy threads to close, reset thread fields, and close ayiya object
      */
     private synchronized void cleanCopyThreads() {
-        if (inThread != null) {
-            inThread.stopCopy();
+        final CopyThread myInThread = inThread; // Race-Conditions vermeiden
+        if (myInThread != null) {
+            inThread = null;
+            myInThread.stopCopy();
         }
-        if (outThread != null) {
-            outThread.stopCopy();
+        final CopyThread myOutThread = outThread; // Race-Conditions vermeiden
+        if (myOutThread != null) {
+            outThread = null;
+            myOutThread.stopCopy();
         }
-        if (ayiya != null) {
+        final Ayiya myAyiya = ayiya; // Race-Conditions vermeiden
+        if (myAyiya != null) {
             try {
-                ayiya.close();
+                myAyiya.close();
             } catch (Exception e) {
                 Log.e(TAG, "Cannot close ayiya object", e);
             }
@@ -519,9 +536,12 @@ class VpnThread extends Thread {
 
             } catch (InterruptedException e) {
                 Log.i(VpnThread.TAG, "refresh tunnel loop received interrupt", e);
+            } catch (ConnectionFailedException e) {
+                throw e;
             } catch (Throwable t) {
                 ayiyaVpnService.notifyUserOfError(R.string.unexpected_runtime_exception, t);
                 Log.e(TAG, "Caught unexpected throwable", t);
+                throw new ConnectionFailedException(t.getMessage(), t);
             } finally {
                 cleanAll();
                 postToast(applicationContext, R.string.vpnservice_tunnel_down, Toast.LENGTH_SHORT);
@@ -786,6 +806,25 @@ class VpnThread extends Thread {
             }
         }
         Log.i(TAG, "Terminated loop of current ayiya object (interrupt or end of a copy thread)");
+        Throwable deathCause = null;
+        final CopyThread myInThread = inThread;
+        final CopyThread myOutThread = outThread;
+        if (myInThread != null && !myInThread.isAlive())
+            deathCause = myInThread.getDeathCause();
+        if (deathCause == null && myOutThread != null && !myOutThread.isAlive())
+            deathCause = myOutThread.getDeathCause();
+        if (deathCause != null) {
+            if (deathCause instanceof TunnelBrokenException) {
+                // launch SubscribeTunnelActivity to re-check subscription status
+                Log.i(TAG, "Forcing re-check of subscrioption after a TunnelBrokenException", deathCause);
+                // @todo sollte eigentlich ohne Benutzer-Sichtbarkeit funktionieren
+                Intent setupIntent = new Intent(ayiyaVpnService, SubscribeTunnelActivity.class);
+                ayiyaVpnService.startActivity(setupIntent);
+                throw new IOException("Ayiya claims it is broken", deathCause);
+            }
+            if (deathCause instanceof IOException)
+                throw (IOException) deathCause;
+        }
     }
 
     /**
@@ -892,9 +931,9 @@ class VpnThread extends Thread {
                 postToast(applicationContext, R.string.vpnservice_route_not_added, Toast.LENGTH_SHORT);
             }
 
-            // add Google DNS server, if configured so
+            // add public DNS server, if configured so
             if (routingConfiguration.isSetNameServers()) {
-                for (Inet6Address dns : GOOGLE_DNS) {
+                for (Inet6Address dns : PUBLIC_DNS) {
                     builder.addDnsServer(dns);
                 }
             }
@@ -929,22 +968,36 @@ class VpnThread extends Thread {
 
     /**
      * Read route and DNS info of the currently active and the VPN network. Weird code, but the best
-     * I could imagine out of the ConnectivityManager API.
-     * In result, the networkDetails field will be updated.
+     * I could imagine out of the ConnectivityManager API. In API versions 28, network changes
+     * are no longer handled by CONNECTIVITY_ACTION broadcast, but by requestNetwork callback methods.
+     * These provide the required details as parameters.
+     *
+     * <p>So when running in version 28 following,
+     * we only use this method to</p>
+     * <ul>
+     * <li>store the supplied value of native network properties</li>
+     * <li>enumerate the network properties of our VPN network</li>
+     * </ul>
+     * <p>In result, the networkDetails field will be updated.</p>
      */
     @TargetApi(21)
-    private void updateNetworkDetails() {
+    private void updateNetworkDetails(@Nullable final LinkProperties newLinkProperties) {
         if (Build.VERSION.SDK_INT >= 21) {
+
+            // force-set native link properties to supplied information
+            if (newLinkProperties != null)
+                networkDetails.setNativeProperties(newLinkProperties);
+
+
             Log.d(VpnThread.TAG, "updateNetworkDetails trying to read nativeRouting");
             ConnectivityManager cm = getConnectivityManager();
             NetworkInfo activeNetworkInfo = cm.getActiveNetworkInfo();
             if (activeNetworkInfo != null) {
-                List<Network> networks = Arrays.asList(cm.getAllNetworks());
-                for (Network n : networks) {
+                for (Network n : cm.getAllNetworks()) {
                     NetworkInfo ni = cm.getNetworkInfo(n);
                     if (ni != null) {
                         LinkProperties linkProperties = cm.getLinkProperties(n);
-                        if (ni.getType() == activeNetworkInfo.getType()) {
+                        if (newLinkProperties == null && ni.getType() == activeNetworkInfo.getType()) {
                             networkDetails.setNativeProperties(linkProperties);
                         } else if (ni.getType() == ConnectivityManager.TYPE_VPN) {
                             networkDetails.setVpnProperties(linkProperties);
@@ -990,11 +1043,11 @@ class VpnThread extends Thread {
      * This is safe to call from the main thread.
      * @param connected the boolean indicating if the new network situation has connectivity
      */
-    public void onConnectivityChange(boolean connected) {
+    public void onConnectivityChange(final boolean connected, @Nullable final LinkProperties newLinkProperties) {
         Log.i(TAG, "Connectivity changed");
         if (connected) {
             // update cached information
-            updateNetworkDetails();
+            updateNetworkDetails(newLinkProperties);
 
             // check if our routing is still valid, otherwise invalidate vpnFD
             if (isTunnelRoutingRequired() ^ tunnelRouted) {
@@ -1017,7 +1070,12 @@ class VpnThread extends Thread {
                 final Ayiya myAyiya = ayiya; // avoid race conditions
                 final CopyThread myInThread = inThread;
                 if (myAyiya != null && myInThread != null && myInThread.isAlive()) {
-                    if (!myAyiya.isAlive()) {
+                    /*
+                       myAyiya.isAlive is not sufficient to detect impact of connectivity change!
+                       Reason is probably that the formerly used network can still be used for a limited
+                       time period.
+                     */
+                    if (!(myAyiya.isAlive() && isCurrentSocketAdressStillValid())) {
                         Log.i(TAG, "ayiya object no longer functional after connectivity change - reconnecting");
                         new AsyncTask<Void, Void, Void>() {
                             @Override
@@ -1040,6 +1098,40 @@ class VpnThread extends Thread {
                 vpnStatus.notifyAll();
             }
         } // we have connectivity
+        else {
+            Log.i(TAG, "We're not connected anyway.");
+        }
+    }
+
+    /**
+     * Check if the local address of current Ayiya is still valid considering the cached network
+     * details. A useful call to this method therefore should be precedet by a validation or update
+     * of the networkDetails cache.
+     * <p>This method constantly returns false when run on Android versions prior to 21.</p>
+     *
+     * @return true if the current local address still matches one of the link addresses
+     */
+    private boolean isCurrentSocketAdressStillValid() {
+        boolean addressValid = false;
+        final Ayiya myAyiya = ayiya;
+        final LinkProperties myNativeProperties = networkDetails.getNativeProperties();
+        Log.i(TAG, "Explicit address validity check requested");
+        if (Build.VERSION.SDK_INT >= 21 && myAyiya != null && myNativeProperties != null) {
+            InetAddress currentLocalAddress = ayiya.getSocket().getLocalAddress();
+            for (LinkAddress linkAdress : networkDetails.getNativeProperties().getLinkAddresses()) {
+                InetAddress newAdress = linkAdress.getAddress();
+                if (newAdress.equals(currentLocalAddress)) {
+                    if (Log.isLoggable(TAG, Log.DEBUG))
+                        Log.d(TAG, "old socket address matches new link local address " + newAdress);
+                    addressValid = true;
+                }
+            }
+        }
+        if (addressValid)
+            Log.i(TAG, "Current socket address still matches the new native local address");
+        else
+            Log.i(TAG, "Current socket address cannot be verified to be valid");
+        return addressValid;
     }
 
     /**
@@ -1059,4 +1151,17 @@ class VpnThread extends Thread {
         return isAlive() && !closeTunnel;
     }
 
+    /**
+     * A copy thread calls back to state that it is gone.
+     * @param diedThread the CopyThread that died.
+     */
+    protected void copyThreadDied(CopyThread diedThread) {
+        // no special treatment for inThread required, a dying inThread is immediately noticed
+        // by VpnThread.
+        if (diedThread != inThread && diedThread == outThread) {
+            Log.i(TAG, "outThread notified us of its death, killing inThread as well");
+            inThread.stopCopy();
+            // inThread is now dying as well, not going unnoticed by monitoredHeartbeatLoop
+        }
+    }
 }

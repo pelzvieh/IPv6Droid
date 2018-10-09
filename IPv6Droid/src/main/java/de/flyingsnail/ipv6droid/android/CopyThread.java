@@ -20,7 +20,6 @@
 package de.flyingsnail.ipv6droid.android;
 
 import android.net.TrafficStats;
-import android.support.annotation.NonNull;
 import android.util.Log;
 
 import java.io.IOException;
@@ -31,6 +30,8 @@ import java.util.Date;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.statistics.TransmissionStatistics;
 
@@ -55,6 +56,9 @@ class CopyThread extends Thread {
     private Date lastPacketReceived;
     // the instance that will keep statistics for this copy thread
     private TransmissionStatistics statisticsCollector;
+
+    // the throwable that caused this thread to die
+    private Throwable deathCause;
 
     // The time to wait for additional packets until sending them out
     private final long packetBundlingPeriod;
@@ -143,6 +147,7 @@ class CopyThread extends Thread {
         }
         bufferPool.clear();
         packetQueue.clear();
+        deathCause = null;
     }
 
     @Override
@@ -186,6 +191,7 @@ class CopyThread extends Thread {
             }
             Log.i(TAG, "Copy thread " + getName() + " ordinarily stopped");
         } catch (Exception e) {
+            deathCause = e;
             if (e instanceof InterruptedException || e instanceof SocketException || e instanceof IOException) {
                 Log.i(TAG, "Copy thread " + getName() + " ran into expected Exception, will end gracefully");
             } else {
@@ -194,7 +200,12 @@ class CopyThread extends Thread {
             }
         } finally {
             cleanAll();
+            vpnThread.copyThreadDied(this);
         }
+    }
+
+    public @Nullable Throwable getDeathCause() {
+        return deathCause;
     }
 
 }
