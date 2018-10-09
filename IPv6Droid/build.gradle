@@ -70,7 +70,7 @@ android {
 
 dependencies {
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'org.jboss.resteasy:resteasy-client:3.6.1.Final'
+    implementation 'org.jboss.resteasy.mobile:resteasy-mobile:1.0.0'
     implementation 'androidx.annotation:annotation:1.0.0'
     implementation 'org.jetbrains.trove4j:trove4j:20160824'
 }
