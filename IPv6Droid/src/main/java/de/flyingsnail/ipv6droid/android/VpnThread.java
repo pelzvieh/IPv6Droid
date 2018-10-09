@@ -1118,12 +1118,15 @@ class VpnThread extends Thread {
         Log.i(TAG, "Explicit address validity check requested");
         if (Build.VERSION.SDK_INT >= 21 && myAyiya != null && myNativeProperties != null) {
             InetAddress currentLocalAddress = ayiya.getSocket().getLocalAddress();
+            Log.d(TAG, "Comparing current socket local address " + currentLocalAddress);
             for (LinkAddress linkAdress : networkDetails.getNativeProperties().getLinkAddresses()) {
                 InetAddress newAdress = linkAdress.getAddress();
+                Log.d(TAG, "- with link address " + newAdress);
                 if (newAdress.equals(currentLocalAddress)) {
-                    if (Log.isLoggable(TAG, Log.DEBUG))
-                        Log.d(TAG, "old socket address matches new link local address " + newAdress);
+                    Log.d(TAG, "--> old socket address matches new link local address" );
                     addressValid = true;
+                } else {
+                    Log.d(TAG, "--- No match");
                 }
             }
         }
