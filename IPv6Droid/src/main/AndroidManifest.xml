@@ -20,13 +20,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="de.flyingsnail.ipv6droid"
-    android:versionCode="51"
-    android:versionName="1.60a4">
+    android:versionCode="52"
+    android:versionName="1.60a5">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="com.android.vending.BILLING" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <!-- We also work on devices with classic touchpad or mouse -->
     <uses-feature android:name="android.hardware.touchscreen" android:required="false"/>
