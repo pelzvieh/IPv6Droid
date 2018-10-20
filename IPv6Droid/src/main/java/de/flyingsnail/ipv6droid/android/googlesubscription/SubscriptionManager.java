@@ -175,11 +175,7 @@ public class SubscriptionManager {
                 continuationToken = activeSubs.getString("INAPP_CONTINUATION_TOKEN", null);
 
                 if (skus == null || skuData == null || skuSignature == null)
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
-                        throw new RemoteException("service returned null as one of the expected arrays");
-                    } else {
-                        throw new RemoteException();
-                    }
+                    throw new RemoteException("service returned null as one of the expected arrays");
 
                 // create api stub
                 for (int index = 0; index < skus.size(); index++) {

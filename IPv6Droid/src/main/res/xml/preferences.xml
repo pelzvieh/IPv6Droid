@@ -29,13 +29,11 @@
         <EditTextPreference
             android:key="tic_host"
             android:title="@string/pref_title_host"
-            android:defaultValue="@string/pref_default_host"
+            android:defaultValue=""
             android:selectAllOnFocus="true"
             android:inputType="textUri"
             android:singleLine="true"
             android:maxLines="1" />
-
-
 
         <SwitchPreference
             android:key="autostart"
@@ -46,7 +44,7 @@
 
         <Preference
             android:key="always-on-vpn"
-            android:title="Configure using system VPN settings">
+            android:title="@string/activity_alwayson_setting">
             <intent android:action="android.net.vpn.SETTINGS"/>
         </Preference>
 
@@ -71,13 +69,6 @@
             android:inputType="textNoSuggestions"
             android:singleLine="true"
             android:maxLines="1" />
-
-        <SwitchPreference
-            android:key="routes_workaround"
-            android:title="@string/pref_title_routes_workaround"
-            android:summaryOn="@string/pref_summary_routes_workaround_on"
-            android:summaryOff="@string/pref_summary_routes_workaround_off"
-            android:defaultValue="false" />
 
         <SwitchPreference
             android:key="routes_setnameservers"

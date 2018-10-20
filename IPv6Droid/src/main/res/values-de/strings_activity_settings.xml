@@ -31,6 +31,7 @@
     <string name="pref_title_autostart">Tunnel beim Einschalten starten</string>
     <string name="pref_summary_autostart_on">Automatisch IPv6 beim Einschalten oder Neustarten des Gerätes aktivieren</string>
     <string name="pref_summary_autostart_off">Der IPv6-Tunnel wird manuell durch Aufrufen der App gestartet</string>
+    <string name="activity_alwayson_setting">Als dauerhaftes VPN konfigurieren</string>
 
     <!-- Routes settings -->
     <string name="pref_header_routes">Routen-Einstellungen</string>
@@ -41,9 +42,6 @@
     <string name="pref_title_routes_setnameservers">Öffentliche DNS-Dienste für Namensauflösung</string>
     <string name="pref_summary_routes_setnameservers_on">Quad9- und Google-Server werden zur IPv6-Namensauflösung verwendet</string>
     <string name="pref_summary_routes_setnameservers_off">Standard-Server des Netzanbieters wird zur Namensauflösung verwendet</string>
-    <string name="pref_title_routes_workaround">Routing-Bug in Android 4.4 umgehen</string>
-    <string name="pref_summary_routes_workaround_on">Es wird versucht, einen Fehler in Android 4.4 durch eine eigene Routingtabelle zu umgehen. Erfordert root.</string>
-    <string name="pref_summary_routes_workaround_off">Es werden keine faulen Tricks versucht.</string>
     <string name="pref_title_force_routing">Route durch VPN erzwingen</string>
     <string name="pref_summary_force_routing_on">Der Tunnel wird auch verwendet, wenn das Gerät sich in einem IPv6-fähigen Netz befindet</string>
     <string name="pref_summary_force_routing_off">In IPv6-fähigen Netzen wird der Tunnel nicht verwendet</string>

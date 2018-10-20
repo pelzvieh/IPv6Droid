@@ -32,6 +32,7 @@
     <string name="pref_title_autostart">Start Tunnel at Boot</string>
     <string name="pref_summary_autostart_on">Automatically start the IPv6 tunnel after (re-)starting the device</string>
     <string name="pref_summary_autostart_off">Explicit start from the app is required to start the IPv6 tunnel</string>
+    <string name="activity_alwayson_setting">Always-on VPN system setting</string>
 
     <!-- Routes settings -->
     <string name="pref_header_routes">Route settings</string>
@@ -43,9 +44,6 @@
     <string name="pref_title_routes_setnameservers">Set public DNS servers</string>
     <string name="pref_summary_routes_setnameservers_on">Use quad9 and Google name servers for hostname resolution</string>
     <string name="pref_summary_routes_setnameservers_off">Use native network\'s name servers for hostname resolution</string>
-    <string name="pref_title_routes_workaround">Android 4.4 workaround</string>
-    <string name="pref_summary_routes_workaround_on">Tries to cure routing bug in Android 4.4.x. Requires root.</string>
-    <string name="pref_summary_routes_workaround_off">Don\'t attempt dirty tricks.</string>
     <string name="pref_title_force_routing">Force routing through VPN</string>
     <string name="pref_summary_force_routing_on">Use the VPN tunnel even in IPv6 capable networks</string>
     <string name="pref_summary_force_routing_off">Use native network in IPv6 capable networks</string>

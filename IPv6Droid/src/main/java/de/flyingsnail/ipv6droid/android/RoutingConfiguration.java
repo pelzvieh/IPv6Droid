@@ -35,11 +35,6 @@ public class RoutingConfiguration implements Cloneable {
     private String specificRoute;
 
     /**
-     * a boolean flag if we should try to reconfigure the device's nativeRouting.
-     */
-    private boolean tryRoutingWorkaround;
-
-    /**
      * a boolean flag if we should set DNS servers.
      */
     private boolean setNameServers;
@@ -53,16 +48,14 @@ public class RoutingConfiguration implements Cloneable {
      * Initialize the RoutingConfiguration object.
      * @param setDefaultRoute a flag if the default route should be set
      * @param specificRoute a String giving a specific route
-     * @param tryRoutingWorkaround a flag if we should reprogram the device's nativeRouting
      * @param setNameServers a flag if we should set Google name servers
      * @param forceRouting a flag if we should route IPv6 through the tunnel even in IPv6 capable networks
      */
     public RoutingConfiguration(boolean setDefaultRoute, String specificRoute,
-                                boolean tryRoutingWorkaround, boolean setNameServers,
+                                boolean setNameServers,
                                 boolean forceRouting) {
         this.setDefaultRoute = setDefaultRoute;
         this.specificRoute = specificRoute;
-        this.tryRoutingWorkaround = tryRoutingWorkaround;
         this.setNameServers = setNameServers;
         this.forceRouting = forceRouting;
     }
@@ -81,14 +74,6 @@ public class RoutingConfiguration implements Cloneable {
 
     public void setSpecificRoute(String specificRoute) {
         this.specificRoute = specificRoute;
-    }
-
-    public boolean isTryRoutingWorkaround() {
-        return tryRoutingWorkaround;
-    }
-
-    public void setTryRoutingWorkaround(boolean tryRoutingWorkaround) {
-        this.tryRoutingWorkaround = tryRoutingWorkaround;
     }
 
     public boolean isSetNameServers() {

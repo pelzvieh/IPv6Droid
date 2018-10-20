@@ -20,10 +20,8 @@
 
 package de.flyingsnail.ipv6droid.android;
 
-import android.annotation.TargetApi;
 import android.net.LinkProperties;
 import android.net.RouteInfo;
-import android.os.Build;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -57,9 +55,8 @@ class NetworkDetails {
      * @return List&lt;RouteInfo&gt; containing route definitions. May be empty, if no network
      * is connected or no information is available.
      */
-    @TargetApi(21)
     public List<RouteInfo> getNativeRouteInfos() {
-        List<RouteInfo> routeInfos = (nativeProperties != null && Build.VERSION.SDK_INT >= 21)
+        List<RouteInfo> routeInfos = (nativeProperties != null)
                 ? nativeProperties.getRoutes()
                 : null;
         // read information out of the cached linkProperties
@@ -74,9 +71,8 @@ class NetworkDetails {
      * @return List&lt;RouteInfo&gt; containing route definitions. May be empty, if no network
      * is connected or no information is available.
      */
-    @TargetApi(21)
     public List<RouteInfo> getVpnRouteInfos() {
-        List<RouteInfo> routeInfos = (vpnProperties != null && Build.VERSION.SDK_INT >= 21)
+        List<RouteInfo> routeInfos = (vpnProperties != null)
                 ? vpnProperties.getRoutes()
                 : null;
         // read information out of the cached linkProperties
@@ -91,9 +87,8 @@ class NetworkDetails {
      * @return List&lt;InetAddress&gt; containing the DNS server's addresses. May be null, if no
      * network is connected, or no such information is available.
      */
-    @TargetApi(21)
     public List<InetAddress> getNativeDnsServers() {
-        List<InetAddress> dnsServers = (nativeProperties != null && Build.VERSION.SDK_INT >= 21)
+        List<InetAddress> dnsServers = (nativeProperties != null)
                 ? nativeProperties.getDnsServers()
                 : null;
 
@@ -108,9 +103,8 @@ class NetworkDetails {
      * @return List&lt;InetAddress&gt; containing the DNS server's addresses. May be null, if no
      * network is connected, or no such information is available.
      */
-    @TargetApi(21)
     public List<InetAddress> getVpnDnsServers() {
-        List<InetAddress> dnsServers = (vpnProperties != null && Build.VERSION.SDK_INT >= 21)
+        List<InetAddress> dnsServers = (vpnProperties != null)
                 ? vpnProperties.getDnsServers()
                 : null;
 

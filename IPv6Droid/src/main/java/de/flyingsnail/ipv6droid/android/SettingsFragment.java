@@ -21,6 +21,7 @@
 package de.flyingsnail.ipv6droid.android;
 
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Bundle;
 import android.preference.EditTextPreference;
 import android.preference.Preference;
@@ -44,7 +45,6 @@ public class SettingsFragment extends PreferenceFragment {
         // Load the preferences from an XML resource
         addPreferencesFromResource(R.xml.preferences);
         /* @todo depending on Android version, make either autostart or always-on-vpn visible */
-
     }
 
     /**
@@ -84,8 +84,10 @@ public class SettingsFragment extends PreferenceFragment {
             preferenceSummaryToValueListener.onSharedPreferenceChanged(preferences, key);
         }
         preferences.registerOnSharedPreferenceChangeListener(preferenceSummaryToValueListener);
-        Preference workaroundPref = findPreference("routes_workaround");
-        workaroundPref.setEnabled(AyiyaVpnService.checkAndroidVersionForWorkaround());
+        Preference autoStart = findPreference("autostart");
+        autoStart.setEnabled(Build.VERSION.SDK_INT < Build.VERSION_CODES.N);
+        Preference alwaysOn = findPreference("always-on-vpn");
+        alwaysOn.setEnabled(Build.VERSION.SDK_INT >= Build.VERSION_CODES.N);
     }
 
     /**

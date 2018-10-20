@@ -21,7 +21,6 @@
 package de.flyingsnail.ipv6droid.android;
 
 import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -41,12 +40,10 @@ import android.system.OsConstants;
 import android.util.Log;
 import android.widget.Toast;
 
-import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
@@ -399,22 +396,6 @@ class VpnThread extends Thread {
                     break;
                 }
 
-                // due to kitkat issue, check local health
-                if (routingConfiguration.isTryRoutingWorkaround() && tunnelRouted && !checkRouting()) {
-                    Log.e(TAG, "Routing broken on this device, no default route is set for IPv6");
-                    postToast(applicationContext, R.string.routingbroken, Toast.LENGTH_LONG);
-                    try {
-                        fixRouting();
-                        if (checkRouting()) {
-                            Log.i(TAG, "VPNService nativeRouting was broken on this device, but could be fixed by the workaround");
-                            postToast(applicationContext, R.string.routingfixed, Toast.LENGTH_LONG);
-                        }
-                    } catch (RuntimeException re) {
-                        ayiyaVpnService.notifyUserOfError(R.string.routingbroken, re);
-                        Log.e(TAG, "Error fixing nativeRouting", re);
-                    }
-                }
-
                 // timestamp base mechanism to prevent busy looping through e.g. IOException
                 Date now = new Date();
                 long lastIterationRun = now.getTime() - lastStartAttempt.getTime();
@@ -558,127 +539,19 @@ class VpnThread extends Thread {
      * Check for existing IPv6 connectivity. We're using the nativeRouting info of the operating system.
      * @return true if there's existing IPv6 connectivity
      */
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private boolean ipv6DefaultExists() {
-        if (Build.VERSION.SDK_INT >= 21) {
-            Log.d(TAG, "Checking if we have an IPv6 default route on current network");
+        Log.d(TAG, "Checking if we have an IPv6 default route on current network");
 
-            for (RouteInfo routeInfo : networkDetails.getNativeRouteInfos()) {
-                // isLoggable would be useful here, but checks for an (outdated?) convention of TAG shorter than 23 chars
-                Log.d(TAG, "Checking if route is an IPv6 default route: " + routeInfo);
-                // @todo strictly speaking, we shouldn't check for default route, but for the configured route of the tunnel
-                if (routeInfo.isDefaultRoute() && routeInfo.getGateway() instanceof Inet6Address) {
-                    Log.i(TAG, "Identified a valid IPv6 default route existing: " + routeInfo);
-                    return true;
-                }
-            }
-        } else {
-            return checkRouting();
-        }
-        return false;
-    }
-
-    /**
-     *     This methods tries to check - without official API - if our device currently has
-     *     an IPV6 route set.
-     *     @return true if routing is OK
-     */
-    private boolean checkRouting() {
-        try {
-            Log.d(TAG, "about to check nativeRouting configuration after Builder.establish");
-            Process routeChecker = Runtime.getRuntime().exec(
-                    new String[]{"/system/bin/ip", "-f", "inet6", "route", "show", "default"});
-            BufferedReader reader = new BufferedReader (
-                    new InputStreamReader(
-                            routeChecker.getInputStream()));
-            BufferedReader errreader = new BufferedReader (
-                    new InputStreamReader(
-                            routeChecker.getErrorStream()));
-            String output = reader.readLine();
-            String errors = errreader.readLine();
-            try {
-                routeChecker.waitFor();
-            } catch (InterruptedException e) {
-                // we got interrupted, so we kill our process
-                routeChecker.destroy();
-                Log.i(TAG, "route checker command interrupted", e);
-            }
-            int exitValue = 0;
-            try {
-                exitValue = routeChecker.exitValue();
-            } catch (IllegalStateException ise) {
-                // command still running. Hmmm.
-                Log.wtf(TAG, "routeChecker still running after waitFor/destroy", ise);
-            }
-            if (output == null || exitValue != 0) {
-                Log.e(TAG, "error checking route: " + errors);
-                return false; // default route is not set on ipv6
-            } else {
-                Log.i(TAG, "Routing checked and found to be OK");
+        for (RouteInfo routeInfo : networkDetails.getNativeRouteInfos()) {
+            // isLoggable would be useful here, but checks for an (outdated?) convention of TAG shorter than 23 chars
+            Log.d(TAG, "Checking if route is an IPv6 default route: " + routeInfo);
+            // @todo strictly speaking, we shouldn't check for default route, but for the configured route of the tunnel
+            if (routeInfo.isDefaultRoute() && routeInfo.getGateway() instanceof Inet6Address) {
+                Log.i(TAG, "Identified a valid IPv6 default route existing: " + routeInfo);
                 return true;
             }
-        } catch (IOException e) {
-            Log.e(TAG, "Routing could not be checked", e);
-            return false; // we cannot even check :-(
         }
-    }
-
-    /**
-     * Try to fix the problem detected by checkRouting. This requires rooted devices :-(
-     */
-    private void fixRouting() {
-        try {
-            Log.d(TAG, "Starting attempt to fix nativeRouting");
-            Process routeAdder = Runtime.getRuntime().exec(
-                    new String[]{
-                            "/system/xbin/su", "-c",
-                            "/system/bin/ip -f inet6 route add default dev tun0"});
-            BufferedReader reader = new BufferedReader (
-                    new InputStreamReader(
-                            routeAdder.getErrorStream()));
-            String errors = reader.readLine();
-            try {
-                routeAdder.waitFor();
-            } catch (InterruptedException e) {
-                // we got interrupted, so we kill our process
-                routeAdder.destroy();
-            }
-            if (errors != null) {
-                Log.e(TAG, "Command to set default route created error message: " + errors);
-                throw new IllegalStateException("Error adding default route");
-            }
-            Log.i(TAG, "Added IPv6 default route to dev tun0");
-
-            Process filterCleaner = Runtime.getRuntime().exec(
-                    new String[]{
-                            "/system/xbin/su", "-c",
-                            "/system/bin/ip6tables -t filter -F OUTPUT"});
-            reader = new BufferedReader (
-                    new InputStreamReader(
-                            filterCleaner.getErrorStream()));
-            errors = reader.readLine();
-            try {
-                filterCleaner.waitFor();
-            } catch (InterruptedException e) {
-                // we got interrupted, so we kill our process
-                filterCleaner.destroy();
-            }
-            int exitValue = 0;
-            try {
-                exitValue = filterCleaner.exitValue();
-            } catch (IllegalStateException ise) {
-                // command still running. Hmmm.
-            }
-            if (exitValue != 0) {
-                Log.e(TAG, "error flushing OUTPUT: " + errors);
-                throw new IllegalStateException("Error flushing OUTPUT filter");
-            } else {
-                Log.i(TAG, "succeeded flushing OUTPUT");
-            }
-            Log.d(TAG, "Routing should be fixed, command result is " + routeAdder.exitValue());
-        } catch (IOException e) {
-            Log.d(TAG, "Failed to fix nativeRouting", e);
-        }
+        return false;
     }
 
     /**
@@ -757,7 +630,12 @@ class VpnThread extends Thread {
             inThread.join(heartbeatInterval - lastPacketDelta);
             if (closeTunnel)
                 break;
+            // re-check cached network information
+            if (!isCurrentSocketAdressStillValid())
+                updateNetworkDetails(null);
+            // determine last package transmission time
             lastPacketDelta = new Date().getTime() - ayiya.getLastPacketSentTime().getTime();
+            // if no traffic occurred, send a heartbeat package
             if ((inThread != null && inThread.isAlive()) &&
                     (outThread != null && outThread.isAlive()) &&
                     lastPacketDelta >= heartbeatInterval - 100) {
@@ -879,27 +757,6 @@ class VpnThread extends Thread {
     }
 
     /**
-     * <ul>
-     * <li>Allow inet v4 traffic in general, as it would be disabled by default when setting up an v6
-     * VPN, but only on Android 5.0 and later.</li>
-     * <li>Configure builder to generate a blocking socket.</li>
-     * <li>Allow applications to intentionally bypass the VPN.</li>
-     * </ul>
-     * The respective methods are only available in API 21
-     * and later.
-     * Method is separate from configureBuilderFromTunnelSpecification only to safely apply the
-     * TargetApi annotation and concentrate API specific code at one place.
-     */
-    @TargetApi(21)
-    private void configureNewSettings(@NonNull VpnService.Builder builder) {
-        if (Build.VERSION.SDK_INT >= 21) {
-            builder.setBlocking(true);
-            builder.allowBypass();
-            builder.allowFamily(OsConstants.AF_INET);
-        }
-    }
-
-    /**
      * Setup VpnService.Builder object (in effect, the local tun device)
      * @param builder the Builder to configure
      * @param tunnelSpecification the TicTunnel specification of the tunnel to set up.
@@ -939,8 +796,12 @@ class VpnThread extends Thread {
             }
         }
 
-        // call method allowFamily on Builder object on API 21 and later (required in Android 5 and later)
-        configureNewSettings(builder);
+        // Configure builder to generate a blocking socket
+        builder.setBlocking(true);
+        // Allow applications to intentionally bypass the VPN.
+        builder.allowBypass();
+        // Explicitly allow usage of IPv4 (i.e. traffic outside of the VPN)
+        builder.allowFamily(OsConstants.AF_INET);
 
         // register an intent to call up main activity from system managed dialog.
         Intent configureIntent = new Intent("android.intent.action.MAIN");
@@ -980,28 +841,47 @@ class VpnThread extends Thread {
      * </ul>
      * <p>In result, the networkDetails field will be updated.</p>
      */
-    @TargetApi(21)
     private void updateNetworkDetails(@Nullable final LinkProperties newLinkProperties) {
-        if (Build.VERSION.SDK_INT >= 21) {
+        boolean foundNative = false; // we need to try different approaches to get native network depending on API version
 
-            // force-set native link properties to supplied information
-            if (newLinkProperties != null)
-                networkDetails.setNativeProperties(newLinkProperties);
+        // force-set native link properties to supplied information
+        if (newLinkProperties != null) {
+            networkDetails.setNativeProperties(newLinkProperties);
+            foundNative = true;
+        }
 
+        Log.d(VpnThread.TAG, "updateNetworkDetails trying to read native link properties");
+        ConnectivityManager cm = getConnectivityManager();
 
-            Log.d(VpnThread.TAG, "updateNetworkDetails trying to read nativeRouting");
-            ConnectivityManager cm = getConnectivityManager();
-            NetworkInfo activeNetworkInfo = cm.getActiveNetworkInfo();
-            if (activeNetworkInfo != null) {
-                for (Network n : cm.getAllNetworks()) {
-                    NetworkInfo ni = cm.getNetworkInfo(n);
-                    if (ni != null) {
-                        LinkProperties linkProperties = cm.getLinkProperties(n);
-                        if (newLinkProperties == null && ni.getType() == activeNetworkInfo.getType()) {
-                            networkDetails.setNativeProperties(linkProperties);
-                        } else if (ni.getType() == ConnectivityManager.TYPE_VPN) {
-                            networkDetails.setVpnProperties(linkProperties);
-                        }
+        // direct way to read network available from API 23
+        if (!foundNative && Build.VERSION.SDK_INT >= 23) {
+            Network activeNetwork = cm.getActiveNetwork();
+            if (activeNetwork != null) {
+                if (cm.getNetworkInfo(activeNetwork).getType() != ConnectivityManager.TYPE_VPN) {
+                    LinkProperties linkProperties = cm.getLinkProperties(activeNetwork);
+                    networkDetails.setNativeProperties(linkProperties);
+                    foundNative = true;
+                } else {
+                    Log.w(TAG, "ConnectivityManager.getActiveNetwork returned our VPN");
+                }
+            }
+        }
+
+        // reconstruct link properties for VPN network, and, prior to API 23, attempt to
+        // find the native network's link properties.
+        NetworkInfo activeNetworkInfo = cm.getActiveNetworkInfo();
+        if (activeNetworkInfo != null) {
+            for (Network n : cm.getAllNetworks()) {
+                NetworkInfo ni = cm.getNetworkInfo(n);
+                if (ni != null) {
+                    LinkProperties linkProperties = cm.getLinkProperties(n);
+                    if (!foundNative
+                            && ni.getType() == activeNetworkInfo.getType()
+                            && ni.getSubtype() == activeNetworkInfo.getSubtype()) {
+                        networkDetails.setNativeProperties(linkProperties);
+                        foundNative = true;
+                    } else if (ni.getType() == ConnectivityManager.TYPE_VPN) {
+                        networkDetails.setVpnProperties(linkProperties);
                     }
                 }
             }
@@ -1116,17 +996,20 @@ class VpnThread extends Thread {
         final Ayiya myAyiya = ayiya;
         final LinkProperties myNativeProperties = networkDetails.getNativeProperties();
         Log.i(TAG, "Explicit address validity check requested");
-        if (Build.VERSION.SDK_INT >= 21 && myAyiya != null && myNativeProperties != null) {
-            InetAddress currentLocalAddress = ayiya.getSocket().getLocalAddress();
-            Log.d(TAG, "Comparing current socket local address " + currentLocalAddress);
-            for (LinkAddress linkAdress : networkDetails.getNativeProperties().getLinkAddresses()) {
-                InetAddress newAdress = linkAdress.getAddress();
-                Log.d(TAG, "- with link address " + newAdress);
-                if (newAdress.equals(currentLocalAddress)) {
-                    Log.d(TAG, "--> old socket address matches new link local address" );
-                    addressValid = true;
-                } else {
-                    Log.d(TAG, "--- No match");
+        if (myAyiya != null && myNativeProperties != null) {
+            DatagramSocket socket = myAyiya.getSocket();
+            if (socket != null) {
+                InetAddress currentLocalAddress = socket.getLocalAddress();
+                Log.d(TAG, "Comparing current socket local address " + currentLocalAddress);
+                for (LinkAddress linkAdress : networkDetails.getNativeProperties().getLinkAddresses()) {
+                    InetAddress newAdress = linkAdress.getAddress();
+                    Log.d(TAG, "- with link address " + newAdress);
+                    if (newAdress.equals(currentLocalAddress)) {
+                        Log.d(TAG, "--> old socket address matches new link local address" );
+                        addressValid = true;
+                    } else {
+                        Log.d(TAG, "--- No match");
+                    }
                 }
             }
         }
@@ -1161,7 +1044,7 @@ class VpnThread extends Thread {
     protected void copyThreadDied(CopyThread diedThread) {
         // no special treatment for inThread required, a dying inThread is immediately noticed
         // by VpnThread.
-        if (diedThread != inThread && diedThread == outThread) {
+        if (diedThread != inThread && diedThread == outThread && inThread != null) {
             Log.i(TAG, "outThread notified us of its death, killing inThread as well");
             inThread.stopCopy();
             // inThread is now dying as well, not going unnoticed by monitoredHeartbeatLoop

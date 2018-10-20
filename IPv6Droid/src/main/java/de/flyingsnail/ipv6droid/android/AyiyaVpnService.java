@@ -127,10 +127,8 @@ public class AyiyaVpnService extends VpnService {
         ongoingNotificationBuilder = createNotificationBuilder(StatisticsActivity.class, CHANNEL_STATUS_ID);
         ongoingNotificationBuilder.setContentTitle(getString(R.string.app_name));
         ongoingNotificationBuilder.setOngoing(true);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            ongoingNotificationBuilder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
-            ongoingNotificationBuilder.setLocalOnly(true); // not interesting on connected devices
-        }
+        ongoingNotificationBuilder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+        ongoingNotificationBuilder.setLocalOnly(true); // not interesting on connected devices
 
         // register receivers of broadcasts
         registerLocalCommandReceiver();
@@ -230,6 +228,7 @@ public class AyiyaVpnService extends VpnService {
      */
     private void registerConnectivityReceiver() {
         if (Build.VERSION.SDK_INT >= 23) {
+            ConnectivityManager cm = getSystemService(ConnectivityManager.class);
             NetworkRequest.Builder builder = new NetworkRequest.Builder().
                     addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).
                     addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN);
@@ -238,12 +237,13 @@ public class AyiyaVpnService extends VpnService {
             networkCallback = new ConnectivityManager.NetworkCallback () {
                 @Override
                 public void onAvailable(Network network) {
-                    onConnectivityChange(true);
+                    onConnectivityChange(true,
+                            cm.getLinkProperties(network));
                 }
 
                 @Override
                 public void onLinkPropertiesChanged(Network network, LinkProperties linkProperties) {
-                    onConnectivityChange(true);
+                    onConnectivityChange(true, linkProperties);
                 }
 
                 @Override
@@ -251,9 +251,7 @@ public class AyiyaVpnService extends VpnService {
                     onConnectivityChange(false);
                 }
             };
-            getSystemService(ConnectivityManager.class).registerNetworkCallback(
-                    request, networkCallback
-            );
+            cm.registerNetworkCallback(request, networkCallback);
         } else registerGlobalConnectivityReceiver();
     }
 
@@ -488,6 +486,7 @@ public class AyiyaVpnService extends VpnService {
         public void onReceive(Context context, @NonNull Intent intent) {
             String action = intent.getAction();
             if (action.equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
+                Log.i(TAG, "Received connectivity action");
                 onConnectivityChange(
                         !intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false));
             }
@@ -506,19 +505,11 @@ public class AyiyaVpnService extends VpnService {
 
 
     private RoutingConfiguration loadRoutingConfiguration(SharedPreferences myPreferences) {
-        boolean workaround = myPreferences.getBoolean("routes_workaround", false) &&
-                checkAndroidVersionForWorkaround();
         return new RoutingConfiguration(
                 myPreferences.getBoolean("routes_default", true),
                 myPreferences.getString("routes_specific", "::/0"),
-                workaround,
                 myPreferences.getBoolean("routes_setnameservers", false),
                 myPreferences.getBoolean("routes_forcetunnel", false));
-    }
-
-    public static boolean checkAndroidVersionForWorkaround() {
-        return (Build.VERSION.SDK_INT == Build.VERSION_CODES.KITKAT ||
-                Build.VERSION.SDK_INT == Build.VERSION_CODES.KITKAT_WATCH);
     }
 
     public class StatisticsBinder extends Binder {
