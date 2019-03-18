@@ -103,7 +103,7 @@ public class VpnStatusReport implements Serializable, Cloneable {
         activity = R.string.vpnservice_activity_wait;
         tunnelProvedWorking = false;
         tunnels = null;
-        cause = null;
+        // cause = null;  // do not reset, exception state having led to idle status should show!
         reportStatus();
     }
 

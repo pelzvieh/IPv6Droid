@@ -79,7 +79,6 @@
     <string name="user_subscription_starting_wizard">Google Abo wird gestartet…</string>
     <string name="user_subscription_purchase_done">Vielen Dank für den Kauf! Richte Tunnel ein…</string>
     <string name="user_subscription_aborted">Schade, das Abo wurde nicht abgeschlossen.</string>
-    <string name="main_activity_caution_sixxs_ends">Achtung: Ihre Konfiguration wird nach dem 6.6.2017 nicht mehr funktionieren, da SixXS den Betrieb einstellt!</string>
     <string name="channel_errors_name">IPv6 Errors</string>
     <string name="channel_status_name">IPv6 Status</string>
     <string name="channel_errors_description">Error messages from IPv6 tunnel</string>

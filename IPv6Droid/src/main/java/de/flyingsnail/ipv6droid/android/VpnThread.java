@@ -40,6 +40,7 @@ import android.system.OsConstants;
 import android.util.Log;
 import android.widget.Toast;
 
+import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -298,16 +299,20 @@ class VpnThread extends Thread {
         } catch (AuthenticationFailedException e) {
             Log.e(TAG, "Authentication step failed", e);
             ayiyaVpnService.notifyUserOfError(R.string.vpnservice_authentication_failed, e);
+            vpnStatus.setCause(e);
         } catch (ConnectionFailedException e) {
             Log.e(TAG, "This configuration will not work on this device", e);
             ayiyaVpnService.notifyUserOfError(R.string.vpnservice_invalid_configuration, e);
+            vpnStatus.setCause(e);
         } catch (IOException e) {
             Log.e(TAG, "IOException caught before reading in tunnel data", e);
             ayiyaVpnService.notifyUserOfError(R.string.vpnservice_io_during_startup, e);
+            vpnStatus.setCause(e);
         } catch (Throwable t) {
             Log.e(TAG, "Failed to run tunnel", t);
             // something went wrong in an unexpected way
             ayiyaVpnService.notifyUserOfError(R.string.vpnservice_unexpected_problem, t);
+            vpnStatus.setCause(t);
         }
         vpnStatus.clear(); // back at zero
     }
@@ -376,13 +381,22 @@ class VpnThread extends Thread {
      */
     private void refreshRemoteEnd() throws ConnectionFailedException, InterruptedException {
         Date lastStartAttempt = new Date(0l);
-        while (!closeTunnel && vpnFD.getFileDescriptor().valid()) {
+        FileDescriptor localFD;
+        try {
+            localFD = refreshFD();
+        } catch (IOException e) {
+            Log.e(TAG, "TUN device defective before connection up", e);
+            vpnStatus.setCause(e);
+            vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
+            return;
+        }
+        while (!closeTunnel && localFD != null && localFD.valid()) {
             try {
                 // Packets to be sent are queued in this input stream.
-                FileInputStream localIn = new FileInputStream(vpnFD.getFileDescriptor());
+                FileInputStream localIn = new FileInputStream(localFD);
 
                 // Packets received need to be written to this output stream.
-                FileOutputStream localOut = new FileOutputStream(vpnFD.getFileDescriptor());
+                FileOutputStream localOut = new FileOutputStream(localFD);
 
                 if (interrupted())
                     throw new InterruptedException("Tunnel loop has interrupted status set");
@@ -448,7 +462,7 @@ class VpnThread extends Thread {
                 // loop until interrupted or tunnel defective
                 monitoredHeartbeatLoop();
                 Log.i(TAG, "monitored heartbeat loop ended");
-
+                localFD = refreshFD();
             } catch (IOException e) {
                 Log.i(TAG, "Tunnel connection broke down, closing and reconnecting ayiya (remote end)", e);
                 vpnStatus.setProgressPerCent(50);
@@ -466,6 +480,17 @@ class VpnThread extends Thread {
         }
         Log.i(VpnThread.TAG, "refreshRemoteEnd loop terminated - " +
                 (closeTunnel ? "explicit close down requested" : "TUN device invalid"));
+    }
+
+    private FileDescriptor refreshFD() throws IOException {
+        FileDescriptor localFD;
+        if (vpnFD != null) {
+            vpnFD.checkError();
+            localFD = vpnFD.getFileDescriptor();
+        } else {
+            localFD = null;
+        }
+        return localFD;
     }
 
     /**
@@ -495,14 +520,23 @@ class VpnThread extends Thread {
                 // check current nativeRouting information for existing IPv6 default route
                 // then setup local tun and nativeRouting
                 Log.i(TAG, "Building new local TUN  object");
-                if (isTunnelRoutingRequired()) {
-                    Log.i(TAG, "No native IPv6 to use, setting routes to tunnel");
-                    vpnFD = builder.establish();
-                    tunnelRouted = true;
-                } else {
-                    Log.i(TAG, "Detected existing IPv6, not setting routes to tunnel");
-                    vpnFD = builderNotRouted.establish();
-                    tunnelRouted = false;
+                try { // catching NPE to circumvent rare Android bug, see https://github.com/pelzvieh/IPv6Droid/issues/44
+                    if (isTunnelRoutingRequired()) {
+                        Log.i(TAG, "No native IPv6 to use, setting routes to tunnel");
+                        vpnFD = builder.establish();
+                        tunnelRouted = true;
+                    } else {
+                        Log.i(TAG, "Detected existing IPv6, not setting routes to tunnel");
+                        vpnFD = builderNotRouted.establish();
+                        tunnelRouted = false;
+                    }
+                } catch (NullPointerException npe) {
+                    vpnFD = null;
+                    Log.e (TAG, "NullPointerException from VpnService.Builder call", npe);
+                    vpnStatus.setActivity(R.string.vpnservice_activity_reconnect);
+                    vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
+                    vpnStatus.setCause(npe);
+                    continue; // just try again
                 }
                 if (vpnFD == null)
                     throw new ConnectionFailedException("App is not correctly prepared to use VpnService calls", null);
@@ -767,6 +801,8 @@ class VpnThread extends Thread {
         builder.setMtu(tunnelSpecification.getMtu());
         builder.setSession(tunnelSpecification.getPopName());
         builder.addAddress(tunnelSpecification.getIpv6Endpoint(), tunnelSpecification.getPrefixLength());
+        /*if (Build.VERSION.SDK_INT >= 29)
+            builder.setMetered (false);*/
         if (!suppressRouting) {
             try {
                 if (routingConfiguration.isSetDefaultRoute())

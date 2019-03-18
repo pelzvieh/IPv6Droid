@@ -29,25 +29,12 @@
     tools:context=".android.MainActivity">
 
     <TextView
-        android:id="@+id/sixxsWarning"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true"
-        android:text="@string/main_activity_caution_sixxs_ends"
-        android:textAppearance="?android:attr/textAppearanceSmall"
-        android:textColor="@android:color/holo_red_dark"
-        android:textStyle="bold"
-        android:visibility="visible" />
-
-    <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceSmall"
         android:id="@+id/statusText"
-        android:layout_alignParentTop="false"
+        android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true"
-        android:layout_below="@id/sixxsWarning"
         android:text="@string/main_activity_please_start"
         android:visibility="invisible"/>
 
@@ -113,8 +100,7 @@
         android:layout_height="wrap_content"
         android:text="@string/main_activity_please_start"
         android:id="@+id/redundant_start_button"
-        android:layout_below="@id/sixxsWarning"
-        android:layout_alignParentTop="false"
+        android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true"
         android:onClick="startVPN" />
 

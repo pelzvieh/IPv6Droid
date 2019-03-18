@@ -28,7 +28,7 @@
     <string name="pref_title_username">Username</string>
     <string name="pref_title_password">Password</string>
     <string name="pref_title_host">TIC host</string>
-    <string name="pref_default_host" translatable="false">tic.sixxs.net</string>
+    <string name="pref_default_host" translatable="false"></string>
     <string name="pref_title_autostart">Start Tunnel at Boot</string>
     <string name="pref_summary_autostart_on">Automatically start the IPv6 tunnel after (re-)starting the device</string>
     <string name="pref_summary_autostart_off">Explicit start from the app is required to start the IPv6 tunnel</string>

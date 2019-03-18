@@ -43,9 +43,7 @@ import android.widget.Toast;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.io.Serializable;
-import java.io.StringWriter;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -402,12 +400,9 @@ public class AyiyaVpnService extends VpnService {
 
         // provide the expanded layout
         NotificationCompat.BigTextStyle bigTextStyle = new NotificationCompat.BigTextStyle();
-        bigTextStyle.setBigContentTitle(getString(resourceId) + ": " + e.getClass());
-        bigTextStyle.setSummaryText(e.getLocalizedMessage());
-        StringWriter sw = new StringWriter();
-        e.printStackTrace(new PrintWriter(sw));
-        sw.flush();
-        bigTextStyle.bigText(sw.getBuffer());
+        bigTextStyle.setBigContentTitle(getString(resourceId));
+        bigTextStyle.setSummaryText(String.valueOf(e.getClass()));
+        bigTextStyle.bigText(e.getLocalizedMessage());
         errorNotificationBuilder.setStyle(bigTextStyle);
 
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);

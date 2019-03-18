@@ -201,7 +201,8 @@ public class Ayiya {
         INVALID_OPERATION, /* no valid opcode was supplied */
         INVALID_PACKET, /* sent packet does not meet the ayiya specs */
         AUTHENTICATION_FAILED, /* MAC did not macth package content */
-        TIMED_OUT /* tunnel not refreshed in time */
+        TIMED_OUT, /* tunnel not refreshed in time */
+        TIMELAPSE /* server rejects packets because of excessive time difference */
     }
 
 
@@ -428,19 +429,29 @@ public class Ayiya {
                     Log.i(TAG, "Received valid echo response");
                 }
                 if (opCode == OpCode.FORWARD_RESPONSE) {
-                    Log.w(TAG, "Received error code from peer");
+                    Log.w(TAG, "Received high level error code from peer");
                     ErrorCode error = getErrorCode(bb.array(), bb.arrayOffset(), bb.limit());
+                    if (error == null) {
+                        Log.w(TAG, "Unknown error code");
+                        invalidPacketCounter++;
+                    }
                     switch (error) {
                         case AUTHENTICATION_FAILED:
-                               throw new TunnelBrokenException("Received error code authentication failed from peer", null);
+                            throw new TunnelBrokenException("Received error code authentication failed from peer", null);
+                        case TIMELAPSE:
+                            throw new TunnelBrokenException("Please check clock and timezone setting", null);
                         default:
                             invalidPacketCounter++;
                     }
                 }
             } else {
-                if (checkErrorPacket(bb.array(), bb.arrayOffset(), bb.limit())) {
+                ErrorCode errorCode = checkErrorPacket(bb.array(), bb.arrayOffset(), bb.limit());
+                if (errorCode != null) {
                     Log.i(TAG, "Received low-level error packet, aborting tunnel");
-                    throw new TunnelBrokenException("Server unwilling to serve us", null);
+                    throw new TunnelBrokenException(
+                            errorCode == ErrorCode.TIMELAPSE
+                                    ? "Please check clock and timezone setting"
+                                    : "Server unwilling to serve us", null);
                 }
                 invalidPacketCounter++;
             }
@@ -549,13 +560,13 @@ public class Ayiya {
      * @param packet the byte[] to check
      * @param offset the int giving the offset into the array to start
      * @param bytecount the int giving the number of bytes to consider
-     * @return true if the packet is a special error-message from the server.
+     * @return the reported ErrorCode if the packet is a low-level error messsage, null otherwise.
      */
-    private boolean checkErrorPacket(byte[] packet, int offset, int bytecount) {
+    private @Nullable ErrorCode checkErrorPacket(byte[] packet, int offset, int bytecount) {
         // check if the size includes at least a full ayiya header
         if (bytecount != 4) {
             Log.w(TAG, "Received strange packet, not a low-level error packet (wrong length)");
-            return false;
+            return null;
         }
 
         // check "magic" bytes
@@ -563,14 +574,14 @@ public class Ayiya {
             ErrorCode errorCode = getErrorCode(packet, offset + 1, 1);
             if (errorCode == null) {
                 Log.w(TAG, "Received strange packet, correct length and magic bytes, but unkown error code");
-                return false;
+                return null;
             } else {
                 Log.e(TAG, "Received low-level error message from server, error code is " + errorCode);
-                return true;
+                return errorCode;
             }
         } else {
             Log.w(TAG, "Received strange packet, correct length but no magic bytes");
-            return false;
+            return null;
         }
     }
     /**
