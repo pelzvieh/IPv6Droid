@@ -571,7 +571,7 @@ public class Ayiya {
 
         // check "magic" bytes
         if (packet[offset + 0] == 0 && packet[offset + 2] == 0 && packet [offset + 3] == 0) {
-            ErrorCode errorCode = getErrorCode(packet, offset + 1, 1);
+            ErrorCode errorCode = getErrorCode(packet, offset + 1, 3);
             if (errorCode == null) {
                 Log.w(TAG, "Received strange packet, correct length and magic bytes, but unkown error code");
                 return null;
