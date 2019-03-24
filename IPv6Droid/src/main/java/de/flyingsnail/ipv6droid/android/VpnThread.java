@@ -439,10 +439,12 @@ class VpnThread extends Thread {
 
                 // start the copying threads
                 Log.i (TAG, "Starting copy threads");
-                outThread = new CopyThread (localIn, popOut, ayiyaVpnService, this, "AYIYA from local to POP", TAG_OUTGOING_THREAD, 0, outgoingStatistics);
-                inThread = new CopyThread (popIn, localOut, ayiyaVpnService, this, "AYIYA from POP to local", TAG_INCOMING_THREAD, 0, ingoingStatistics);
-                outThread.start();
-                inThread.start();
+                synchronized (this) {
+                    outThread = new CopyThread(localIn, popOut, ayiyaVpnService, this, "AYIYA from local to POP", TAG_OUTGOING_THREAD, 0, outgoingStatistics);
+                    inThread = new CopyThread(popIn, localOut, ayiyaVpnService, this, "AYIYA from POP to local", TAG_INCOMING_THREAD, 0, ingoingStatistics);
+                    outThread.start();
+                    inThread.start();
+                };
                 vpnStatus.setStatus(VpnStatusReport.Status.Connected);
                 vpnStatus.setCause(null);
 
@@ -474,8 +476,6 @@ class VpnThread extends Thread {
             } finally {
                 cleanCopyThreads();
                 localIp = null;
-                inThread = null;
-                outThread = null;
             }
         }
         Log.i(VpnThread.TAG, "refreshRemoteEnd loop terminated - " +
