@@ -20,18 +20,23 @@
 package de.flyingsnail.ipv6droid.android.googlesubscription;
 
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.MainActivity;
@@ -61,6 +66,18 @@ public class SubscribeTunnelActivity extends Activity implements SubscriptionChe
     /** A Button to initiate a purchase */
     private Button purchaseButton;
 
+    /** A TextView to show the end of current subscription period. */
+    private TextView validUntil;
+
+    /** A Checkbox that shows if user accepted terms and conditions */
+    private CheckBox acceptConditions;
+
+    /** A layout containing the views to show valid until information, incl. label */
+    private View validUntilLine;
+
+    /** The app preferences */
+    private SharedPreferences myPreferences;
+
 
     private void displayActiveSubscriptions() {
         // Get a handler that can be used to post to the main thread
@@ -75,16 +92,29 @@ public class SubscribeTunnelActivity extends Activity implements SubscriptionChe
                     int nrTunnels = mySubscriptionManager.getTunnels().size();
                     if (nrTunnels > 0) {
                         purchasingInfoView.setText(String.format(getString(R.string.user_has_subscription), nrTunnels));
-                        purchasingInfoView.setTextColor(Color.BLACK);
                         purchaseButton.setEnabled(false);
+                        acceptConditions.setEnabled(false);
+                        acceptConditions.setChecked(true);
+                        Date validUntilDate = mySubscriptionManager.getTunnels().get(0).getExpiryDate();
+                        validUntil.setText(
+                                SimpleDateFormat.getDateInstance(
+                                        SimpleDateFormat.SHORT
+                                ).format(validUntilDate)
+                        );
+                        validUntilLine.setVisibility(View.VISIBLE);
 
                         // update caches
                         updatePreferences();
                         updateCachedTunnelList();
                     } else {
                         purchasingInfoView.setText(R.string.user_not_subscribed);
-                        purchasingInfoView.setTextColor(Color.BLACK);
-                        purchaseButton.setEnabled(true);
+                        purchaseButton.setEnabled(acceptConditions.isChecked());
+                        validUntilLine.setVisibility(View.GONE);
+                        /*if (myPreferences.getBoolean(IPv6DroidIntroActivity.FIRST_STARTUP_PREFERENCE_KEY, true)) {
+                            Intent introIntent = new Intent (SubscribeTunnelActivity.this, IPv6DroidIntroActivity.class);
+                            startActivity(introIntent);
+                        }*/
+
                     }
                 } // if the parent object has not been destroy'ed yet
             } // This is your code
@@ -112,7 +142,6 @@ public class SubscribeTunnelActivity extends Activity implements SubscriptionChe
     private void updatePreferences() {
         // write username, server name and password preferences derived from the subscription
         PreferenceManager.setDefaultValues(getApplicationContext(), R.xml.preferences, false);
-        SharedPreferences myPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         SharedPreferences.Editor editor = myPreferences.edit();
         //TODO chunk and cheapness!
         editor.putString(MainActivity.TIC_USERNAME, GOOGLESUBSCRIPTION);
@@ -134,20 +163,50 @@ public class SubscribeTunnelActivity extends Activity implements SubscriptionChe
 
         purchasingInfoView = (TextView)findViewById(R.id.subscriptionStatus);
         purchaseButton = (Button) findViewById(R.id.subscribe);
+        validUntil = (TextView)findViewById(R.id.validUntil);
+        acceptConditions = (CheckBox)findViewById(R.id.acceptTerms);
+        validUntilLine = findViewById(R.id.validUntilLine);
 
         purchasingInfoView.setText(R.string.user_subscription_checking);
-        purchasingInfoView.setTextColor(Color.BLACK);
         purchaseButton.setEnabled(false); // we don't have a bound service yet
+        validUntilLine.setVisibility(View.GONE);
 
         subscriptionManager = new SubscriptionManager(this, this);
+        myPreferences = PreferenceManager.getDefaultSharedPreferences(this);
     }
 
     public void onPurchaseSubsciption (final View clickedView) {
+        if (!acceptConditions.isChecked()) {
+            Toast.makeText(this, R.string.user_subscription_error_not_accepted, Toast.LENGTH_LONG);
+            return;
+        }
         purchaseButton.setEnabled(false); // gegen ungeduldige Benutzer
+        acceptConditions.setEnabled(false); // jetzt ist er gefangen...
         SubscriptionManager mySubscriptionManager = this.subscriptionManager; // avoid race condition
         if (mySubscriptionManager != null) {
             purchasingInfoView.setText(R.string.user_subscription_starting_wizard);
             mySubscriptionManager.initiatePurchase();
+        }
+    }
+
+    public void onManageSubscriptions (final View clickedView) {
+        String UriTemplate = "https://play.google.com/store/account/subscriptions?sku=%s&package=%s";
+
+        try {
+            startActivity(
+                    new Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse(
+                                    String.format(
+                                            UriTemplate,
+                                            SubscriptionBuilder.SKU_TUNNEL_SUBSCRIPTION,
+                                            getApplicationContext().getPackageName()
+                                    )
+                            )
+                    )
+            );
+        } catch (ActivityNotFoundException e) {
+            Toast.makeText(this, R.string.user_subscription_management_not_launched, Toast.LENGTH_LONG);
         }
     }
 
@@ -170,15 +229,12 @@ public class SubscribeTunnelActivity extends Activity implements SubscriptionChe
                 break;
             case TEMPORARY_PROBLEM:
                 purchasingInfoView.setText(R.string.technical_problem);
-                purchasingInfoView.setTextColor(Color.RED);
                 break;
             case SUBSCRIPTION_UNPARSABLE:
                 purchasingInfoView.setText(R.string.user_has_unparsable_subscription_status);
-                purchasingInfoView.setTextColor(Color.RED);
                 break;
             case NO_SERVICE:
                 purchasingInfoView.setText(R.string.user_subscription_failed);
-                purchasingInfoView.setTextColor(Color.RED);
                 purchaseButton.setEnabled(false); // we don't have a bound service anymore
                 break;
             case CHECK_FAILED:
@@ -186,7 +242,6 @@ public class SubscribeTunnelActivity extends Activity implements SubscriptionChe
                 break;
             case PURCHASE_FAILED:
                 purchasingInfoView.setText(R.string.user_subscription_aborted);
-                purchasingInfoView.setTextColor(Color.RED);
                 purchaseButton.setEnabled(true);
                 break;
             case PURCHASE_COMPLETED:
@@ -199,6 +254,14 @@ public class SubscribeTunnelActivity extends Activity implements SubscriptionChe
                 Log.w(TAG, "Unimplemented Result type from subscriptions manager");
                 break;
         }
+    }
+
+    /**
+     * Handler if user clicked the accept terms checkbox
+     * @param clickedView
+     */
+    public void onAcceptTerms(View clickedView) {
+        displayActiveSubscriptions();
     }
 
     /**

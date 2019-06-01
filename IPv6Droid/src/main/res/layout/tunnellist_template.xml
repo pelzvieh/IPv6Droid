@@ -27,4 +27,6 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/checkedTextView"
     android:checkMark="@drawable/tunnelitemstate"
-    android:duplicateParentState="true"/>
+    android:duplicateParentState="true"
+    android:textColor="#000000"
+    />

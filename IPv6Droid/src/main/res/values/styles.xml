@@ -44,4 +44,25 @@
         <item name="android:padding">16dp</item>
     </style>
 
+    <!-- Definition for drawing horizontal lines -->
+    <style name="HorizontalLine">
+        <item name="android:layout_width">fill_parent</item>
+        <item name="android:layout_height">@dimen/horizontal_line_height</item>
+        <item name="android:background">@color/horizontal_line_fill_color</item>
+        <item name="android:layout_marginTop">@dimen/large_spacer</item>
+        <item name="android:layout_marginBottom">@dimen/large_spacer</item>
+    </style>
+
+    <style name="HighlightedText" parent="@android:style/TextAppearance.Material.Body1">
+        <item name="android:textColor">@color/ipv6droid_pink</item>
+    </style>
+    <style name="HighlightedTextMedium" parent="@android:style/TextAppearance.Material.Medium">
+        <item name="android:textColor">@color/ipv6droid_pink</item>
+    </style>
+
+    <dimen name="horizontal_line_height">2dp</dimen>
+    <dimen name="large_spacer">10dp</dimen>
+    <color name="horizontal_line_fill_color">@color/ipv6droid_green</color>
+    <color name="ipv6droid_green">#95CB33</color>
+    <color name="ipv6droid_pink">#C60089</color>
 </resources>

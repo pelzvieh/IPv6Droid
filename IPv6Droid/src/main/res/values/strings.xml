@@ -65,7 +65,7 @@
     <string name="title_activity_subscribe_tunnel">SubscribeTunnel</string>
     <string name="title_activity_initial_setup">Initial Setup</string>
     <string name="subscription_label">Subscribe to IPv6 tunnel service</string>
-    <string name="manual_setup_label">Set up using existing credentials</string>
+    <string name="manual_setup_label">Self-hosted</string>
     <string name="user_has_subscription">You are subscribed to %d tunnels</string>
     <string name="user_has_unparsable_subscription_status">Could not understand subscription status</string>
     <string name="subscribe_to_tunnel_service">Subscribe to Tunnel Service</string>
@@ -78,8 +78,21 @@
     <string name="user_subscription_starting_wizard">Starting Google subscription wizard…</string>
     <string name="user_subscription_purchase_done">Thank you for purchasing! Provisioning your tunnels…</string>
     <string name="user_subscription_aborted">Subscription not successful, we\'re sorry.</string>
+    <string name="user_subscription_management_not_launched">"Could not launch Google Play subscription manager"</string>
     <string name="channel_errors_name">IPv6 Errors</string>
     <string name="channel_status_name">IPv6 Status</string>
     <string name="channel_errors_description">Error messages from IPv6 tunnel</string>
     <string name="channel_status_description">Current status of IPv6 tunnel</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="intro_app_title">Introduction to IPv6Droid</string>
+    <string name="intro_app_description">IPv6Droid is an Android client to use certain types of IPv6 tunnels, in order to bring IPv6 support to Android mobile devices on networks that do not support IPv6, plus use any kind of server-side NAT and therefore disabling the most boadly available types of IPv6 tunnels. Specifically, all mobile networks in Germany at the time of writing meet both criteria.</string>
+    <string name="subscription">Subscription</string>
+    <string name="manage_subscriptions">Here you can launch Google Play to review and manage (e.g. terminate) your tunnel subscription.</string>
+    <string name="subscription_status">The following status is determined from the Google account, that your device is linked to. Retrieving the status may take a few seconds. If \"valid until\" date is reached, subscription will be extended (with the monthly fee), unless you terminated the subscription.</string>
+    <string name="subscriptions_manage_subscriptions">Manage Subscriptions</string>
+    <string name="user_subscription_subscribe_hint">Here you can subscribe to a set of 4 tunnels with a few clicks. The subscription process is entirely handled by Google, including credit card or other payment details. You will be shown the exact price for your region. First time users have a full 60 days free testing period!</string>
+    <string name="user_subscription_terms_link">I accept terms and conditions: <![CDATA[https://flyingsnail.de/svcdesc.html]]></string>
+    <string name="user_subscription_error_not_accepted">You must accept terms and conditions to subscribe</string>
+    <string name="user_subscription_valid_until">Valid until</string>
 </resources>
