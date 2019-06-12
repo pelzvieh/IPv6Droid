@@ -69,7 +69,10 @@ android {
 }
 
 dependencies {
-    implementation 'org.jboss.resteasy.mobile:resteasy-mobile:1.0.0'
+    implementation 'com.squareup.retrofit2:retrofit:2.6.0'
+    implementation 'com.squareup.retrofit2:converter-jackson:2.6.0'
+    implementation 'com.squareup.retrofit2:converter-scalars:2.6.0'
+//    implementation 'org.jboss.resteasy.mobile:resteasy-mobile:1.0.0'
     implementation 'androidx.annotation:annotation:1.0.2'
     implementation 'org.jetbrains.trove4j:trove4j:20160824'
     implementation 'androidx.constraintlayout:constraintlayout:1.1.3'

@@ -41,7 +41,6 @@ import androidx.annotation.Nullable;
 
 import com.android.vending.billing.IInAppBillingService;
 
-import org.jboss.resteasy.spi.ResteasyProviderFactory;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -51,6 +50,9 @@ import java.util.List;
 
 import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 import de.flyingsnail.ipv6server.restapi.SubscriptionsApi;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 /**
  * Created by pelzi on 18.10.17.
@@ -61,11 +63,6 @@ public class SubscriptionManager {
     private static final int RESPONSE_CODE_OK = 0;
     private static final int RC_BUY = 3;
 
-    static {
-        // add exception handler to client factory
-        ResteasyProviderFactory pf = ResteasyProviderFactory.getInstance();
-        pf.addClientErrorInterceptor(new SubscriptionErrorInterceptor());
-    }
     /**
      * The client representing the SubscrptionsApi of the IPv6Server.
      */
@@ -186,16 +183,21 @@ public class SubscriptionManager {
                         if (SubscriptionBuilder.getSupportedSku().contains(skus.get(index))) {
                             // this one is relevant!
                             foundRelevantSubscription = true;
+                            Call<List<TicTunnel>> subsCall = subscriptionsClient.checkSubscriptionAndReturnTunnels(
+                                    skuData.get(index),
+                                    skuSignature.get(index)
+                            );
                             new AsyncTask<Integer, Void, Exception>() {
                                 @Override
                                 protected Exception doInBackground(Integer... params) {
                                     int index = params[0];
                                     List<TicTunnel> subscribedTunnels;
                                     try {
-                                        subscribedTunnels = subscriptionsClient.checkSubscriptionAndReturnTunnels(
-                                                skuData.get(index),
-                                                skuSignature.get(index)
-                                        );
+                                        Response<List<TicTunnel>> subscribedTunnelsResponse = subsCall.execute();
+                                        if (!subscribedTunnelsResponse.isSuccessful()) {
+                                            throw new IllegalStateException("subscribedTunnels returns exception " + subscribedTunnelsResponse.errorBody().string());
+                                        }
+                                        subscribedTunnels = subscribedTunnelsResponse.body();
                                         Log.d(TAG, String.format("Successfully retrieved %d tunnels from server", subscribedTunnels.size()));
                                         // add only valid tunnels to save case distinction all through
                                         // the app
@@ -250,12 +252,17 @@ public class SubscriptionManager {
         }
         final Activity originatingActivity = (Activity)originatingContext;
 
+        Call<String> developerPayloadCall = subscriptionsClient.createNewPayload();
         new AsyncTask<Void, Void, Exception>() {
             @Override
             protected Exception doInBackground(Void... voids) {
                 String developerPayload = null;
                 try {
-                    developerPayload = subscriptionsClient.createNewPayload();
+                    Response<String> developerPayloadResponse = developerPayloadCall.execute();
+                    if (!developerPayloadResponse.isSuccessful()) {
+                        throw new IllegalStateException("createNewPayload returns exception " + developerPayloadResponse.errorBody().string());
+                    }
+                    developerPayload = developerPayloadResponse.body();
                     if (service == null) // should not happen because purchaseButton is enabled only after successful connection
                         throw new IllegalStateException("InAppSubscriptionService not bound");
                     final Bundle bundle = service.getBuyIntent(3, originatingContext.getPackageName(),
@@ -273,7 +280,7 @@ public class SubscriptionManager {
                 } catch (Exception e) {
                     try {
                         if (developerPayload != null)
-                            subscriptionsClient.deleteUnusedPayload(developerPayload);
+                            subscriptionsClient.deleteUnusedPayload(developerPayload).execute();
                     } catch (Exception e1) {
                         Log.w(TAG, "Failed to revoke payload " + developerPayload, e1);
                     }
@@ -301,15 +308,21 @@ public class SubscriptionManager {
      * @param dataSignature the String representing the signature to purchaseData, provided by Google
      */
     private void providePurchasedTunnels(String purchaseData, String dataSignature) {
+        Call<List<TicTunnel>> subsCall = subscriptionsClient.checkSubscriptionAndReturnTunnels(
+                purchaseData,
+                dataSignature
+        );
+
         new AsyncTask<Pair<String, String>, Void, List<TicTunnel>>() {
             @Override
             protected List<TicTunnel> doInBackground(Pair<String, String>... params) {
                 Pair<String, String> purchase = params[0];
                 try {
-                    List<TicTunnel> tunnels = subscriptionsClient.checkSubscriptionAndReturnTunnels(
-                            purchase.first,
-                            purchase.second
-                    );
+                    Response<List<TicTunnel>> subscribedTunnelsResponse = subsCall.execute();
+                    if (!subscribedTunnelsResponse.isSuccessful()) {
+                        throw new IllegalStateException("subscribedTunnels returns exception " + subscribedTunnelsResponse.errorBody().string());
+                    }
+                    List<TicTunnel>tunnels = subscribedTunnelsResponse.body();
                     return tunnels;
                 } catch (Exception e) {
                     Log.w(TAG, "Subscription information failed to verify", e);
@@ -339,7 +352,19 @@ public class SubscriptionManager {
     private void purchaseFailed(@Nullable final String developerPayload) {
         try {
             if (developerPayload != null)
-                subscriptionsClient.deleteUnusedPayload(developerPayload);
+                subscriptionsClient.deleteUnusedPayload(developerPayload).enqueue(
+                        new Callback<Void>() {
+                            @Override
+                            public void onResponse(Call<Void> call, Response<Void> response) {
+                                Log.i (TAG, "Deleted developer payload for failed purchase");
+                            }
+
+                            @Override
+                            public void onFailure(Call<Void> call, Throwable t) {
+                                Log.w (TAG, "Deleting developer payload for failed purchase failed", t);
+                            }
+                        }
+                );
         } catch (Exception e1) {
             Log.w(TAG, "Failed to revoke payload " + developerPayload, e1);
         }

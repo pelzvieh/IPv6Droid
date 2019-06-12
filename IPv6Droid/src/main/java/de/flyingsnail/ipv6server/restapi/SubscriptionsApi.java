@@ -26,23 +26,20 @@ package de.flyingsnail.ipv6server.restapi;
 import java.io.IOException;
 import java.util.List;
 
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.FormParam;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
-
 import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 import de.flyingsnail.ipv6server.svc.SubscriptionRejectedException;
+import retrofit2.Call;
+import retrofit2.http.DELETE;
+import retrofit2.http.Field;
+import retrofit2.http.FormUrlEncoded;
+import retrofit2.http.GET;
+import retrofit2.http.Headers;
+import retrofit2.http.POST;
+import retrofit2.http.Path;
 
 
-@Path("/subscriptions")
-@Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
+//@Produces(MediaType.APPLICATION_JSON)
+//@Consumes(MediaType.APPLICATION_JSON)
 public interface SubscriptionsApi {
   /**
    * Create a unique new payload for a new tunnel subscription purchase. The generated payload
@@ -52,9 +49,9 @@ public interface SubscriptionsApi {
    * @return the String representing the unique payload
    * @throws IOException in case of communication problems with the server.
    */
-  @GET
-  @Path("/new")
-  String createNewPayload() throws IOException;
+  @GET("subscriptions/new")
+  @Headers("Accept: application/json")
+  Call<String> createNewPayload();
   
   /**
    * Invalidate a payload (if it is not already used). The client indicates by this call
@@ -62,9 +59,8 @@ public interface SubscriptionsApi {
    * payload will occur.
    * @throws IOException in case of communication problems with the server.
    */
-  @DELETE
-  @Path("/{payload}")
-  void deleteUnusedPayload(@PathParam("payload") String payload) throws IOException;
+  @DELETE("subscriptions/{payload}")
+  Call<Void> deleteUnusedPayload(@Path("payload") String payload);
   
   /**
    * Check validity of supplied Subscription object that supposedly is filled from
@@ -83,10 +79,9 @@ public interface SubscriptionsApi {
    * @throws IOException in case of technical problems
    * @throws SubscriptionRejectedException in case of definitive falsification of data
    */
-  @POST
-  @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-  @Path("/check")
-  List<TicTunnel> checkSubscriptionAndReturnTunnels(
-          @FormParam("data") String subscriptionData,
-          @FormParam("signature") String signature) throws SubscriptionRejectedException, IOException;
+  @FormUrlEncoded
+  @POST("subscriptions/check")
+  Call<List<TicTunnel>> checkSubscriptionAndReturnTunnels(
+          @Field("data") String subscriptionData,
+          @Field("signature") String signature);
 }

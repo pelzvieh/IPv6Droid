@@ -23,21 +23,23 @@
 
 package de.flyingsnail.ipv6droid.android.googlesubscription;
 
-import org.jboss.resteasy.client.ProxyFactory;
-import org.jboss.resteasy.plugins.providers.RegisterBuiltin;
-import org.jboss.resteasy.spi.ResteasyProviderFactory;
-
 import de.flyingsnail.ipv6server.restapi.SubscriptionsApi;
+import retrofit2.Retrofit;
+import retrofit2.converter.jackson.JacksonConverterFactory;
+import retrofit2.converter.scalars.ScalarsConverterFactory;
+
 
 /**
  * Create stubs on the REST api of IPv6server
  * Created by pelzi on 27.06.16.
  */
 public class RestProxyFactory {
-    static {
-        RegisterBuiltin.register(ResteasyProviderFactory.getInstance());
-    }
     public static SubscriptionsApi createSubscriptionsClient() {
-        return ProxyFactory.create(SubscriptionsApi.class, "https://flyingsnail.de/services/services/");
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("https://flyingsnail.de/services/services/")
+                .addConverterFactory(ScalarsConverterFactory.create())
+                .addConverterFactory(JacksonConverterFactory.create())
+                .build();
+        return retrofit.create(SubscriptionsApi.class);
     }
 }
