@@ -24,25 +24,23 @@
 package de.flyingsnail.ipv6droid.android.googlesubscription;
 
 import android.app.Activity;
-import android.app.PendingIntent;
-import android.content.ComponentName;
 import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
 import android.os.AsyncTask;
-import android.os.Bundle;
-import android.os.IBinder;
-import android.os.RemoteException;
 import android.util.Log;
-import android.util.Pair;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.android.vending.billing.IInAppBillingService;
-
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.android.billingclient.api.BillingClient;
+import com.android.billingclient.api.BillingClient.BillingResponseCode;
+import com.android.billingclient.api.BillingClientStateListener;
+import com.android.billingclient.api.BillingFlowParams;
+import com.android.billingclient.api.BillingResult;
+import com.android.billingclient.api.Purchase;
+import com.android.billingclient.api.PurchasesUpdatedListener;
+import com.android.billingclient.api.SkuDetails;
+import com.android.billingclient.api.SkuDetailsParams;
+import com.android.billingclient.api.SkuDetailsResponseListener;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -51,7 +49,6 @@ import java.util.List;
 import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 import de.flyingsnail.ipv6server.restapi.SubscriptionsApi;
 import retrofit2.Call;
-import retrofit2.Callback;
 import retrofit2.Response;
 
 /**
@@ -64,16 +61,30 @@ public class SubscriptionManager {
     private static final int RC_BUY = 3;
 
     /**
+     * Helper implementation of the PurchasesUpdatedListener interface. Receives updates on purchases from Google.
+     */
+    private final PurchasesUpdatedListener googlePurchasesUpdatesListener = new PurchasesUpdatedListener() {
+        @Override
+        public void onPurchasesUpdated(BillingResult billingResult, @Nullable List<Purchase> purchases) {
+            Log.i(TAG, "received Google purchase update");
+            if (billingResult.getResponseCode() == BillingResponseCode.OK
+                    && purchases != null) {
+                for (Purchase purchase : purchases) {
+                    SubscriptionManager.this.onGoogleProductPurchased(purchase);
+                }
+            }
+        }
+    };
+
+    /**
      * The client representing the SubscrptionsApi of the IPv6Server.
      */
     SubscriptionsApi subscriptionsClient;
 
-
     /**
-     * The proxy implementing the Google InAppBillingService interface. Is set asynchronously
-     * by binding serviceCon.
+     * An instance of the Google BillingClient.
      */
-    private IInAppBillingService service;
+    private BillingClient googleBillingClient;
 
     /**
      * The SubscriptionCheckResultListener that should be informed about this Manager's progress.
@@ -84,6 +95,11 @@ public class SubscriptionManager {
      * The Context that constructed this Manager.
      */
     private final @NonNull Context originatingContext;
+
+    /**
+     * The list of SkuDetails that can be purchased on this client.
+     */
+    private List<SkuDetails> supportedSKUDetails = new ArrayList<>(0);
 
     /**
      * Construct a SubscriptionManager. It will query Google subscriptions, check and retrieve the
@@ -98,20 +114,203 @@ public class SubscriptionManager {
      *                If the Context is actually an Acitivty, the method initiatePurchase can be
      *                used to start purchases.
      */
-    public SubscriptionManager(SubscriptionCheckResultListener resultListener, final @NonNull Context context) {
+    public SubscriptionManager(SubscriptionCheckResultListener resultListener,
+                               final @NonNull Context context) {
         tunnels = new ArrayList<TicTunnel>();
         listener = resultListener;
         originatingContext = context;
 
         subscriptionsClient = RestProxyFactory.createSubscriptionsClient();
+        googleBillingClient = BillingClient.newBuilder(context).
+                setListener(googlePurchasesUpdatesListener).
+                enablePendingPurchases().
+                build();
+        googleBillingClient.startConnection(stateListener);
+    }
 
-        Intent serviceIntent =
-                new Intent("com.android.vending.billing.InAppBillingService.BIND");
-        serviceIntent.setPackage("com.android.vending");
-        if (!originatingContext.bindService(serviceIntent, serviceConn, Context.BIND_AUTO_CREATE)) {
-            Log.e(TAG, "bindService failed");
+    /**
+     * A list of TicTunnels associated with the current user's subscriptions
+     */
+    private List<TicTunnel> tunnels;
+
+    /**
+     * An instance implementing ServiceConnection by setting this object's service class when bound.
+     */
+    private BillingClientStateListener stateListener = new BillingClientStateListener() {
+        @Override
+        public void onBillingServiceDisconnected() {
             listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.NO_SERVICE);
         }
+
+        @Override
+        public void onBillingSetupFinished(BillingResult billingResult) {
+            if (billingResult.getResponseCode() == BillingResponseCode.OK) {
+                tunnels.clear();
+                if (googleBillingClient.isFeatureSupported(BillingClient.FeatureType.SUBSCRIPTIONS).getResponseCode() != BillingResponseCode.OK) {
+                    Log.e(TAG, "Subscriptions are not supported on this device: " +
+                            googleBillingClient.isFeatureSupported(BillingClient.FeatureType.SUBSCRIPTIONS).getDebugMessage());
+                    listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.NO_SERVICE);
+                    return;
+                }
+
+                // retrieve list of purchased subscriptions
+                boolean subHandled = false;
+                Purchase.PurchasesResult purchasesResult = googleBillingClient.queryPurchases(BillingClient.SkuType.SUBS);
+                if (purchasesResult.getResponseCode() == BillingResponseCode.OK) {
+                    for (Purchase purchase: purchasesResult.getPurchasesList()) {
+                        Log.i(TAG, "Initial load of purchases retrieved purchase " + purchase.getOrderId());
+                        try {
+                            onGoogleProductPurchased(purchase);
+                            subHandled = true;
+                        } catch (RuntimeException re) {
+                            Log.e(TAG, "Runtime exception caught during handling of subscription purchase", re);
+                        }
+                    }
+                } else {
+                    listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.NO_SERVICE);
+                }
+                final boolean hasSubscriptions = subHandled;
+
+
+                // retrieve list of Google-supported SKU and filter with our supported SKU. Required for purchase init
+                List<String> clientSKU = SubscriptionBuilder.getSupportedSku();
+                SkuDetailsParams.Builder params = SkuDetailsParams.newBuilder();
+                params.setSkusList(clientSKU).setType(BillingClient.SkuType.SUBS);
+                googleBillingClient.querySkuDetailsAsync(params.build(),
+                        new SkuDetailsResponseListener() {
+                            @Override
+                            public void onSkuDetailsResponse(BillingResult billingResult,
+                                                             List<SkuDetails> skuDetailsList) {
+                                Log.i(TAG, "Received list of sku details");
+                                SubscriptionManager.this.supportedSKUDetails = skuDetailsList;
+                                // if the user has subscriptions, there's already check result reported
+                                if (!hasSubscriptions) {
+                                    if (skuDetailsList == null || skuDetailsList.isEmpty()) {
+                                        Log.e(TAG, "received list of SKU details is empty");
+                                        listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.NO_SERVICE);
+                                    } else {
+                                        // we positively know the available SKU and that the user has no active purchase
+                                        // this will enable the purchase process in suitable caller contexts
+                                        listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.NO_SUBSCRIPTIONS);
+                                    }
+                                }
+                            }
+                        });
+
+            } else {
+                Log.e (TAG, "Setup of Billing library yields error code. Debug message: " + billingResult.getDebugMessage());
+                listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.NO_SERVICE);
+            }
+        }
+    };
+
+    /**
+     * Deal with a Google purchase information. Convenience method for {@link #onGoogleProductPurchased(String, String, String)}
+     * @param purchase a Purchase object from the Google Billing API
+     * @return true if purchase deals with a product relevant for this app
+     */
+    private boolean onGoogleProductPurchased (Purchase purchase) {
+        if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
+            return onGoogleProductPurchased(purchase.getSku(), purchase.getOriginalJson(), purchase.getSignature());
+        } else {
+            Log.d(TAG, "Purchase is not in state PURCHASED - ignoring for now");
+            return false;
+        }
+    }
+
+    /**
+     * Deal with a Google purchase information (exploded parameters).
+     * @param sku a String quoting the SKU (product identifier)
+     * @param skuData a String quoting the JSON that describes the concrete purchase
+     * @param skuSignature a String signing the skuData JSON
+     * @return true if purchase deals with a product relevant for this app.
+     */
+    private boolean onGoogleProductPurchased(String sku, String skuData, String skuSignature) {
+        Log.d(TAG, "Examining SKU " + sku
+                + ",\n Data '" + skuData + "',\n signature '" + skuSignature);
+
+        boolean isSubscriptionRelevant = false;
+        try {
+                if (SubscriptionBuilder.getSupportedSku().contains(sku)) {
+                    // this one is relevant!
+                    isSubscriptionRelevant = true;
+                    Call<List<TicTunnel>> subsCall = subscriptionsClient.checkSubscriptionAndReturnTunnels(
+                            skuData,
+                            skuSignature
+                    );
+                    new AsyncTask<Void, Void, Exception>() {
+                        @Override
+                        protected Exception doInBackground(Void... params) {
+                            List<TicTunnel> subscribedTunnels;
+                            try {
+                                Response<List<TicTunnel>> subscribedTunnelsResponse = subsCall.execute();
+                                if (!subscribedTunnelsResponse.isSuccessful()) {
+                                    throw new IllegalStateException("subscribedTunnels returns exception " + subscribedTunnelsResponse.errorBody().string());
+                                }
+                                subscribedTunnels = subscribedTunnelsResponse.body();
+                                Log.d(TAG, String.format("Successfully retrieved %d tunnels from server", subscribedTunnels.size()));
+                                // add only valid tunnels to save case distinction all through
+                                // the app
+                                for (TicTunnel tunnel : subscribedTunnels) {
+                                    if (tunnel.isEnabled()) {
+                                        tunnels.add(tunnel);
+                                        Log.d(TAG, String.format("Added valid tunnel %s", tunnel.getTunnelId()));
+                                    }
+                                }
+                            } catch (Exception e) {
+                                Log.e(TAG, "Cannot verify subscription", e);
+                                return e;
+                            }
+                            return null;
+                        }
+
+                        @Override
+                        protected void onPostExecute(Exception e) {
+                            if (e != null) {
+                                if (e instanceof IOException || e instanceof RuntimeException) {
+                                    listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.TEMPORARY_PROBLEM);
+                                } else {
+                                    listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.CHECK_FAILED);
+                                }
+                            } else {
+                                listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.HAS_TUNNELS);
+                            }
+                        }
+                    }.execute();
+                }
+            } catch (RuntimeException re) {
+                Log.e(TAG, "unable to handle active subscription " + sku, re);
+            }
+        return isSubscriptionRelevant;
+    }
+
+
+    /**
+     * Initiate the Google subscription purchase workflow on behalf of the originating activity.
+     * Failure to do so, or successful purchase will be reported to the SubscriptionCheckResultListener
+     * given to the constructor of this SubscriptionManager.
+     */
+    public void initiatePurchase() throws IllegalStateException {
+        if (!(originatingContext instanceof Activity)) {
+            throw new IllegalStateException("initiatePurchase can only be called if SubscriptionManager is constructed from an Activity");
+        }
+        if (supportedSKUDetails == null || supportedSKUDetails.isEmpty()) {
+            throw new IllegalStateException("initiatePurchase can only be called if supported SKU are known");
+        }
+        final Activity originatingActivity = (Activity)originatingContext;
+
+        BillingFlowParams flowParams = BillingFlowParams.newBuilder()
+                .setSkuDetails(supportedSKUDetails.get(0))
+                .build();
+        int responseCode = googleBillingClient.launchBillingFlow(originatingActivity, flowParams).getResponseCode();
+
+        if (responseCode == BillingResponseCode.OK) {
+            listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.PURCHASE_COMPLETED);
+            Log.i(TAG, "Purchase succeeded!");
+        } else {
+            Log.w(TAG, "Failed purchase, responseCode=" + responseCode + ", responseCode=" + responseCode);
+        }
+
     }
 
     /**
@@ -124,291 +323,19 @@ public class SubscriptionManager {
     }
 
     /**
-     * A list of TicTunnels associated with the current user's subscriptions
+     * Get the list of subscription products that can be purchased.
+     * @return List&lt;SkuDetails&gt;
      */
-    private List<TicTunnel> tunnels;
-
-    /**
-     * An instance implementing ServiceConnection by setting this object's service class when bound.
-     */
-    private ServiceConnection serviceConn = new ServiceConnection() {
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            service = null;
-            listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.NO_SERVICE);
+    public List<SkuDetails> getSupportedSKUDetails() {
+        if (supportedSKUDetails == null) {
+            throw new IllegalStateException("getSupportedSKUDetails can only be called if supported SKU are known");
         }
 
-        @Override
-        public void onServiceConnected(ComponentName name,
-                                       IBinder serviceBind) {
-            service = IInAppBillingService.Stub.asInterface(serviceBind);
-
-            tunnels.clear();
-            try {
-                getTunnelsFromSubscription();
-            } catch (RemoteException e) {
-                Log.e(TAG, "Could not read existing subscriptions");
-                listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.SUBSCRIPTION_UNPARSABLE);
-            }
-        }
-    };
-
-    /**
-     * Retrieve the active subscriptions by querying google play, then resolving the SKU list. Then
-     * verify the subscription with the server and get the list of provisiond tunnels.
-     * This re-populates the tunnels field of this SubscribeTunnelActivity activity.
-     */
-    private void getTunnelsFromSubscription() throws RemoteException {
-        boolean foundRelevantSubscription = false; // if we're through the subscriptions w/o a tunnel subscription, we offer to subscribe
-
-        String continuationToken = null;
-        do {
-            // loop on INAPP_CONTINUATION_TOKEN
-            Bundle activeSubs = service.getPurchases(3, originatingContext.getPackageName(),
-                    "subs", continuationToken);
-            if (activeSubs.getInt("RESPONSE_CODE") == RESPONSE_CODE_OK) {
-                final List<String> skus = activeSubs.getStringArrayList("INAPP_PURCHASE_ITEM_LIST");
-                final List<String> skuData = activeSubs.getStringArrayList("INAPP_PURCHASE_DATA_LIST");
-                final List<String> skuSignature = activeSubs.getStringArrayList("INAPP_DATA_SIGNATURE_LIST");
-                continuationToken = activeSubs.getString("INAPP_CONTINUATION_TOKEN", null);
-
-                if (skus == null || skuData == null || skuSignature == null)
-                    throw new RemoteException("service returned null as one of the expected arrays");
-
-                // create api stub
-                for (int index = 0; index < skus.size(); index++) {
-                    Log.d(TAG, "Examining index " + index + ",\n SKU " + skus.get(index)
-                            + ",\n Data '" + skuData.get(index) + "',\n signature '" + skuSignature.get(index));
-                    try {
-                        if (SubscriptionBuilder.getSupportedSku().contains(skus.get(index))) {
-                            // this one is relevant!
-                            foundRelevantSubscription = true;
-                            Call<List<TicTunnel>> subsCall = subscriptionsClient.checkSubscriptionAndReturnTunnels(
-                                    skuData.get(index),
-                                    skuSignature.get(index)
-                            );
-                            new AsyncTask<Integer, Void, Exception>() {
-                                @Override
-                                protected Exception doInBackground(Integer... params) {
-                                    int index = params[0];
-                                    List<TicTunnel> subscribedTunnels;
-                                    try {
-                                        Response<List<TicTunnel>> subscribedTunnelsResponse = subsCall.execute();
-                                        if (!subscribedTunnelsResponse.isSuccessful()) {
-                                            throw new IllegalStateException("subscribedTunnels returns exception " + subscribedTunnelsResponse.errorBody().string());
-                                        }
-                                        subscribedTunnels = subscribedTunnelsResponse.body();
-                                        Log.d(TAG, String.format("Successfully retrieved %d tunnels from server", subscribedTunnels.size()));
-                                        // add only valid tunnels to save case distinction all through
-                                        // the app
-                                        for (TicTunnel tunnel : subscribedTunnels) {
-                                            if (tunnel.isEnabled()) {
-                                                tunnels.add(tunnel);
-                                                Log.d(TAG, String.format("Added valid tunnel %s", tunnel.getTunnelId()));
-                                            }
-                                        }
-                                    } catch (Exception e) {
-                                        Log.e(TAG, "Cannot verify subscription", e);
-                                        return e;
-                                    }
-                                    return null;
-                                }
-
-                                @Override
-                                protected void onPostExecute(Exception e) {
-                                    if (e != null) {
-                                        if (e instanceof IOException || e instanceof RuntimeException) {
-                                            listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.TEMPORARY_PROBLEM);
-                                        } else {
-                                            listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.CHECK_FAILED);
-                                        }
-                                    } else {
-                                        listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.HAS_TUNNELS);
-                                    }
-                                }
-                            }.execute(index);
-                        }
-                    } catch (RuntimeException re) {
-                        Log.e(TAG, "unable to handle active subscription " + skus.get(index), re);
-                    }
-                }
-            }
-        } while (continuationToken != null);
-
-        // if we had no luck with this guy's subscriptions, still we need to update the Activity state
-        if (!foundRelevantSubscription)
-            listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.NO_SUBSCRIPTIONS);
-    }
-
-
-    /**
-     * Initiate the Google subscription purchase workflow on behalf of the orignating activity.
-     * The originating acitivity's onActivityResult will be called on completion and should then
-     * delegate to handlePurchaseActivityResult
-     */
-    public void initiatePurchase() throws IllegalArgumentException {
-        if (!(originatingContext instanceof Activity)) {
-            throw new IllegalArgumentException("initiatePurchase can only be called if SubscriptionManager is constructed from an Activity");
-        }
-        final Activity originatingActivity = (Activity)originatingContext;
-
-        Call<String> developerPayloadCall = subscriptionsClient.createNewPayload();
-        new AsyncTask<Void, Void, Exception>() {
-            @Override
-            protected Exception doInBackground(Void... voids) {
-                String developerPayload = null;
-                try {
-                    Response<String> developerPayloadResponse = developerPayloadCall.execute();
-                    if (!developerPayloadResponse.isSuccessful()) {
-                        throw new IllegalStateException("createNewPayload returns exception " + developerPayloadResponse.errorBody().string());
-                    }
-                    developerPayload = developerPayloadResponse.body();
-                    if (service == null) // should not happen because purchaseButton is enabled only after successful connection
-                        throw new IllegalStateException("InAppSubscriptionService not bound");
-                    final Bundle bundle = service.getBuyIntent(3, originatingContext.getPackageName(),
-                            SubscriptionBuilder.getSupportedSku().get(0), "subs", developerPayload);
-
-                    final PendingIntent pendingIntent = bundle.getParcelable("BUY_INTENT");
-                    if (bundle.getInt("RESPONSE_CODE") == RESPONSE_CODE_OK && pendingIntent != null) {
-                        // Start purchase flow (this brings up the Google Play UI).
-                        // Result will be delivered through onActivityResult().
-                        originatingActivity.startIntentSenderForResult(pendingIntent.getIntentSender(), RC_BUY, new Intent(),
-                                Integer.valueOf(0), Integer.valueOf(0), Integer.valueOf(0));
-                        // this is async, so at this point, we still need a valid developerPayload...
-                    } else
-                        return new RuntimeException("Subscription service returned " + pendingIntent);
-                } catch (Exception e) {
-                    try {
-                        if (developerPayload != null)
-                            subscriptionsClient.deleteUnusedPayload(developerPayload).execute();
-                    } catch (Exception e1) {
-                        Log.w(TAG, "Failed to revoke payload " + developerPayload, e1);
-                    }
-                    return e;
-                }
-                return null;
-            }
-
-            @Override
-            protected void onPostExecute(final Exception e) {
-                if (e != null) {
-                    listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.TEMPORARY_PROBLEM);
-                    Log.e(TAG, "Exception on checking purchase", e);
-                }
-            }
-
-        }.execute();
-    }
-
-    /**
-     * Let the IPv6Server generate the tunnels and activate the account. It should be called
-     * after a Google purchase was successfully completed by that account.
-     *
-     * @param purchaseData  the String describing the purchase, provided by Google
-     * @param dataSignature the String representing the signature to purchaseData, provided by Google
-     */
-    private void providePurchasedTunnels(String purchaseData, String dataSignature) {
-        Call<List<TicTunnel>> subsCall = subscriptionsClient.checkSubscriptionAndReturnTunnels(
-                purchaseData,
-                dataSignature
-        );
-
-        new AsyncTask<Pair<String, String>, Void, List<TicTunnel>>() {
-            @Override
-            protected List<TicTunnel> doInBackground(Pair<String, String>... params) {
-                Pair<String, String> purchase = params[0];
-                try {
-                    Response<List<TicTunnel>> subscribedTunnelsResponse = subsCall.execute();
-                    if (!subscribedTunnelsResponse.isSuccessful()) {
-                        throw new IllegalStateException("subscribedTunnels returns exception " + subscribedTunnelsResponse.errorBody().string());
-                    }
-                    List<TicTunnel>tunnels = subscribedTunnelsResponse.body();
-                    return tunnels;
-                } catch (Exception e) {
-                    Log.w(TAG, "Subscription information failed to verify", e);
-                    return null;
-                }
-            }
-
-            @Override
-            protected void onPostExecute(List<TicTunnel> newTunnels) {
-                if (newTunnels != null) {
-                    tunnels.addAll(newTunnels);
-                    listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.HAS_TUNNELS);
-                } else {
-                    listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.TEMPORARY_PROBLEM);
-                }
-            }
-        }.execute(new Pair<String, String>(purchaseData, dataSignature));
-    }
-
-    /**
-     * The initiated purchase from Google has failed for whatever reason. Clean up
-     * the generated intermediate account (identified by developerPayload).
-     *
-     * @param developerPayload the String identifying the temporary account that was generated
-     *                         on initiation.
-     */
-    private void purchaseFailed(@Nullable final String developerPayload) {
-        try {
-            if (developerPayload != null)
-                subscriptionsClient.deleteUnusedPayload(developerPayload).enqueue(
-                        new Callback<Void>() {
-                            @Override
-                            public void onResponse(Call<Void> call, Response<Void> response) {
-                                Log.i (TAG, "Deleted developer payload for failed purchase");
-                            }
-
-                            @Override
-                            public void onFailure(Call<Void> call, Throwable t) {
-                                Log.w (TAG, "Deleting developer payload for failed purchase failed", t);
-                            }
-                        }
-                );
-        } catch (Exception e1) {
-            Log.w(TAG, "Failed to revoke payload " + developerPayload, e1);
-        }
-        listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.PURCHASE_FAILED);
-    }
-
-    public boolean handlePurchaseActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == RC_BUY) {
-            if (resultCode == Activity.RESULT_OK && data != null) {
-                int responseCode = data.getIntExtra("RESPONSE_CODE", 0);
-                String purchaseData = data.getStringExtra("INAPP_PURCHASE_DATA");
-                String dataSignature = data.getStringExtra("INAPP_DATA_SIGNATURE");
-
-                if (responseCode == RESPONSE_CODE_OK) {
-                    listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.PURCHASE_COMPLETED);
-                    Log.i(TAG, "Purchase succeeded!");
-                    Log.d(TAG, purchaseData);
-                    Log.d(TAG, dataSignature);
-                    providePurchasedTunnels(purchaseData, dataSignature);
-                } else {
-                    Log.w(TAG, "Failed purchase, resultCode=" + resultCode + ", responseCode=" + responseCode);
-                    String developerPayload = null;
-                    try {
-                        JSONObject jsonObject = new JSONObject(purchaseData);
-                        developerPayload = jsonObject.getString("developerPayload");
-                    } catch (JSONException e) {
-                        Log.wtf(TAG, "Could not parse purchaseData string");
-                    }
-                    purchaseFailed(developerPayload);
-                }
-            } else {
-                Log.w(TAG, "Failed purchase, resultCode=" + resultCode);
-                purchaseFailed(null);
-            }
-            return true;
-        } else
-            return false;
+        return supportedSKUDetails;
     }
 
     public void destroy() {
-        // very important:
-        Log.d(TAG, "unbinding serviceConnection to Google InAppBilling.");
-        if (service != null) {
-            originatingContext.unbindService(serviceConn);
-        }
+        Log.i(TAG, "Destrying Subscription Manager.");
+        googleBillingClient.endConnection();
     }
 }

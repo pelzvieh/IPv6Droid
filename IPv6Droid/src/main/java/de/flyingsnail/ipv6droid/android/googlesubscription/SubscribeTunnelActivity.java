@@ -49,7 +49,6 @@ import static de.flyingsnail.ipv6droid.android.googlesubscription.Subscription.G
 
 /**
  * Guides the user through managing her subscriptions.
- * @todo disentangle view and model/controller aspects, make model reusable deep into VpnThread
  */
 public class SubscribeTunnelActivity extends Activity implements SubscriptionCheckResultListener {
     private static final String TAG = SubscribeTunnelActivity.class.getSimpleName();
@@ -110,11 +109,6 @@ public class SubscribeTunnelActivity extends Activity implements SubscriptionChe
                         purchasingInfoView.setText(R.string.user_not_subscribed);
                         purchaseButton.setEnabled(acceptConditions.isChecked());
                         validUntilLine.setVisibility(View.GONE);
-                        /*if (myPreferences.getBoolean(IPv6DroidIntroActivity.FIRST_STARTUP_PREFERENCE_KEY, true)) {
-                            Intent introIntent = new Intent (SubscribeTunnelActivity.this, IPv6DroidIntroActivity.class);
-                            startActivity(introIntent);
-                        }*/
-
                     }
                 } // if the parent object has not been destroy'ed yet
             } // This is your code
@@ -221,6 +215,12 @@ public class SubscribeTunnelActivity extends Activity implements SubscriptionChe
     }
 
 
+    /**
+     * The callback method defined by SubscriptionCheckResultListener. This is used by our
+     * SubscriptionManager instance to report failure, success of Google/our server queries and
+     * their result.
+     * @param result a ResultType indicating success, technical difficulties and if tunnels are available.
+     */
     @Override
     public void onSubscriptionCheckResult(ResultType result) {
         switch (result) {
@@ -256,28 +256,10 @@ public class SubscribeTunnelActivity extends Activity implements SubscriptionChe
         }
     }
 
-    /**
-     * Handler if user clicked the accept terms checkbox
-     * @param clickedView
-     */
-    public void onAcceptTerms(View clickedView) {
-        displayActiveSubscriptions();
-    }
 
     /**
-     * The subscription Activity that was launched on our behalf by SubscriptionManager.initiatePurchase,
-     * returns an result.
-     * @param requestCode the int given to StartActivityForResult. Should be RC_BUY in our case.
-     * @param resultCode the int describing success or failure of the activity
-     * @param data an Intent used to transmit purchase data in case of successful purchase.
+     * Destroy this activity. Destroys our SubscriptionManager in turn.
      */
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (subscriptionManager != null) // The Activity might have been destroyed after click on purchase...
-          subscriptionManager.handlePurchaseActivityResult(requestCode, resultCode, data);
-    }
-
     @Override
     public void onDestroy() {
         Log.i(TAG, "SubscribeTunnelActivity gets destroyed.");
