@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="de.flyingsnail.ipv6droid"
-    android:versionCode="58"
+    android:versionCode="59"
     android:versionName="1.80">
 
     <uses-permission android:name="android.permission.INTERNET" />

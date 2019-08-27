@@ -44,9 +44,6 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Objects;
 
-import sockslib.client.Socks5DatagramSocket;
-import sockslib.client.SocksProxy;
-
 /**
  * AYIYA - Anything In Anything
  *
@@ -113,11 +110,6 @@ public class Ayiya {
 
     private Date lastPacketReceivedTime = new Date();
     private Date lastPacketSentTime = new Date();
-
-    /**
-     * The SocksProxy to use, or null.
-     */
-    private SocksProxy socksProxy;
 
     /**
      * Yield the time when the last packet was <b>received</b>. This gives an indication if the
@@ -252,22 +244,15 @@ public class Ayiya {
 
     /**
      * Connect the tunnel.
-     * @param socksProxy a SocksProxy representing a Socks5 proxy, or null for direct connection
      */
-    public synchronized void connect(SocksProxy socksProxy) throws IOException, ConnectionFailedException {
+    public synchronized void connect() throws IOException, ConnectionFailedException {
         if (socket != null) {
             throw new IllegalStateException("This AYIYA is already connected.");
         }
-        this.socksProxy = socksProxy;
 
         // UDP connection
-        if (socksProxy != null) {
-            socket = new Socks5DatagramSocket(socksProxy);
-            socket.connect(socksProxy.getInetAddress(), socksProxy.getPort()); // rather a bug in Socks5...
-        } else {
-            socket = new DatagramSocket();
-            socket.connect(ipv4Pop, port);
-        }
+        socket = new DatagramSocket();
+        socket.connect(ipv4Pop, port);
         socket.setSoTimeout(0); // no read timeout
         //socket.setSoTimeout(10000); // 10 secs. read timeout
 
@@ -288,7 +273,6 @@ public class Ayiya {
         if (socket == null)
             throw new IllegalStateException("Ayiya object is closed or not initialized");
         close();
-        connect(socksProxy);
     }
 
     /**

@@ -409,12 +409,7 @@ public class AyiyaVpnService extends VpnService {
                 myPreferences.getBoolean("routes_default", true),
                 myPreferences.getString("routes_specific", "::/0"),
                 myPreferences.getBoolean("routes_setnameservers", false),
-                myPreferences.getBoolean("routes_forcetunnel", false),
-                myPreferences.getBoolean("socks_useproxy", false),
-                myPreferences.getString("socks_host", "localhost"),
-                Integer.valueOf(myPreferences.getString("socks_port", "1080")),
-                myPreferences.getString("socks_user", ""),
-                myPreferences.getString("socks_password", ""));
+                myPreferences.getBoolean("routes_forcetunnel", false));
     }
 
     public class StatisticsBinder extends Binder {

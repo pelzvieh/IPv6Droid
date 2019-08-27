@@ -49,9 +49,7 @@ import java.io.OutputStream;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
-import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -66,12 +64,6 @@ import de.flyingsnail.ipv6droid.ayiya.Ayiya;
 import de.flyingsnail.ipv6droid.ayiya.ConnectionFailedException;
 import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 import de.flyingsnail.ipv6droid.ayiya.TunnelBrokenException;
-import sockslib.client.Socks5;
-import sockslib.client.SocksProxy;
-import sockslib.common.UsernamePasswordCredentials;
-import sockslib.common.methods.NoAuthenticationRequiredMethod;
-import sockslib.common.methods.SocksMethod;
-import sockslib.common.methods.UsernamePasswordMethod;
 
 /**
  * This class does the actual work, i.e. logs in to TIC, reads available tunnels and starts
@@ -413,12 +405,9 @@ class VpnThread extends Thread implements NetworkChangeListener {
                     Thread.sleep(1000l - lastIterationRun);
                 lastStartAttempt = new Date();
 
-                // if configured, setup SOCKS5 proxy (null by default)
-                SocksProxy socksProxy = getSocksProxy();
-
                 // setup tunnel to PoP
                 Log.i(TAG, "Connecting ayiya object");
-                ayiya.connect(socksProxy);
+                ayiya.connect();
                 vpnStatus.setProgressPerCent(75);
                 vpnStatus.setActivity(R.string.vpnservice_activity_ping_pop);
 
@@ -479,44 +468,6 @@ class VpnThread extends Thread implements NetworkChangeListener {
         }
         Log.i(VpnThread.TAG, "refreshRemoteEnd loop terminated - " +
                 (closeTunnel ? "explicit close down requested" : "TUN device invalid"));
-    }
-
-    /**
-     * If configured, setup SOCKS5 proxy (null by default)
-     * @return the SocksProxy instance to use or null if none should be used
-     * @throws ConnectionFailedException in case of
-     */
-    private SocksProxy getSocksProxy() throws ConnectionFailedException {
-        SocksProxy socksProxy = null;
-        if (routingConfiguration.isUseSocksProxy()) {
-            try {
-                InetSocketAddress socketAddress = new InetSocketAddress(
-                        routingConfiguration.getSocksHost(),
-                        routingConfiguration.getSocksPort());
-                if (socketAddress.isUnresolved()) {
-                    throw new ConnectionFailedException("Cannot resolve configured SOCKS host: "
-                            + routingConfiguration.getSocksHost(), null);
-                }
-                socksProxy = new Socks5(socketAddress);
-                Log.i(TAG, "Using socks proxy " + socksProxy);
-                final String socksUser = routingConfiguration.getSocksUser();
-                final String socksPassword = routingConfiguration.getSocksPassword();
-                if (socksUser == null || socksPassword == null) {
-                    socksProxy.setAcceptableMethods(Arrays.asList(new SocksMethod[]{new NoAuthenticationRequiredMethod()}));
-                } else {
-                    socksProxy.setCredentials(new UsernamePasswordCredentials(socksUser, socksPassword));
-                    socksProxy.setAcceptableMethods(Arrays.asList(new SocksMethod[]{
-                            new NoAuthenticationRequiredMethod(),
-                            new UsernamePasswordMethod()
-                    }));
-                }
-            } catch (RuntimeException re) {
-                throw new ConnectionFailedException("Proxy configuration defective", re);
-            }
-        } else {
-            Log.i (TAG, "Directly connecting without SOCKS proxy");
-        }
-        return socksProxy;
     }
 
     private FileDescriptor refreshFD() throws IOException {
@@ -1013,9 +964,11 @@ class VpnThread extends Thread implements NetworkChangeListener {
                 @Override
                 protected Void doInBackground(Void... params) {
                     try {
+                      if (vpnFD != null) {
                         vpnFD.close();
-                        Log.i(TAG, "VPN closed");
-                        cleanCopyThreads();
+                      }
+                      Log.i(TAG, "VPN closed");
+                      cleanCopyThreads();
                     } catch (Throwable t) {
                         Log.e(TAG, "stopping copy threads failed", t);
                     }

@@ -79,6 +79,4 @@ dependencies {
     implementation 'androidx.core:core:1.0.2'
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
     implementation 'com.android.billingclient:billing:2.0.1'
-    implementation 'io.github.fengyouchao:sockslib:1.0.4-SNAPSHOT'
-    annotationProcessor 'org.apache.logging.log4j:log4j-core:2.4'
 }

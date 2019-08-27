@@ -54,19 +54,6 @@ public class SettingsFragment extends PreferenceFragment {
             new SharedPreferences.OnSharedPreferenceChangeListener() {
                 @Override
                 public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-                    if (key.equals("socks_useproxy")) {
-                        boolean useSocksProxy = sharedPreferences.getBoolean(key, false);
-                        Preference socksHost = findPreference("socks_host");
-                        socksHost.setEnabled(useSocksProxy);
-                        Preference socksPort= findPreference("socks_port");
-                        socksPort.setEnabled(useSocksProxy);
-                        Preference socksUser = findPreference("socks_user");
-                        socksUser.setEnabled(useSocksProxy);
-                        Preference socksPassword = findPreference("socks_password");
-                        socksPassword.setEnabled(useSocksProxy);
-                        return;
-                    }
-
                     Preference preference = findPreference(key);
                     if (preference == null)
                         return;

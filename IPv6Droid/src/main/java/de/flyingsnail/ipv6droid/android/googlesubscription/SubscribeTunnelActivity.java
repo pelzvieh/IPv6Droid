@@ -256,6 +256,14 @@ public class SubscribeTunnelActivity extends Activity implements SubscriptionChe
         }
     }
 
+    /**
+     * Handler if user clicked the accept terms checkbox
+     * @param clickedView the view that the user actually clicked on
+     */
+    public void onAcceptTerms(View clickedView) {
+        displayActiveSubscriptions();
+    }
+
 
     /**
      * Destroy this activity. Destroys our SubscriptionManager in turn.

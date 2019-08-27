@@ -45,68 +45,20 @@ public class RoutingConfiguration implements Cloneable {
     private boolean forceRouting;
 
     /**
-     * a boolean flag if we should use a SOCKS5 proxy for IPv4 UDP traffic
-     */
-    private final boolean useSocksProxy;
-    /**
-     * a String giving the SOCKS5 proxie's host name
-     */
-    private final String socksHost;
-
-    /**
-     * an int giving the SOCKS5 proxie's port number
-     */
-    private final int socksPort;
-
-    /**
-     * a String giving the SOCKS5 username
-     */
-    private final String socksUser;
-
-    /**
-     * a String giving the SOCKS5 password
-     */
-    private final String socksPassword;
-
-    /**
      * Initialize the RoutingConfiguration object.
      * @param setDefaultRoute a flag if the default route should be set
      * @param specificRoute a String giving a specific route
      * @param setNameServers a flag if we should set Google name servers
      * @param forceRouting a flag if we should route IPv6 through the tunnel even in IPv6 capable networks
-     * @param useSocksProxy a flag if we should use a SOCKS5 proxy
-     * @param socksHost the host name of the SOCKS5 proxy to use if useSocksProxy is set
-     * @param socksPort the port number of the SOCKS5 proxy to use if useSocksProxy is set
-     * @param socksUser the user name for SOCKS5 User method authentication, or null/empty
      */
     public RoutingConfiguration(boolean setDefaultRoute,
                                 String specificRoute,
                                 boolean setNameServers,
-                                boolean forceRouting,
-                                boolean useSocksProxy,
-                                String socksHost,
-                                int socksPort,
-                                String socksUser,
-                                String socksPassword) {
+                                boolean forceRouting) {
         this.setDefaultRoute = setDefaultRoute;
         this.specificRoute = specificRoute;
         this.setNameServers = setNameServers;
         this.forceRouting = forceRouting;
-        this.useSocksProxy = useSocksProxy;
-        this.socksHost = socksHost;
-        this.socksPort = socksPort;
-        this.socksUser = (socksUser == null || socksPassword == null || !socksPassword.isEmpty()) ?
-                socksUser : null;
-        this.socksPassword = (socksPassword == null || !socksPassword.isEmpty()) ?
-                socksPassword : null;
-    }
-
-    public String getSocksUser() {
-        return socksUser;
-    }
-
-    public String getSocksPassword() {
-        return socksPassword;
     }
 
     public boolean isSetDefaultRoute() {
@@ -139,18 +91,6 @@ public class RoutingConfiguration implements Cloneable {
 
     public void setForceRouting(boolean forceRouting) {
         this.forceRouting = forceRouting;
-    }
-
-    public boolean isUseSocksProxy() {
-        return useSocksProxy;
-    }
-
-    public String getSocksHost() {
-        return socksHost;
-    }
-
-    public int getSocksPort() {
-        return socksPort;
     }
 
     @Override
