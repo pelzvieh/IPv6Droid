@@ -23,24 +23,29 @@ package de.flyingsnail.ipv6droid.ayiya;
 import android.annotation.SuppressLint;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Objects;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import sockslib.client.Socks5DatagramSocket;
+import sockslib.client.SocksProxy;
 
 /**
  * AYIYA - Anything In Anything
@@ -63,7 +68,7 @@ public class Ayiya {
     private static final String TAG = Ayiya.class.getName();
 
     /** The port number for AYIYA */
-    public int port = 5072;
+    private int port = 5072;
 
     // @todo I'm afraid I missed an official source for this kind of constants
     private static final byte IPPROTO_IPv6 = 41;
@@ -108,6 +113,11 @@ public class Ayiya {
 
     private Date lastPacketReceivedTime = new Date();
     private Date lastPacketSentTime = new Date();
+
+    /**
+     * The SocksProxy to use, or null.
+     */
+    private SocksProxy socksProxy;
 
     /**
      * Yield the time when the last packet was <b>received</b>. This gives an indication if the
@@ -225,14 +235,12 @@ public class Ayiya {
             hashedPassword = ayiyaHash (tunnel.getPassword());
         } catch (NoSuchAlgorithmException e) {
             throw new ConnectionFailedException("Cannot hash password", e);
-        } catch (UnsupportedEncodingException e) {
-            throw new ConnectionFailedException("Cannot hash password", e);
         }
     }
 
-    private static byte[] ayiyaHash (String s) throws NoSuchAlgorithmException, UnsupportedEncodingException {
+    private static byte[] ayiyaHash (String s) throws NoSuchAlgorithmException {
         // compute the SHA1 hash of the password
-        return ayiyaHash(s.getBytes("UTF-8"));
+        return ayiyaHash(s.getBytes(StandardCharsets.UTF_8));
     }
 
     private static byte[] ayiyaHash (byte[] in) throws NoSuchAlgorithmException {
@@ -244,15 +252,22 @@ public class Ayiya {
 
     /**
      * Connect the tunnel.
+     * @param socksProxy a SocksProxy representing a Socks5 proxy, or null for direct connection
      */
-    public synchronized void connect() throws IOException, ConnectionFailedException {
+    public synchronized void connect(SocksProxy socksProxy) throws IOException, ConnectionFailedException {
         if (socket != null) {
             throw new IllegalStateException("This AYIYA is already connected.");
         }
+        this.socksProxy = socksProxy;
 
         // UDP connection
-        socket = new DatagramSocket();
-        socket.connect(ipv4Pop, port);
+        if (socksProxy != null) {
+            socket = new Socks5DatagramSocket(socksProxy);
+            socket.connect(socksProxy.getInetAddress(), socksProxy.getPort()); // rather a bug in Socks5...
+        } else {
+            socket = new DatagramSocket();
+            socket.connect(ipv4Pop, port);
+        }
         socket.setSoTimeout(0); // no read timeout
         //socket.setSoTimeout(10000); // 10 secs. read timeout
 
@@ -273,7 +288,7 @@ public class Ayiya {
         if (socket == null)
             throw new IllegalStateException("Ayiya object is closed or not initialized");
         close();
-        connect();
+        connect(socksProxy);
     }
 
     /**
@@ -320,7 +335,7 @@ public class Ayiya {
             Log.wtf(TAG, "SHA1 no longer available???", e);
             throw new TunnelBrokenException("Cannot build ayiya struct", e);
         }
-        DatagramPacket dgPacket = new DatagramPacket(ayiyaPacket, ayiyaPacket.length, socket.getRemoteSocketAddress());
+        DatagramPacket dgPacket = new DatagramPacket(ayiyaPacket, ayiyaPacket.length, new InetSocketAddress(ipv4Pop, port));
         socket.send(dgPacket);
         lastPacketSentTime = new Date();
     }
@@ -348,7 +363,7 @@ public class Ayiya {
                 // 4th byte: next header
                         put(nextHeader).
                 // 5th-8th byte: epoch time
-                        putInt((int) ((new Date().getTime()) / 1000l)).
+                        putInt((int) ((new Date().getTime()) / 1000L)).
                 // 9th-24th byte: Identity
                         put(ipv6Local.getAddress())
         ;
@@ -404,7 +419,7 @@ public class Ayiya {
             else if (bytecount == 0) {
                 Log.e(TAG, "Received 0 bytes from blocking read..?");
                 try {
-                    Thread.sleep(100l);
+                    Thread.sleep(100L);
                 } catch (InterruptedException e) {
                     throw new TunnelBrokenException ("Received interrupt", e);
                 }
@@ -434,14 +449,15 @@ public class Ayiya {
                     if (error == null) {
                         Log.w(TAG, "Unknown error code");
                         invalidPacketCounter++;
-                    }
-                    switch (error) {
-                        case AUTHENTICATION_FAILED:
-                            throw new TunnelBrokenException("Received error code authentication failed from peer", null);
-                        case TIMELAPSE:
-                            throw new TunnelBrokenException("Please check clock and timezone setting", null);
-                        default:
-                            invalidPacketCounter++;
+                    } else {
+                        switch (error) {
+                            case AUTHENTICATION_FAILED:
+                                throw new TunnelBrokenException("Received error code authentication failed from peer", null);
+                            case TIMELAPSE:
+                                throw new TunnelBrokenException("Please check clock and timezone setting", null);
+                            default:
+                                invalidPacketCounter++;
+                        }
                     }
                 }
             } else {
@@ -545,7 +561,7 @@ public class Ayiya {
         }
 
         // check ipv6
-        if (packet[3+offset] == IPPROTO_IPv6 && bytecount >= OVERHEAD && (packet[OVERHEAD +offset] >> 4) != 6) {
+        if (packet[3+offset] == IPPROTO_IPv6 && (packet[OVERHEAD +offset] >> 4) != 6) {
             Log.e(TAG, "Payload should be an IPv6 packet, but isn't");
             return false;
         }
@@ -611,19 +627,21 @@ public class Ayiya {
     }
 
     private class AyiyaInputStream extends InputStream {
-        private ThreadLocal<ByteBuffer> streamBuffer = new ThreadLocal<ByteBuffer>();
+        private ThreadLocal<ByteBuffer> streamBuffer = new ThreadLocal<>();
 
         private void ensureBuffer() throws IOException {
-            if (streamBuffer.get() == null) {
+            ByteBuffer myByteBuffer = streamBuffer.get();
+            if (myByteBuffer == null) {
                 byte[] actualBuffer = new byte[2* OVERHEAD + mtu];
                 // a new Thread, a new buffer.
-                streamBuffer.set (ByteBuffer.wrap(actualBuffer));
                 // wrap it into a byte buffer which keeps track of position and length ("limit")
-                streamBuffer.get().limit(0); // initially no bytes inside
+                myByteBuffer = ByteBuffer.wrap(actualBuffer);
+                myByteBuffer.limit(0); // initially no bytes inside
+                streamBuffer.set (myByteBuffer);
             }
-            while (!streamBuffer.get().hasRemaining()) {
+            while (!myByteBuffer.hasRemaining()) {
                 try {
-                    Ayiya.this.read(streamBuffer.get());
+                    Ayiya.this.read(myByteBuffer);
                 } catch (TunnelBrokenException e) {
                     throw new IOException(e);
                 }
@@ -633,7 +651,7 @@ public class Ayiya {
         @Override
         public int read() throws IOException {
             ensureBuffer();
-            return streamBuffer.get().get();
+            return Objects.requireNonNull(streamBuffer.get()).get();
         }
 
         @Override
@@ -644,9 +662,10 @@ public class Ayiya {
         @Override
         public int read(@NonNull byte[] buffer, int offset, int length) throws IOException {
             ensureBuffer();
-            int byteCount = Math.min(streamBuffer.get().remaining(), length);
-            streamBuffer.get().get(buffer, offset, byteCount);
-            if (streamBuffer.get().hasRemaining())
+            ByteBuffer myByteBuffer = Objects.requireNonNull(streamBuffer.get());
+            int byteCount = Math.min(myByteBuffer.remaining(), length);
+            myByteBuffer.get(buffer, offset, byteCount);
+            if (myByteBuffer.hasRemaining())
                 Log.e(TAG, "Warning: InputStream.read supplied with a buffer too small to read a full Datagram");
             return byteCount;
         }
@@ -721,5 +740,4 @@ public class Ayiya {
     public void setPort(int port) {
         this.port = port;
     }
-
 }

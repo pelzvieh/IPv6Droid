@@ -6,7 +6,6 @@
         <EditTextPreference
             android:key="tic_username"
             android:title="@string/pref_title_username"
-            android:defaultValue=""
             android:selectAllOnFocus="true"
             android:inputType="textPersonName"
             android:singleLine="true"
@@ -18,7 +17,6 @@
         <EditTextPreference
             android:key="tic_password"
             android:title="@string/pref_title_password"
-            android:defaultValue=""
             android:selectAllOnFocus="true"
             android:inputType="textPassword"
             android:singleLine="true"
@@ -29,7 +27,6 @@
         <EditTextPreference
             android:key="tic_host"
             android:title="@string/pref_title_host"
-            android:defaultValue=""
             android:selectAllOnFocus="true"
             android:inputType="textUri"
             android:singleLine="true"
@@ -83,6 +80,41 @@
             android:summaryOn="@string/pref_summary_force_routing_on"
             android:summaryOff="@string/pref_summary_force_routing_off"
             android:defaultValue="false" />
-
+    </PreferenceCategory>
+    <PreferenceCategory
+        android:title="SOCKS proxy"
+        android:key="pref_key_socks_settings">
+        <SwitchPreference
+            android:key="socks_useproxy"
+            android:title="Use SOCKS5 proxy"
+            android:summaryOn="Connect to a IPv4 SOCKS5 host"
+            android:summaryOff="Directly connect to IPv6 tunnel server"
+            android:defaultValue="false" />
+        <EditTextPreference
+            android:key="socks_host"
+            android:title="Host name / IP (v4)"
+            android:summary="host name/ip"
+            android:defaultValue="localhost"
+            android:inputType="textUri"
+            android:enabled="false"/>
+        <EditTextPreference
+            android:key="socks_port"
+            android:title="Port number"
+            android:inputType="number"
+            android:summary="port"
+            android:defaultValue="1080"
+            android:enabled="false"/>
+        <EditTextPreference
+            android:key="socks_user"
+            android:title="User name"
+            android:inputType="textEmailAddress"
+            android:summary="user name"
+            android:enabled="false"/>
+        <EditTextPreference
+            android:key="socks_password"
+            android:title="Password"
+            android:inputType="textPassword"
+            android:summary="***"
+            android:enabled="false" />
     </PreferenceCategory>
 </PreferenceScreen>
