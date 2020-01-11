@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Gradle: org.bouncycastle:bctls-jdk15on:1.63@jar">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.bouncycastle/bctls-jdk15on/1.63/5b89b9ff6495fb9532bb4d73653c4f205d9ce4e/bctls-jdk15on-1.63.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.bouncycastle/bctls-jdk15on/1.63/6824f5bbcfed0d518fefb677a62c8caef4dfaf45/bctls-jdk15on-1.63-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

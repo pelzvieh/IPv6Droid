@@ -82,4 +82,5 @@ dependencies {
     implementation 'androidx.core:core:1.1.0'
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
     implementation 'com.android.billingclient:billing:2.1.0'
+    implementation 'org.bouncycastle:bctls-jdk15on:1.63'
 }

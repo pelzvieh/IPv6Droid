@@ -30,8 +30,8 @@ import java.util.List;
 
 import de.flyingsnail.ipv6droid.android.googlesubscription.SubscriptionCheckResultListener;
 import de.flyingsnail.ipv6droid.android.googlesubscription.SubscriptionManager;
-import de.flyingsnail.ipv6droid.ayiya.ConnectionFailedException;
-import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
+import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
+import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
 
 /**
  * Created by pelzi on 18.10.17.

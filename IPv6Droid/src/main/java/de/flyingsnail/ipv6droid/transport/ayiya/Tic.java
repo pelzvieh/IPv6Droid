@@ -18,7 +18,7 @@
  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  */
 
-package de.flyingsnail.ipv6droid.ayiya;
+package de.flyingsnail.ipv6droid.transport.ayiya;
 
 import android.annotation.SuppressLint;
 import android.util.Log;
@@ -42,6 +42,10 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 import javax.net.ssl.SSLSocketFactory;
+
+import de.flyingsnail.ipv6droid.transport.AuthenticationFailedException;
+import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
+import de.flyingsnail.ipv6droid.transport.TunnelNotAcceptedException;
 
 /**
  * This represents the Tunnel Information Control Protocol as published by Sixxs (http://www.sixxs.net/tools/tic).

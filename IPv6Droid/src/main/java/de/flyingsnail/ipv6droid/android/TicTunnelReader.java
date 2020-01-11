@@ -35,11 +35,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import androidx.annotation.NonNull;
-import de.flyingsnail.ipv6droid.ayiya.ConnectionFailedException;
-import de.flyingsnail.ipv6droid.ayiya.Tic;
-import de.flyingsnail.ipv6droid.ayiya.TicConfiguration;
-import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
-import de.flyingsnail.ipv6droid.ayiya.TunnelNotAcceptedException;
+import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
+import de.flyingsnail.ipv6droid.transport.ayiya.Tic;
+import de.flyingsnail.ipv6droid.transport.ayiya.TicConfiguration;
+import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
+import de.flyingsnail.ipv6droid.transport.TunnelNotAcceptedException;
 
 import static de.flyingsnail.ipv6droid.android.googlesubscription.Subscription.GOOGLESUBSCRIPTION;
 

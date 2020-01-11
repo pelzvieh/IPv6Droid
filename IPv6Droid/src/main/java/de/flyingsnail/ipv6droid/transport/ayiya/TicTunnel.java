@@ -18,7 +18,7 @@
  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  */
 
-package de.flyingsnail.ipv6droid.ayiya;
+package de.flyingsnail.ipv6droid.transport.ayiya;
 
 import android.util.Log;
 
