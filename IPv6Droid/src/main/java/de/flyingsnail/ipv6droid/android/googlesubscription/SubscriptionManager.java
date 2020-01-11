@@ -46,7 +46,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
+import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
 import de.flyingsnail.ipv6server.restapi.SubscriptionsApi;
 import retrofit2.Call;
 import retrofit2.Response;

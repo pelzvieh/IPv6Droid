@@ -11,7 +11,7 @@ import java.io.OutputStream;
 import java.util.List;
 
 import androidx.annotation.NonNull;
-import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
+import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
 
 /**
  * Implements the TunnelPersisting interface for storing to a file.

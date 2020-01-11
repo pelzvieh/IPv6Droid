@@ -18,12 +18,11 @@
  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  */
 
-package de.flyingsnail.ipv6droid.ayiya;
+package de.flyingsnail.ipv6droid.transport.ayiya;
 
 import android.annotation.SuppressLint;
 import android.util.Log;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.io.IOException;
@@ -42,7 +41,12 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.Objects;
+
+import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
+import de.flyingsnail.ipv6droid.transport.Transporter;
+import de.flyingsnail.ipv6droid.transport.TransporterInputStream;
+import de.flyingsnail.ipv6droid.transport.TransporterOutputStream;
+import de.flyingsnail.ipv6droid.transport.TunnelBrokenException;
 
 /**
  * AYIYA - Anything In Anything
@@ -53,7 +57,7 @@ import java.util.Objects;
  * http://www.sixxs.net/tools/ayiya
  *
  */
-public class Ayiya {
+public class Ayiya implements Transporter {
 
     /**
      * AYIYA version (which document this should conform to)
@@ -63,6 +67,9 @@ public class Ayiya {
 
     /** Tag for Logger */
     private static final String TAG = Ayiya.class.getName();
+
+    /** The TicTunnel type supported by this Transporter */
+    public static final String TUNNEL_TYPE = "AYIYA";
 
     /** The port number for AYIYA */
     private int port = 5072;
@@ -116,6 +123,7 @@ public class Ayiya {
      * tunnel is still alive.
      * @return a Date denoting the time of last packet received.
      */
+    @Override
     public Date getLastPacketReceivedTime() {
         return lastPacketReceivedTime;
     }
@@ -125,6 +133,7 @@ public class Ayiya {
      * send an heartbeat packet.
      * @return a Date denoting the time of last packet sent.
      */
+    @Override
     public Date getLastPacketSentTime() {
         return lastPacketSentTime;
     }
@@ -133,6 +142,7 @@ public class Ayiya {
      * Check if this object is in a functional state
      * @return a boolean, true if socket is still connected
      */
+    @Override
     public boolean isAlive() {
         if (socket != null && socket.isConnected()) {
             try {
@@ -245,6 +255,7 @@ public class Ayiya {
     /**
      * Connect the tunnel.
      */
+    @Override
     public synchronized void connect() throws IOException, ConnectionFailedException {
         if (socket != null) {
             throw new IllegalStateException("This AYIYA is already connected.");
@@ -269,16 +280,19 @@ public class Ayiya {
     /**
      * Re-Connect the tunnel, closing the existing socket
      */
+    @Override
     public synchronized void reconnect() throws IOException, ConnectionFailedException {
         if (socket == null)
             throw new IllegalStateException("Ayiya object is closed or not initialized");
         close();
+        connect();
     }
 
     /**
      * Tell if a valid response has already been received by this instance.
      * @return true if any valid response was already received.
      */
+    @Override
     public boolean isValidPacketReceived() {
         // special situation: a packet was received, but is not yet read out - not the sender's
         // fault, really! Here, we ignore this situation, i.e. a tunnel might be classified
@@ -290,6 +304,7 @@ public class Ayiya {
      * Return the number of invalid packages received yet.
      * @return an int representing the number.
      */
+    @Override
     public int getInvalidPacketCounter() {
         return invalidPacketCounter;
     }
@@ -297,6 +312,7 @@ public class Ayiya {
      * Get the maximum transmission unit (MTU) associated with this Ayiya instance.
      * @return the MTU in bytes
      */
+    @Override
     public int getMtu() {
         return mtu;
     }
@@ -304,6 +320,7 @@ public class Ayiya {
     /**
      * Send a heartbeat to the PoP
      */
+    @Override
     public void beat() throws IOException, TunnelBrokenException {
         if (socket == null)
             throw new IOException("beat() called on unconnected Ayiya");
@@ -314,7 +331,7 @@ public class Ayiya {
         }
         byte[] ayiyaPacket;
         try {
-            ayiyaPacket = buildAyiyaStruct(new byte[0], OpCode.NOOP,  IPPROTO_NONE);
+            ayiyaPacket = buildAyiyaStruct(ByteBuffer.wrap(new byte[0]), OpCode.NOOP,  IPPROTO_NONE);
         } catch (NoSuchAlgorithmException e) {
             Log.wtf(TAG, "SHA1 no longer available???", e);
             throw new TunnelBrokenException("Cannot build ayiya struct", e);
@@ -333,8 +350,8 @@ public class Ayiya {
     }
 
     @SuppressLint("Assert")
-    private byte[] buildAyiyaStruct(byte[] payload, OpCode opcode, byte nextHeader) throws NoSuchAlgorithmException {
-        byte[] retval = new byte[payload.length + OVERHEAD];
+    private byte[] buildAyiyaStruct(ByteBuffer payload, OpCode opcode, byte nextHeader) throws NoSuchAlgorithmException {
+        byte[] retval = new byte[payload.remaining() + OVERHEAD];
         ByteBuffer bb = ByteBuffer.wrap (retval);
         bb.order(ByteOrder.BIG_ENDIAN);
         MessageDigest sha1 = MessageDigest.getInstance("SHA1");
@@ -380,6 +397,7 @@ public class Ayiya {
      * @throws IOException in case of network problems (probably temporary in nature)
      * @throws TunnelBrokenException in case that this tunnel is no longer usable and must be restarted
      */
+    @Override
     public ByteBuffer read(ByteBuffer bb) throws IOException, TunnelBrokenException {
         if (socket == null)
             throw new IllegalStateException("read() called on unconnected Ayiya");
@@ -590,8 +608,9 @@ public class Ayiya {
      * @throws IOException in case of network problems (probably temporary in nature)
      * @throws TunnelBrokenException in case that this tunnel is no longer usable and must be restarted
      */
+    @Override
     @SuppressLint("Assert")
-    public void write(byte[] payload) throws IOException, TunnelBrokenException {
+    public void write(ByteBuffer payload) throws IOException, TunnelBrokenException {
         if (socket == null)
             throw new IllegalStateException("write(byte[]) called on unconnected Ayiya");
         if (!socket.isConnected())
@@ -610,104 +629,35 @@ public class Ayiya {
         lastPacketSentTime = new Date();
     }
 
-    private class AyiyaInputStream extends InputStream {
-        private ThreadLocal<ByteBuffer> streamBuffer = new ThreadLocal<>();
-
-        private void ensureBuffer() throws IOException {
-            ByteBuffer myByteBuffer = streamBuffer.get();
-            if (myByteBuffer == null) {
-                byte[] actualBuffer = new byte[2* OVERHEAD + mtu];
-                // a new Thread, a new buffer.
-                // wrap it into a byte buffer which keeps track of position and length ("limit")
-                myByteBuffer = ByteBuffer.wrap(actualBuffer);
-                myByteBuffer.limit(0); // initially no bytes inside
-                streamBuffer.set (myByteBuffer);
-            }
-            while (!myByteBuffer.hasRemaining()) {
-                try {
-                    Ayiya.this.read(myByteBuffer);
-                } catch (TunnelBrokenException e) {
-                    throw new IOException(e);
-                }
-            }
-        }
-
-        @Override
-        public int read() throws IOException {
-            ensureBuffer();
-            return Objects.requireNonNull(streamBuffer.get()).get();
-        }
-
-        @Override
-        public int read(@NonNull byte[] buffer) throws IOException {
-            return read(buffer, 0, buffer.length);
-        }
-
-        @Override
-        public int read(@NonNull byte[] buffer, int offset, int length) throws IOException {
-            ensureBuffer();
-            ByteBuffer myByteBuffer = Objects.requireNonNull(streamBuffer.get());
-            int byteCount = Math.min(myByteBuffer.remaining(), length);
-            myByteBuffer.get(buffer, offset, byteCount);
-            if (myByteBuffer.hasRemaining())
-                Log.e(TAG, "Warning: InputStream.read supplied with a buffer too small to read a full Datagram");
-            return byteCount;
-        }
-
-        @Override
-        public void close() throws IOException {
-            super.close();
-            streamBuffer.remove(); // @todo in principle, there may be more buffers of other Threads. Hm.
-        }
-    }
-
-    /**
+  /**
      * Provides an InputStream on the tunnel's payload. Only sensible use is to provide enough
      * buffer to read one datagram at a time. In this case, each call will receive one packet
      * send by the tunnel.
      * @return the InputStream.
      */
+    @Override
     public InputStream getInputStream() {
-        return new AyiyaInputStream();
+        return new TransporterInputStream(this);
     }
 
-    private class AyiyaOutputStream extends OutputStream {
-
-        @Override
-        public void write(@NonNull byte[] buffer) throws IOException {
-            try {
-                Ayiya.this.write(buffer);
-            } catch (TunnelBrokenException e) {
-                throw new IOException(e);
-            }
-        }
-
-        @Override
-        public void write(@NonNull byte[] buffer, int offset, int count) throws IOException {
-            this.write(Arrays.copyOfRange(buffer, offset, offset + count));
-        }
-
-        @Override
-        public void write(int i) throws IOException {
-            this.write(new byte[] {(byte)i});
-        }
-    }
-
-    /**
+  /**
      * Provides an OutputStream on the tunnel. Any write should give a whole tcp package to transmit.
      * @return the OutputStream
      */
+    @Override
     public OutputStream getOutputStream() {
-        return new AyiyaOutputStream();
+        return new TransporterOutputStream(this);
     }
 
     /** This can be used by friendly classes to protect this socket from tunneling, query its state, etc. */
+    @Override
     public DatagramSocket getSocket() {
         return socket;
     }
     /**
      * Close our socket. Basically that's about it.
      */
+    @Override
     public synchronized void close() {
         if (socket != null && !socket.isClosed()) {
             socket.close();
@@ -721,7 +671,18 @@ public class Ayiya {
      * @todo this should eventually become an attribute of TicTunnel
      * @param port an int giving the port number to use.
      */
+    @Override
     public void setPort(int port) {
         this.port = port;
     }
+
+  /**
+   * Return the number of bytes of overhead required by this transport on each packet.
+   *
+   * @return an int giving the number of bytes of overhead
+   */
+  @Override
+  public int getOverhead() {
+    return OVERHEAD;
+  }
 }

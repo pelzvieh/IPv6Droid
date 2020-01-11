@@ -31,7 +31,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import de.flyingsnail.ipv6droid.R;
-import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
+import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
 
 /**
 * Created by pelzi on 05.09.13.

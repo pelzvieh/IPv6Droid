@@ -29,7 +29,7 @@ import java.util.List;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
+import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
 
 /**
  * A ArrayList&lt;TicTunnel&gt; extended by information on a potentially selected tunnel.

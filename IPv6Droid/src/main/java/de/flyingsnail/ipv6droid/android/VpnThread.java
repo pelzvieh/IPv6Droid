@@ -50,20 +50,22 @@ import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.UnknownHostException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.StringTokenizer;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.transport.Transporter;
 import de.flyingsnail.ipv6droid.android.googlesubscription.SubscribeTunnelActivity;
 import de.flyingsnail.ipv6droid.android.statistics.Statistics;
 import de.flyingsnail.ipv6droid.android.statistics.TransmissionStatistics;
-import de.flyingsnail.ipv6droid.ayiya.AuthenticationFailedException;
-import de.flyingsnail.ipv6droid.ayiya.Ayiya;
-import de.flyingsnail.ipv6droid.ayiya.ConnectionFailedException;
-import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
-import de.flyingsnail.ipv6droid.ayiya.TunnelBrokenException;
+import de.flyingsnail.ipv6droid.transport.AuthenticationFailedException;
+import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
+import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
+import de.flyingsnail.ipv6droid.transport.TunnelBrokenException;
+import de.flyingsnail.ipv6droid.transport.TransporterBuilder;
 
 /**
  * This class does the actual work, i.e. logs in to TIC, reads available tunnels and starts
@@ -184,7 +186,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
     /**
      * The tunnel protocol object
      */
-    private Ayiya ayiya;
+    private Transporter transporter;
     /**
      * The incoming statistics collector.
      */
@@ -320,7 +322,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
     }
 
     /**
-     * Request copy threads to close, reset thread fields, and close ayiya object
+     * Request copy threads to close, reset thread fields, and close transporter object
      */
     private synchronized void cleanCopyThreads() {
         final CopyThread myInThread = inThread; // Race-Conditions vermeiden
@@ -333,17 +335,17 @@ class VpnThread extends Thread implements NetworkChangeListener {
             outThread = null;
             myOutThread.stopCopy();
         }
-        final Ayiya myAyiya = ayiya; // Race-Conditions vermeiden
+        final Transporter myAyiya = transporter; // Race-Conditions vermeiden
         if (myAyiya != null) {
             try {
                 myAyiya.close();
             } catch (Exception e) {
-                Log.e(TAG, "Cannot close ayiya object", e);
+                Log.e(TAG, "Cannot close transporter object", e);
             }
         }
     }
     /**
-     * Request copy threads to close, close ayiya object and VPN socket.
+     * Request copy threads to close, close transporter object and VPN socket.
      */
     private synchronized void cleanAll() {
         try {
@@ -362,7 +364,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
 
     /**
      * Run tunnels with a given local end (vpnFD remaining constant, local IP remaining constant,
-     * all connections staying up. In effect, this method will (re-)connect the ayiya part and run
+     * all connections staying up. In effect, this method will (re-)connect the transporter part and run
      * monitoredHeartbeatLoop on it.
      *
      * @throws ConnectionFailedException in case that the current configuration seems permanently defective
@@ -406,16 +408,16 @@ class VpnThread extends Thread implements NetworkChangeListener {
                 lastStartAttempt = new Date();
 
                 // setup tunnel to PoP
-                Log.i(TAG, "Connecting ayiya object");
-                ayiya.connect();
+                Log.i(TAG, "Connecting transporter object");
+                transporter.connect();
                 vpnStatus.setProgressPerCent(75);
                 vpnStatus.setActivity(R.string.vpnservice_activity_ping_pop);
 
-                // Initialize the input and output streams from the ayiya socket
-                DatagramSocket popSocket = ayiya.getSocket();
+                // Initialize the input and output streams from the transporter socket
+                DatagramSocket popSocket = transporter.getSocket();
                 ayiyaVpnService.protect(popSocket);
-                InputStream popIn = ayiya.getInputStream();
-                OutputStream popOut = ayiya.getOutputStream();
+                InputStream popIn = transporter.getInputStream();
+                OutputStream popOut = transporter.getOutputStream();
 
                 // update network info
                 try {
@@ -454,7 +456,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
                 Log.i(TAG, "monitored heartbeat loop ended");
                 localFD = refreshFD();
             } catch (IOException e) {
-                Log.i(TAG, "Tunnel connection broke down, closing and reconnecting ayiya (remote end)", e);
+                Log.i(TAG, "Tunnel connection broke down, closing and reconnecting transporter (remote end)", e);
                 vpnStatus.setProgressPerCent(50);
                 vpnStatus.setCause(e);
                 vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
@@ -490,7 +492,11 @@ class VpnThread extends Thread implements NetworkChangeListener {
      */
     private void refreshTunnelLoop(VpnService.Builder builder, VpnService.Builder builderNotRouted) throws ConnectionFailedException {
         // Prepare the tunnel to PoP
-        ayiya = new Ayiya(tunnels.getActiveTunnel());
+        try {
+            transporter = TransporterBuilder.createTransporter(tunnels.getActiveTunnel());
+        } catch (NoSuchAlgorithmException e) {
+            throw new ConnectionFailedException("Cannot construct a transporter for this tunnel type", e);
+        }
         closeTunnel = false;
 
         Date lastStartAttempt = new Date(0l);
@@ -610,11 +616,10 @@ class VpnThread extends Thread implements NetworkChangeListener {
     /**
      * This loop monitors the two copy threads and generates heartbeats in the heartbeat
      * interval. It detects tunnel defects by a number of means and exits by one of its
-     * declared exceptions when either it is no longer intended to run or the given ayiya doesn't
+     * declared exceptions when either it is no longer intended to run or the given transporter doesn't
      * seem to work any more. It just exits if one of the copy threads terminated (see there).
      *
-     * @throws InterruptedException if someone (e.g. the user...) doesn't want us to go on.
-     * @throws IOException in case of a (usually temporary) technical problem with the current ayiya.
+     * @throws IOException in case of a (usually temporary) technical problem with the current transporter.
      *   Often, this means that our IP address did change.
      * @throws ConnectionFailedException in case of a more fundamental problem, e.g. if the tunnel
      *   is not enabled any more in TIC, or the given and up-to-date TIC information in the tunnel
@@ -639,18 +644,18 @@ class VpnThread extends Thread implements NetworkChangeListener {
             if (closeTunnel)
                 break;
             // re-check cached network information
-            final Ayiya myAyiya = ayiya; // prevents race condition on null check below
+            final Transporter myAyiya = transporter; // prevents race condition on null check below
             if (!isCurrentSocketAdressStillValid())
                 networkHelper.updateNetworkDetails(null);
             // determine last package transmission time
-            lastPacketDelta = new Date().getTime() - ayiya.getLastPacketSentTime().getTime();
+            lastPacketDelta = new Date().getTime() - transporter.getLastPacketSentTime().getTime();
             // if no traffic occurred, send a heartbeat package
             if ((inThread != null && inThread.isAlive()) &&
                     (outThread != null && outThread.isAlive()) &&
                     lastPacketDelta >= heartbeatInterval - 100) {
                 try {
                     Log.i(TAG, "Sending heartbeat");
-                    ayiya.beat();
+                    transporter.beat();
                     lastPacketDelta = 0l;
                 } catch (TunnelBrokenException e) {
                     throw new IOException ("Ayiya object claims it is broken", e);
@@ -662,11 +667,11 @@ class VpnThread extends Thread implements NetworkChangeListener {
                    but if not pingable, probably broken.
                    In the latter case we give it another heartbeat interval time to recover. */
                 if (isDeviceConnected() &&
-                        !ayiya.isValidPacketReceived() && // if the tunnel worked in a session, don't worry if it pauses - it's 100% network problems
-                        checkExpiry(ayiya.getLastPacketReceivedTime(),
+                        !transporter.isValidPacketReceived() && // if the tunnel worked in a session, don't worry if it pauses - it's 100% network problems
+                        checkExpiry(transporter.getLastPacketReceivedTime(),
                                 activeTunnel.getHeartbeatInterval()) &&
                         !activeTunnel.getIpv6Pop().isReachable(10000)
-                        ) {
+                ) {
                     if (!timeoutSuspected)
                         timeoutSuspected = true;
                     else if (new Date().getTime() - activeTunnel.getCreationDate().getTime()
@@ -692,7 +697,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
                 Log.i(TAG, "Sent heartbeat.");
             }
         }
-        Log.i(TAG, "Terminated loop of current ayiya object (interrupt or end of a copy thread)");
+        Log.i(TAG, "Terminated loop of current transporter object (interrupt or end of a copy thread)");
         Throwable deathCause = null;
         final CopyThread myInThread = inThread;
         final CopyThread myOutThread = outThread;
@@ -718,7 +723,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
      * Method called by the inbound copy thread if the first packet was transmitted.
      */
     protected void notifyFirstPacketReceived() {
-        if (ayiya.isValidPacketReceived()) {
+        if (transporter.isValidPacketReceived()) {
             // major status update, just once per session
             vpnStatus.setTunnelProvedWorking(true);
             vpnStatus.setStatus(VpnStatusReport.Status.Connected);
@@ -825,7 +830,6 @@ class VpnThread extends Thread implements NetworkChangeListener {
     /**
      * Waits until the device's active connection is connected.
      *
-     * @throws InterruptedException in case of an interrupt during waiting.
      */
     private void waitOnConnectivity() throws InterruptedException {
         while (!isDeviceConnected()) {
@@ -917,7 +921,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
      * @return true if the current local address still matches one of the link addresses
      */
     private boolean isCurrentSocketAdressStillValid() {
-        Ayiya myAyiya = ayiya; // prevents race condition on null check below
+        Transporter myAyiya = transporter; // prevents race condition on null check below
         return networkHelper.isCurrentSocketAdressStillValid(myAyiya != null ? myAyiya.getSocket() : null);
     }
 
@@ -964,11 +968,11 @@ class VpnThread extends Thread implements NetworkChangeListener {
                 @Override
                 protected Void doInBackground(Void... params) {
                     try {
-                      if (vpnFD != null) {
-                        vpnFD.close();
-                      }
-                      Log.i(TAG, "VPN closed");
-                      cleanCopyThreads();
+                        if (vpnFD != null) {
+                            vpnFD.close();
+                        }
+                        Log.i(TAG, "VPN closed");
+                        cleanCopyThreads();
                     } catch (Throwable t) {
                         Log.e(TAG, "stopping copy threads failed", t);
                     }
@@ -977,7 +981,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
             }.execute();
         } else {
             // check if our sockets are still valid
-            final Ayiya myAyiya = ayiya; // avoid race conditions
+            final Transporter myAyiya = transporter; // avoid race conditions
             final CopyThread myInThread = inThread;
             if (myAyiya != null && myInThread != null && myInThread.isAlive()) {
                     /*
@@ -986,7 +990,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
                        time period.
                      */
                 if (!(myAyiya.isAlive() && isCurrentSocketAdressStillValid())) {
-                    Log.i(TAG, "ayiya object no longer functional after connectivity change - reconnecting");
+                    Log.i(TAG, "transporter object no longer functional after connectivity change - reconnecting");
                     new AsyncTask<Void, Void, Void>() {
                         @Override
                         protected Void doInBackground(Void... params) {

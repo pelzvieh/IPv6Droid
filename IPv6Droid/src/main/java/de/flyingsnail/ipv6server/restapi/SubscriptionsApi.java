@@ -26,7 +26,7 @@ package de.flyingsnail.ipv6server.restapi;
 import java.io.IOException;
 import java.util.List;
 
-import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
+import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
 import de.flyingsnail.ipv6server.svc.SubscriptionRejectedException;
 import retrofit2.Call;
 import retrofit2.http.DELETE;
