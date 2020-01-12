@@ -1,12 +1,35 @@
+<!--
+  ~ /*
+  ~  * Copyright (c) 2020 Dr. Andreas Feldner.
+  ~  *
+  ~  *     This program is free software; you can redistribute it and/or modify
+  ~  *     it under the terms of the GNU General Public License as published by
+  ~  *     the Free Software Foundation; either version 2 of the License, or
+  ~  *     (at your option) any later version.
+  ~  *
+  ~  *     This program is distributed in the hope that it will be useful,
+  ~  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~  *     GNU General Public License for more details.
+  ~  *
+  ~  *     You should have received a copy of the GNU General Public License along
+  ~  *     with this program; if not, write to the Free Software Foundation, Inc.,
+  ~  *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  ~  *
+  ~  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
+  ~  */
+  ~
+  -->
+
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_height="wrap_content"
     android:layout_width="match_parent"
     android:scrollbars="vertical">
 
-    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingBottom="@dimen/activity_vertical_margin"
         android:paddingLeft="@dimen/activity_horizontal_margin"
@@ -42,6 +65,17 @@
             android:text="@string/user_not_subscribed"
             android:textAlignment="viewStart"
             android:textAppearance="@style/HighlightedTextMedium" />
+
+        <TextView
+            android:id="@+id/purchasingInfoDebug"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:selectAllOnFocus="false"
+            android:text="@string/user_not_subscribed"
+            android:textAlignment="viewStart"
+            android:textAppearance="@style/DetailsForInterestedUser"
+            android:textIsSelectable="true" />
+
 
         <LinearLayout
             android:id="@+id/validUntilLine"
@@ -84,7 +118,6 @@
             android:layout_height="wrap_content"
             android:text="@string/user_subscription_subscribe_hint"
             android:textAppearance="@android:style/TextAppearance.Material.Body1" />
-        />
 
         <Space
             android:layout_width="match_parent"

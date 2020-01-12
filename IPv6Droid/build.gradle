@@ -1,21 +1,24 @@
 /*
- * Copyright (c) 2015 Dr. Andreas Feldner.
  *
- *     This program is free software; you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation; either version 2 of the License, or
- *     (at your option) any later version.
+ *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  *
+ *  *     This program is free software; you can redistribute it and/or modify
+ *  *     it under the terms of the GNU General Public License as published by
+ *  *     the Free Software Foundation; either version 2 of the License, or
+ *  *     (at your option) any later version.
+ *  *
+ *  *     This program is distributed in the hope that it will be useful,
+ *  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  *     GNU General Public License for more details.
+ *  *
+ *  *     You should have received a copy of the GNU General Public License along
+ *  *     with this program; if not, write to the Free Software Foundation, Inc.,
+ *  *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *  *
+ *  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License along
- *     with this program; if not, write to the Free Software Foundation, Inc.,
- *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  */
 
 buildscript {
@@ -25,7 +28,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.4.2'
+        classpath 'com.android.tools.build:gradle:3.5.3'
     }
 }
 apply plugin: 'com.android.application'
@@ -38,11 +41,11 @@ repositories {
 }
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 29
 
     defaultConfig {
         minSdkVersion 21
-        targetSdkVersion 28
+        targetSdkVersion 29
     }
 
     compileOptions {
@@ -76,7 +79,7 @@ dependencies {
     implementation 'androidx.annotation:annotation:1.1.0'
     implementation 'org.jetbrains.trove4j:trove4j:20160824'
     implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
-    implementation 'androidx.core:core:1.0.2'
+    implementation 'androidx.core:core:1.1.0'
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
-    implementation 'com.android.billingclient:billing:2.0.1'
+    implementation 'com.android.billingclient:billing:2.1.0'
 }

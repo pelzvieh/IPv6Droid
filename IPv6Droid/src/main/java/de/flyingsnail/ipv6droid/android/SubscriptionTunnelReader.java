@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2017 Dr. Andreas Feldner.
+ *  * Copyright (c) 2020 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -58,7 +58,7 @@ public class SubscriptionTunnelReader implements TunnelReader, SubscriptionCheck
     public synchronized List<TicTunnel> queryTunnels() throws ConnectionFailedException, IOException {
         if (!finished) {
             try {
-                wait(10000l);
+                wait(10000L);
             } catch (InterruptedException e) {
                 throw new IOException (e);
             }
@@ -73,7 +73,7 @@ public class SubscriptionTunnelReader implements TunnelReader, SubscriptionCheck
     }
 
     @Override
-    public synchronized void onSubscriptionCheckResult(ResultType result) {
+    public synchronized void onSubscriptionCheckResult(ResultType result, String debugMessage) {
         switch (result) {
             case HAS_TUNNELS:
                 finished = true;
@@ -88,8 +88,13 @@ public class SubscriptionTunnelReader implements TunnelReader, SubscriptionCheck
                 break;
             case TEMPORARY_PROBLEM:
             case CHECK_FAILED:
-            case NO_SERVICE:
+            case NO_SERVICE_PERMANENT:
+            case NO_SERVICE_TRY_AGAIN:
                 finished = true;
+                failed = true;
+                break;
+            case NO_SERVICE_AUTO_RECOVERY:
+                finished = false;
                 failed = true;
                 break;
         }

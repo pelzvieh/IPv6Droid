@@ -1,22 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ~ Copyright (c) 2015 Dr. Andreas Feldner.
+  ~ /*
+  ~  * Copyright (c) 2020 Dr. Andreas Feldner.
+  ~  *
+  ~  *     This program is free software; you can redistribute it and/or modify
+  ~  *     it under the terms of the GNU General Public License as published by
+  ~  *     the Free Software Foundation; either version 2 of the License, or
+  ~  *     (at your option) any later version.
+  ~  *
+  ~  *     This program is distributed in the hope that it will be useful,
+  ~  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~  *     GNU General Public License for more details.
+  ~  *
+  ~  *     You should have received a copy of the GNU General Public License along
+  ~  *     with this program; if not, write to the Free Software Foundation, Inc.,
+  ~  *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  ~  *
+  ~  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
+  ~  */
   ~
-  ~     This program is free software; you can redistribute it and/or modify
-  ~     it under the terms of the GNU General Public License as published by
-  ~     the Free Software Foundation; either version 2 of the License, or
-  ~     (at your option) any later version.
-  ~
-  ~     This program is distributed in the hope that it will be useful,
-  ~     but WITHOUT ANY WARRANTY; without even the implied warranty of
-  ~     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  ~     GNU General Public License for more details.
-  ~
-  ~     You should have received a copy of the GNU General Public License along
-  ~     with this program; if not, write to the Free Software Foundation, Inc.,
-  ~     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-  ~
-  ~ Contact information and current version at http://www.flying-snail.de/IPv6Droid
   -->
 
 <resources>
@@ -72,13 +75,13 @@
     <string name="statistics_time_of_burst">Aktivitäts-Dauer</string>
     <string name="statistics_packets_per_burst">Pakete pro Aktivität</string>
     <string name="statistics_bytes_per_burst">Bytes pro Aktivität</string>
-    <string name="technical_problem">Subscription failed - temporary problem contacting server</string>
+    <string name="technical_problem">Abo-Abschluss fehlgeschlagen - bitte versuchen Sie es in wenigen Minuten noch einmal oder prüfen Sie Ihre Internet-Verbindung</string>
     <string name="user_subscription_checking">Frage Abo-Daten ab…</string>
     <string name="user_subscription_verifying">Überprüfe Abo-Angaben…</string>
     <string name="user_subscription_failed">Überprüfung fehlgeschlagen</string>
     <string name="user_subscription_starting_wizard">Google Abo wird gestartet…</string>
-    <string name="user_subscription_purchase_done">Vielen Dank für den Kauf! Richte Tunnel ein…</string>
-    <string name="user_subscription_aborted">Schade, das Abo wurde nicht abgeschlossen.</string>
+    <string name="user_subscription_purchase_done">Vielen Dank für den Kauf! Richte Tunnel für Sie ein…</string>
+    <string name="user_subscription_aborted">Sie haben das Abo nicht abgeschlossen. Haben Sie noch Fragen? Zögern Sie nicht, uns zu kontaktieren.</string>
     <string name="channel_errors_name">IPv6 Errors</string>
     <string name="channel_status_name">IPv6 Status</string>
     <string name="channel_errors_description">Error messages from IPv6 tunnel</string>
@@ -94,5 +97,11 @@
     <string name="user_subscription_terms_link">Ich akzeptiere die Leistungsbeschreibung <![CDATA[https://flyingsnail.de/lstbeschr.html]]></string>
     <string name="user_subscription_valid_until">Gültig bis</string>
     <string name="user_subscription_error_not_accepted">Sie müssen der Leistungsbeschreibung zustimmen, um ein Abo abzuschließen.</string>
+    <string name="SubManConnectionLost">Verbindung abgerissen</string>
+    <string name="SubManEmptySKUdetails">Keine Produktdetails erhalten</string>
+    <string name="SubManStartingUp">Baue Verbindung auf</string>
+    <string name="subscriptionPurchaseStarted">Abo-Abschluss bei Google gestartet</string>
+    <string name="user_subscription_no_service">Der Abo-Dienst von Google ist gerade nicht verfügbar, wir versuchen es bald noch einmal.</string>
+    <string name="user_subscription_no_service_on_this_device">Auf diesem Gerät stehen keine Google-Abonnements zur Verfügung. Kontaktieren Sie uns bitte für andere Optionen.</string>
 
 </resources>

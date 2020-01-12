@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2017 Dr. Andreas Feldner.
+ *  * Copyright (c) 2020 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -29,15 +29,37 @@ package de.flyingsnail.ipv6droid.android.googlesubscription;
 
 public interface SubscriptionCheckResultListener {
     public enum ResultType {
+        /** We successfully read provisioned tunnels, we're ready to use them */
         HAS_TUNNELS,
+        /** We know that the user does not have a subscription  */
         NO_SUBSCRIPTIONS,
+        /** We're having a problem, most probably temporary, to read required information */
         TEMPORARY_PROBLEM,
+        /**
+         * The user's attempt to purchase a subscription has failed, most probably because the user
+         * aborted the process, or did not have a valid payment method at hand.
+         */
         PURCHASE_FAILED,
+        /** Checking for active subscriptions failed, perhaps permanently */
         CHECK_FAILED,
+        /** We don't understand what Google says to us */
         SUBSCRIPTION_UNPARSABLE,
+        /** A purchase has been completed, but the tunnels are not yet provisioned. */
         PURCHASE_COMPLETED,
-        NO_SERVICE
+        /** The purchase process has been initiated, user is currently interacting with google */
+        PURCHASE_STARTED,
+        /** We could not yet contact the Google subscription service, or lost connection.
+         * SubscriptionManager took action to automatically recover from this condition. */
+        NO_SERVICE_AUTO_RECOVERY,
+        /** There is no subscription service suitable to our needs on this device.
+         * Retrying is pointless. */
+        NO_SERVICE_PERMANENT,
+        /** We cannot currently use the Google subscription service, nor took action to recover.
+         * No indication is given as to when and under which circumstances it might work again.
+         * Retry later if you want.
+         */
+        NO_SERVICE_TRY_AGAIN
     }
 
-    public void onSubscriptionCheckResult (ResultType result);
+    public void onSubscriptionCheckResult(ResultType result, String debugMessage);
 }
