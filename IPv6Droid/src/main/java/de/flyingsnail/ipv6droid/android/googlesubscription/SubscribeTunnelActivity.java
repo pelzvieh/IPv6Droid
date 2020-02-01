@@ -111,10 +111,10 @@ public class SubscribeTunnelActivity extends Activity implements SubscriptionChe
             Log.d(TAG, "No action bar", npe);
         }
 
-        purchasingInfoView = (TextView)findViewById(R.id.subscriptionStatus);
-        purchaseButton = (Button) findViewById(R.id.subscribe);
-        validUntil = (TextView)findViewById(R.id.validUntil);
-        acceptConditions = (CheckBox)findViewById(R.id.acceptTerms);
+        purchasingInfoView = findViewById(R.id.subscriptionStatus);
+        purchaseButton = findViewById(R.id.subscribe);
+        validUntil = findViewById(R.id.validUntil);
+        acceptConditions = findViewById(R.id.acceptTerms);
         validUntilLine = findViewById(R.id.validUntilLine);
         purchasingInfoDebug = findViewById(R.id.purchasingInfoDebug);
 
@@ -324,7 +324,7 @@ public class SubscribeTunnelActivity extends Activity implements SubscriptionChe
      */
     static private void scheduleRetry(SubscribeTunnelActivity instance) {
         SubscriptionManager failedSubscriptionManager = instance.subscriptionManager;
-        if (failedSubscriptionManager != null) { // not already handled...
+        if (failedSubscriptionManager != null) { // not already destroyed...
             failedSubscriptionManager.destroy();
         }
         new AsyncTask<SubscribeTunnelActivity, Void, Void>() {
@@ -357,6 +357,8 @@ public class SubscribeTunnelActivity extends Activity implements SubscriptionChe
      * received from SubscriptionManager, plus will write the new list back to cache.
      */
     private void updateCachedTunnelList() {
+        if (subscriptionManager == null || this.isDestroyed())
+            return; // this Activity is already destroyed
         // write tunnel list to cache
         TunnelPersisting tp = new TunnelPersistingFile(this.getApplicationContext());
         Tunnels cachedTunnels = new Tunnels();
