@@ -1,28 +1,30 @@
 /*
- * Copyright (c) 2013 Dr. Andreas Feldner.
  *
- *     This program is free software; you can redistribute it and/or modify
- *     it under the terms of the GNU Lesser General Public License as published by
- *     the Free Software Foundation; either version 2 of the License, or
- *     (at your option) any later version.
+ *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  *
+ *  *     This program is free software; you can redistribute it and/or modify
+ *  *     it under the terms of the GNU General Public License as published by
+ *  *     the Free Software Foundation; either version 2 of the License, or
+ *  *     (at your option) any later version.
+ *  *
+ *  *     This program is distributed in the hope that it will be useful,
+ *  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  *     GNU General Public License for more details.
+ *  *
+ *  *     You should have received a copy of the GNU General Public License along
+ *  *     with this program; if not, write to the Free Software Foundation, Inc.,
+ *  *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *  *
+ *  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU Lesser General Public License along
- *     with this program; if not, write to the Free Software Foundation, Inc.,
- *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  */
 
 package de.flyingsnail.ipv6droid.transport.ayiya;
 
 import android.util.Log;
 
-import java.io.Serializable;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.UnknownHostException;
@@ -32,7 +34,7 @@ import java.util.Date;
  * This represents the tunnel description as delivered by the tic protocol.
  * Created by pelzi on 17.08.13.
  */
-public class TicTunnel implements Serializable {
+public class TicTunnel implements de.flyingsnail.ipv6droid.transport.TunnelSpec {
     /** The tag to identify logger. */
     private static final String TAG = TicTunnel.class.getSimpleName();
 
@@ -73,7 +75,7 @@ public class TicTunnel implements Serializable {
     /**
      * No idea what this is.
      */
-    private String ipv4Endpoint;
+    private Inet4Address ipv4Endpoint;
 
     /** POP address in IPv4 */
     private Inet4Address ipv4Pop;
@@ -98,10 +100,12 @@ public class TicTunnel implements Serializable {
      */
     private int heartbeatInterval;
 
+    @Override
     public String getTunnelName() {
         return tunnelName;
     }
 
+    @Override
     public void setTunnelName(String tunnelName) {
         this.tunnelName = tunnelName;
     }
@@ -135,25 +139,28 @@ public class TicTunnel implements Serializable {
         this.id = id;
     }
 
+    @Override
     public Inet4Address getIPv4Pop() {
         return ipv4Pop;
     }
 
-    public void setIPv4Pop(String ipv4Pop) throws UnknownHostException {
+    @Override
+    public void setIPv4Pop(Inet4Address ipv4Pop) {
         Log.d(TAG, "setting ipv4 of POP to " + ipv4Pop);
-        if (ipv4Pop == null)
-            ipv4Pop = "185.101.92.120"; // todo correct in server!!
-        this.ipv4Pop = (Inet4Address)Inet4Address.getByName (ipv4Pop);
+        this.ipv4Pop = ipv4Pop;
     }
 
+    @Override
     public String getTunnelId() {
         return tunnelId;
     }
 
+    @Override
     public void setTunnelId(String tunnelId) {
         this.tunnelId = tunnelId;
     }
 
+    @Override
     public String getType() {
         return type;
     }
@@ -162,44 +169,44 @@ public class TicTunnel implements Serializable {
         this.type = type;
     }
 
+    @Override
     public Inet6Address getIpv6Endpoint() {
         return ipv6Endpoint;
     }
 
-    public void setIpv6Endpoint(String ipv6Endpoint) throws UnknownHostException {
-        this.ipv6Endpoint = (Inet6Address)Inet6Address.getByName(ipv6Endpoint);
+    @Override
+    public void setIpv6Endpoint(Inet6Address ipv6Endpoint) {
+        this.ipv6Endpoint = ipv6Endpoint;
     }
 
+    @Override
     public Inet6Address getIpv6Pop() {
         return ipv6Pop;
     }
 
-    public void setIpv6Pop(String ipv6Pop) throws UnknownHostException {
-        this.ipv6Pop = (Inet6Address)Inet6Address.getByName(ipv6Pop);
+    @Override
+    public void setIpv6Pop(Inet6Address ipv6Pop) {
+        this.ipv6Pop = ipv6Pop;
     }
 
+    @Override
     public int getPrefixLength() {
         return prefixLength;
     }
 
+    @Override
     public void setPrefixLength(int prefixLength) {
         this.prefixLength = prefixLength;
     }
 
+    @Override
     public String getPopName() {
         return popName;
     }
 
+    @Override
     public void setPopName(String popName) {
         this.popName = popName;
-    }
-
-    public String getIpv4Endpoint() {
-        return ipv4Endpoint;
-    }
-
-    public void setIpv4Endpoint(String ipv4Endpoint) {
-        this.ipv4Endpoint = ipv4Endpoint;
     }
 
     public String getUserState() {
@@ -255,18 +262,22 @@ public class TicTunnel implements Serializable {
         this.password = password;
     }
 
+    @Override
     public int getHeartbeatInterval() {
         return heartbeatInterval;
     }
 
+    @Override
     public void setHeartbeatInterval(int heartbeatInterval) {
         this.heartbeatInterval = heartbeatInterval;
     }
 
+    @Override
     public int getMtu() {
         return mtu;
     }
 
+    @Override
     public void setMtu(int mtu) {
         this.mtu = mtu;
     }
@@ -297,6 +308,7 @@ public class TicTunnel implements Serializable {
     }
 
 
+    @Override
     public Date getExpiryDate() {
         return expiryDate;
     }
@@ -326,17 +338,17 @@ public class TicTunnel implements Serializable {
             else if ("Type".equalsIgnoreCase(key))
                 setType(value);
             else if ("IPv6 Endpoint".equalsIgnoreCase(key))
-                setIpv6Endpoint(value);
+                setIpv6Endpoint((Inet6Address)Inet6Address.getByName(value));
             else if ("IPv6 PoP".equalsIgnoreCase(key))
-                setIpv6Pop(value);
+                setIpv6Pop((Inet6Address)Inet6Address.getByName(value));
             else if ("IPv6 PrefixLength".equalsIgnoreCase(key))
                 setPrefixLength(Integer.parseInt(value));
             else if ("PoP Name".equalsIgnoreCase(key) || "PoP Id".equalsIgnoreCase(key))
                 setPopName(value);
             else if ("IPv4 Endpoint".equalsIgnoreCase(key))
-                setIpv4Endpoint(value);
+                key = key; // we're not interested
             else if ("IPv4 PoP".equalsIgnoreCase(key))
-                setIPv4Pop(value);
+                setIPv4Pop((Inet4Address)Inet4Address.getByName(value));
             else if ("UserState".equalsIgnoreCase(key))
                 setUserState(value);
             else if ("AdminState".equalsIgnoreCase(key))
@@ -387,7 +399,6 @@ public class TicTunnel implements Serializable {
                 && getIpv6Pop().equals(((TicTunnel)o).getIpv6Pop())
                 && getPrefixLength() == ((TicTunnel)o).getPrefixLength()
                 && getPopName().equals(((TicTunnel)o).getPopName())
-                && getIpv4Endpoint().equals(((TicTunnel)o).getIpv4Endpoint())
                 && getUserState().equals(((TicTunnel)o).getUserState())
                 && getAdminState().equals(((TicTunnel)o).getAdminState())
                 && getPassword().equals(((TicTunnel)o).getPassword())

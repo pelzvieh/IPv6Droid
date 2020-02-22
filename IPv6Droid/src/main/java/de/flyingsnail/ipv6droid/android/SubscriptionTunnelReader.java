@@ -31,7 +31,7 @@ import java.util.List;
 import de.flyingsnail.ipv6droid.android.googlesubscription.SubscriptionCheckResultListener;
 import de.flyingsnail.ipv6droid.android.googlesubscription.SubscriptionManager;
 import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
-import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
+import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
 /**
  * Created by pelzi on 18.10.17.
@@ -55,7 +55,7 @@ public class SubscriptionTunnelReader implements TunnelReader, SubscriptionCheck
      * @throws IOException in case of a temporary problem to query.
      */
     @Override
-    public synchronized List<TicTunnel> queryTunnels() throws ConnectionFailedException, IOException {
+    public synchronized List<TunnelSpec> queryTunnels() throws ConnectionFailedException, IOException {
         if (!finished) {
             try {
                 wait(10000L);

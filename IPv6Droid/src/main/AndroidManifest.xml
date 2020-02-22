@@ -26,7 +26,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="de.flyingsnail.ipv6droid"
     android:versionCode="60"
-    android:versionName="1.81">
+    android:versionName="2.00-alpha">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -76,7 +76,8 @@
             android:launchMode="singleTop"
             android:parentActivityName=".android.MainActivity"
             android:resizeableActivity="true"
-            tools:ignore="UnusedAttribute">
+            tools:ignore="UnusedAttribute"
+            android:theme="@style/AppSettingsTheme">
 
             <!-- Parent activity meta-data to support 4.0 and lower -->
             <meta-data

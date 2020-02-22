@@ -1,21 +1,24 @@
 /*
- * Copyright (c) 2015 Dr. Andreas Feldner.
  *
- *     This program is free software; you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation; either version 2 of the License, or
- *     (at your option) any later version.
+ *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  *
+ *  *     This program is free software; you can redistribute it and/or modify
+ *  *     it under the terms of the GNU General Public License as published by
+ *  *     the Free Software Foundation; either version 2 of the License, or
+ *  *     (at your option) any later version.
+ *  *
+ *  *     This program is distributed in the hope that it will be useful,
+ *  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  *     GNU General Public License for more details.
+ *  *
+ *  *     You should have received a copy of the GNU General Public License along
+ *  *     with this program; if not, write to the Free Software Foundation, Inc.,
+ *  *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *  *
+ *  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License along
- *     with this program; if not, write to the Free Software Foundation, Inc.,
- *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  */
 
 package de.flyingsnail.ipv6droid.android;
@@ -24,14 +27,15 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
-import java.io.Serializable;
-import java.util.List;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
+import java.io.Serializable;
+import java.util.List;
+
 import de.flyingsnail.ipv6droid.R;
-import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
+import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
 /**
 * Created by pelzi on 05.09.13.
@@ -134,7 +138,7 @@ public class VpnStatusReport implements Serializable, Cloneable {
      * @throws IllegalArgumentException if the new activeTunnel is not contained in the tunnels list.
      * @throws IllegalStateException if now tunnels are yet set.
      */
-    protected void setActiveTunnel(@Nullable TicTunnel activeTunnel) throws IllegalArgumentException, IllegalStateException {
+    protected void setActiveTunnel(@Nullable TunnelSpec activeTunnel) throws IllegalArgumentException, IllegalStateException {
         if (tunnels == null)
             throw new IllegalStateException("No tunnels are set when trying to set the active tunnel");
         boolean changed = (tunnels.getActiveTunnel() != activeTunnel) && (
@@ -225,7 +229,8 @@ public class VpnStatusReport implements Serializable, Cloneable {
      * Get the currently active (or build) tunnel
      * @return the TicTunnel
      */
-    public @Nullable TicTunnel getActiveTunnel() {
+    public @Nullable
+    TunnelSpec getActiveTunnel() {
         return tunnels == null ? null : tunnels.getActiveTunnel();
     }
 
@@ -235,7 +240,7 @@ public class VpnStatusReport implements Serializable, Cloneable {
      * This is kept separate from @ref setActiveTunnel
      * @param ticTunnelList the new List of TicTunnel objects
      */
-    public void setTicTunnelList(@NonNull List<TicTunnel> ticTunnelList) {
+    public void setTicTunnelList(@NonNull List<TunnelSpec> ticTunnelList) {
         tunnels.replaceTunnelList(ticTunnelList);
         reportStatus();
     }

@@ -1,21 +1,24 @@
 /*
- * Copyright (c) 2015 Dr. Andreas Feldner.
  *
- *     This program is free software; you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation; either version 2 of the License, or
- *     (at your option) any later version.
+ *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  *
+ *  *     This program is free software; you can redistribute it and/or modify
+ *  *     it under the terms of the GNU General Public License as published by
+ *  *     the Free Software Foundation; either version 2 of the License, or
+ *  *     (at your option) any later version.
+ *  *
+ *  *     This program is distributed in the hope that it will be useful,
+ *  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  *     GNU General Public License for more details.
+ *  *
+ *  *     You should have received a copy of the GNU General Public License along
+ *  *     with this program; if not, write to the Free Software Foundation, Inc.,
+ *  *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *  *
+ *  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License along
- *     with this program; if not, write to the Free Software Foundation, Inc.,
- *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  */
 
 package de.flyingsnail.ipv6droid.android;
@@ -31,6 +34,7 @@ import android.net.RouteInfo;
 import android.net.TrafficStats;
 import android.net.VpnService;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Handler;
 import android.os.ParcelFileDescriptor;
 import android.system.OsConstants;
@@ -57,15 +61,16 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 import de.flyingsnail.ipv6droid.R;
-import de.flyingsnail.ipv6droid.transport.Transporter;
 import de.flyingsnail.ipv6droid.android.googlesubscription.SubscribeTunnelActivity;
 import de.flyingsnail.ipv6droid.android.statistics.Statistics;
 import de.flyingsnail.ipv6droid.android.statistics.TransmissionStatistics;
 import de.flyingsnail.ipv6droid.transport.AuthenticationFailedException;
 import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
-import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
-import de.flyingsnail.ipv6droid.transport.TunnelBrokenException;
+import de.flyingsnail.ipv6droid.transport.Transporter;
 import de.flyingsnail.ipv6droid.transport.TransporterBuilder;
+import de.flyingsnail.ipv6droid.transport.TunnelBrokenException;
+import de.flyingsnail.ipv6droid.transport.TunnelSpec;
+import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
 
 /**
  * This class does the actual work, i.e. logs in to TIC, reads available tunnels and starts
@@ -224,10 +229,19 @@ class VpnThread extends Thread implements NetworkChangeListener {
         TunnelReader tr;
         try {
             tr = new TicTunnelReader(ayiyaVpnService);
+            Log.i(TAG, "Using Tic Tunnel config");
         } catch (ConnectionFailedException e) {
-            tr = new SubscriptionTunnelReader(ayiyaVpnService);
+            try {
+                tr = new DTLSTunnelReader(ayiyaVpnService);
+                Log.i(TAG, "Using DTLS config");
+            } catch (ConnectionFailedException e1) {
+                Log.i(TAG, "Falling back to subscription tunnels");
+                tr = new SubscriptionTunnelReader(ayiyaVpnService);
+            }
         }
         this.tunnelReader = tr;
+
+        networkHelper = new NetworkHelper(this, ayiyaVpnService);
     }
 
 
@@ -235,7 +249,6 @@ class VpnThread extends Thread implements NetworkChangeListener {
     public void run() {
         closeTunnel = false;
         try {
-            networkHelper = new NetworkHelper(this, ayiyaVpnService);
             TrafficStats.setThreadStatsTag(TAG_PARENT_THREAD);
             handler = new Handler(applicationContext.getMainLooper());
 
@@ -271,7 +284,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
 
                 // build vpn device on local machine
                 builder = ayiyaVpnService.createBuilder();
-                TicTunnel activeTunnel = tunnels.getActiveTunnel();
+                TunnelSpec activeTunnel = tunnels.getActiveTunnel();
                 //noinspection ConstantConditions
                 configureBuilderFromTunnelSpecification(builder, activeTunnel, false);
                 builderNotRouted = ayiyaVpnService.createBuilder();
@@ -628,7 +641,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
     private void monitoredHeartbeatLoop() throws InterruptedException, IOException, ConnectionFailedException {
         boolean timeoutSuspected = false;
         long lastPacketDelta = 0l;
-        TicTunnel activeTunnel = tunnels.getActiveTunnel();
+        TunnelSpec activeTunnel = tunnels.getActiveTunnel();
         @SuppressWarnings("ConstantConditions") long heartbeatInterval = activeTunnel.getHeartbeatInterval() * 1000l;
         if (heartbeatInterval < 300000l && isNetworkMobile()) {
             Log.i(TAG, "Lifting heartbeat interval to 300 secs");
@@ -674,8 +687,9 @@ class VpnThread extends Thread implements NetworkChangeListener {
                 ) {
                     if (!timeoutSuspected)
                         timeoutSuspected = true;
-                    else if (new Date().getTime() - activeTunnel.getCreationDate().getTime()
+                    else if (activeTunnel instanceof TicTunnel && new Date().getTime() - ((TicTunnel)activeTunnel).getCreationDate().getTime()
                             > TIC_RECHECK_BLOCKED_MILLISECONDS) {
+                        // todo explicit AYIYA code, refactor out of here
                         boolean tunnelChanged;
                         try {
                             tunnelChanged = readTunnels(); // no need to update activeTunnel - we're going to quit
@@ -741,7 +755,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
     private boolean readTunnels() throws ConnectionFailedException, IOException {
         boolean tunnelChanged = false;
 
-        List<TicTunnel> availableTunnels = tunnelReader.queryTunnels();
+        List<? extends TunnelSpec> availableTunnels = tunnelReader.queryTunnels();
         boolean activeTunnelValid = false;
         if (tunnels == null)
             tunnels = new Tunnels(availableTunnels, null);
@@ -776,13 +790,13 @@ class VpnThread extends Thread implements NetworkChangeListener {
      * @param tunnelSpecification the TicTunnel specification of the tunnel to set up.
      */
     private void configureBuilderFromTunnelSpecification(@NonNull VpnService.Builder builder,
-                                                         @NonNull TicTunnel tunnelSpecification,
+                                                         @NonNull TunnelSpec tunnelSpecification,
                                                          boolean suppressRouting) {
         builder.setMtu(tunnelSpecification.getMtu());
         builder.setSession(tunnelSpecification.getPopName());
         builder.addAddress(tunnelSpecification.getIpv6Endpoint(), tunnelSpecification.getPrefixLength());
-        /*if (Build.VERSION.SDK_INT >= 29)
-            builder.setMetered (false);*/
+        if (Build.VERSION.SDK_INT >= 29)
+            builder.setMetered (false);
         if (!suppressRouting) {
             try {
                 if (routingConfiguration.isSetDefaultRoute())
@@ -893,7 +907,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
             throw new IllegalStateException("Attempt to get Statistics on a non-running tunnel");
         }
 
-        TicTunnel activeTunnel = tunnels.getActiveTunnel();
+        TunnelSpec activeTunnel = tunnels.getActiveTunnel();
         assert(activeTunnel != null);
         Statistics stats = new Statistics(
                 outgoingStatistics,

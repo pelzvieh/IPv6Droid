@@ -22,7 +22,6 @@
  */
 package de.flyingsnail.ipv6droid.android.googlesubscription;
 
-import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -40,6 +39,8 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -57,7 +58,7 @@ import static de.flyingsnail.ipv6droid.android.googlesubscription.Subscription.G
 /**
  * Guides the user through managing her subscriptions.
  */
-public class SubscribeTunnelActivity extends Activity implements SubscriptionCheckResultListener {
+public class SubscribeTunnelActivity extends AppCompatActivity implements SubscriptionCheckResultListener {
     private static final String TAG = SubscribeTunnelActivity.class.getSimpleName();
 
     private static final int RESPONSE_CODE_OK = 0;
@@ -104,9 +105,16 @@ public class SubscribeTunnelActivity extends Activity implements SubscriptionChe
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_subscribe_tunnel);
+        Toolbar myToolbar = (Toolbar) findViewById(R.id.subscriptionsToolbar);
+        setSupportActionBar(myToolbar);
+
         try {
             //noinspection ConstantConditions
-            getActionBar().setDisplayHomeAsUpEnabled(true);
+            if (MainActivity.isConfigurationRequired(this, false)) {
+                getSupportActionBar().setIcon(R.drawable.ic_launcher);
+            } else {
+                getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            }
         } catch (NullPointerException npe) {
             Log.d(TAG, "No action bar", npe);
         }

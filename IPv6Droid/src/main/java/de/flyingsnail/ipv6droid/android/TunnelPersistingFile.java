@@ -1,7 +1,32 @@
+/*
+ *
+ *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  *
+ *  *     This program is free software; you can redistribute it and/or modify
+ *  *     it under the terms of the GNU General Public License as published by
+ *  *     the Free Software Foundation; either version 2 of the License, or
+ *  *     (at your option) any later version.
+ *  *
+ *  *     This program is distributed in the hope that it will be useful,
+ *  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  *     GNU General Public License for more details.
+ *  *
+ *  *     You should have received a copy of the GNU General Public License along
+ *  *     with this program; if not, write to the Free Software Foundation, Inc.,
+ *  *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *  *
+ *  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
+ *
+ *
+ */
+
 package de.flyingsnail.ipv6droid.android;
 
 import android.content.Context;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -10,8 +35,7 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.util.List;
 
-import androidx.annotation.NonNull;
-import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
+import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
 /**
  * Implements the TunnelPersisting interface for storing to a file.
@@ -51,11 +75,11 @@ public class TunnelPersistingFile implements TunnelPersisting  {
         InputStream is = context.openFileInput(FILE_LAST_TUNNEL);
         ObjectInputStream os = new ObjectInputStream(is);
         //noinspection unchecked
-        List<TicTunnel> cachedTunnels;
+        List<? extends TunnelSpec> cachedTunnels;
         try {
-            cachedTunnels = (List<TicTunnel>)os.readObject();
+            cachedTunnels = (List<? extends TunnelSpec>)os.readObject();
         } catch (ClassNotFoundException e) {
-            Log.wtf(TAG, "Unable to read cached tunnels from persistence media");
+            Log.wtf(TAG, "Unable to read cached tunnels from persistence media", e);
             throw new IOException(e);
         }
         if (cachedTunnels instanceof Tunnels) {
@@ -63,7 +87,7 @@ public class TunnelPersistingFile implements TunnelPersisting  {
         } else {
             // this is for reading the previous file format
             int selected = os.readInt();
-            TicTunnel tunnel = cachedTunnels.get(selected);
+            TunnelSpec tunnel = cachedTunnels.get(selected);
             return new Tunnels(cachedTunnels, tunnel);
         }
     }

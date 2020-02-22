@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2017 Dr. Andreas Feldner.
+ *  * Copyright (c) 2020 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -27,12 +27,12 @@ import java.io.IOException;
 import java.util.List;
 
 import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
-import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
+import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
 /**
  * Created by pelzi on 18.10.17.
  */
 
 interface TunnelReader {
-    List<TicTunnel> queryTunnels() throws ConnectionFailedException, IOException;
+    List<? extends TunnelSpec> queryTunnels() throws ConnectionFailedException, IOException;
 }

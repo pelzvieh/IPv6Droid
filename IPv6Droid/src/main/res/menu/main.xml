@@ -1,57 +1,61 @@
 <!--
-  ~ Copyright (c) 2015 Dr. Andreas Feldner.
+  ~ /*
+  ~  * Copyright (c) 2020 Dr. Andreas Feldner.
+  ~  *
+  ~  *     This program is free software; you can redistribute it and/or modify
+  ~  *     it under the terms of the GNU General Public License as published by
+  ~  *     the Free Software Foundation; either version 2 of the License, or
+  ~  *     (at your option) any later version.
+  ~  *
+  ~  *     This program is distributed in the hope that it will be useful,
+  ~  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~  *     GNU General Public License for more details.
+  ~  *
+  ~  *     You should have received a copy of the GNU General Public License along
+  ~  *     with this program; if not, write to the Free Software Foundation, Inc.,
+  ~  *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  ~  *
+  ~  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
+  ~  */
   ~
-  ~     This program is free software; you can redistribute it and/or modify
-  ~     it under the terms of the GNU General Public License as published by
-  ~     the Free Software Foundation; either version 2 of the License, or
-  ~     (at your option) any later version.
-  ~
-  ~     This program is distributed in the hope that it will be useful,
-  ~     but WITHOUT ANY WARRANTY; without even the implied warranty of
-  ~     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  ~     GNU General Public License for more details.
-  ~
-  ~     You should have received a copy of the GNU General Public License along
-  ~     with this program; if not, write to the Free Software Foundation, Inc.,
-  ~     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-  ~
-  ~ Contact information and current version at http://www.flying-snail.de/IPv6Droid
   -->
 
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
     <!-- Connect, should appear as action button -->
     <item android:id="@+id/action_connect"
           android:icon="@drawable/ic_action_connect"
           android:title="@string/action_connect"
-          android:showAsAction="ifRoom" />
+          app:showAsAction="ifRoom" />
     <!-- Disconnect, should appear as action button -->
     <item android:id="@+id/action_disconnect"
           android:icon="@drawable/ic_action_disconnect"
           android:title="@string/action_disconnect"
-          android:showAsAction="ifRoom" />
+          app:showAsAction="ifRoom" />
     <!-- Show statistics, should always be in the overflow -->
     <item android:id="@+id/action_show_statistics"
         android:title="@string/action_show_statistics"
         android:orderInCategory="50"
-        android:showAsAction="never" />
+        app:showAsAction="never" />
     <!-- Reload tunnel specs, should always be in the overflow -->
     <item android:id="@+id/action_tic_reload"
         android:title="@string/action_tic_reload"
         android:orderInCategory="50"
-        android:showAsAction="never" />
+        app:showAsAction="never" />
     <!-- Help, should always be in the overflow -->
     <item android:id="@+id/action_help"
         android:title="@string/action_help"
         android:orderInCategory="50"
-        android:showAsAction="never" />
+        app:showAsAction="never" />
     <!-- Subscribe, should always be in the overflow -->
     <item android:id="@+id/action_subscribe"
         android:title="@string/action_subscribe"
         android:orderInCategory="99"
-        android:showAsAction="never" />
+        app:showAsAction="never" />
     <!-- Settings, should always be in the overflow -->
     <item android:id="@+id/action_settings"
         android:title="@string/action_settings"
         android:orderInCategory="100"
-        android:showAsAction="never" />
+        app:showAsAction="never" />
 </menu>

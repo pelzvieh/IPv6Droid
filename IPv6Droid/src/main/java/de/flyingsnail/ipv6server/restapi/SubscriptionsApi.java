@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2016 Dr. Andreas Feldner.
+ *  * Copyright (c) 2020 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@ package de.flyingsnail.ipv6server.restapi;
 import java.io.IOException;
 import java.util.List;
 
-import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
+import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 import de.flyingsnail.ipv6server.svc.SubscriptionRejectedException;
 import retrofit2.Call;
 import retrofit2.http.DELETE;
@@ -81,7 +81,7 @@ public interface SubscriptionsApi {
    */
   @FormUrlEncoded
   @POST("subscriptions/check")
-  Call<List<TicTunnel>> checkSubscriptionAndReturnTunnels(
+  Call<List<TunnelSpec>> checkSubscriptionAndReturnTunnels(
           @Field("data") String subscriptionData,
           @Field("signature") String signature);
 }

@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2017 Dr. Andreas Feldner.
+ *  * Copyright (c) 2020 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -30,16 +30,18 @@ import android.os.Build;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import androidx.annotation.NonNull;
 import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
+import de.flyingsnail.ipv6droid.transport.TunnelNotAcceptedException;
+import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 import de.flyingsnail.ipv6droid.transport.ayiya.Tic;
 import de.flyingsnail.ipv6droid.transport.ayiya.TicConfiguration;
 import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
-import de.flyingsnail.ipv6droid.transport.TunnelNotAcceptedException;
 
 import static de.flyingsnail.ipv6droid.android.googlesubscription.Subscription.GOOGLESUBSCRIPTION;
 
@@ -65,6 +67,8 @@ public class TicTunnelReader implements TunnelReader {
         if (GOOGLESUBSCRIPTION.equals(ticConfiguration.getServer())) {
             throw new ConnectionFailedException("Google subscription managed tunnels cannot be verified by TIC", null);
         }
+        if (ticConfiguration.getUsername().isEmpty() || ticConfiguration.getPassword().isEmpty() || ticConfiguration.getServer().isEmpty())
+            throw new ConnectionFailedException("No TIC Configuration found", null);
     }
 
     private TicConfiguration loadTicConfiguration(SharedPreferences myPreferences) {
@@ -81,7 +85,8 @@ public class TicTunnelReader implements TunnelReader {
      * @throws ConnectionFailedException if some permanent problem exists with TIC and the current config
      * @throws IOException if some (hopefully transient) technical problem came up.
      */
-    public List<TicTunnel> queryTunnels() throws ConnectionFailedException, IOException {
+    @Override
+    public List<? extends TunnelSpec> queryTunnels() throws ConnectionFailedException, IOException {
         // gather some client information for the nosy TIC
         Tic.ContextInfo contextInfo;
         try {

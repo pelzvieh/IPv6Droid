@@ -1,45 +1,49 @@
 /*
- * Copyright (c) 2015 Dr. Andreas Feldner.
  *
- *     This program is free software; you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation; either version 2 of the License, or
- *     (at your option) any later version.
+ *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  *
+ *  *     This program is free software; you can redistribute it and/or modify
+ *  *     it under the terms of the GNU General Public License as published by
+ *  *     the Free Software Foundation; either version 2 of the License, or
+ *  *     (at your option) any later version.
+ *  *
+ *  *     This program is distributed in the hope that it will be useful,
+ *  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  *     GNU General Public License for more details.
+ *  *
+ *  *     You should have received a copy of the GNU General Public License along
+ *  *     with this program; if not, write to the Free Software Foundation, Inc.,
+ *  *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *  *
+ *  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License along
- *     with this program; if not, write to the Free Software Foundation, Inc.,
- *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  */
 
 package de.flyingsnail.ipv6droid.android;
 
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
+import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
 /**
  * A ArrayList&lt;TicTunnel&gt; extended by information on a potentially selected tunnel.
  * Created by pelzi on 28.01.16.
  */
-public class Tunnels extends ArrayList<TicTunnel> implements Cloneable {
+public class Tunnels extends ArrayList<TunnelSpec> implements Cloneable {
     // Version number for serialized state
     static final long serialVersionUID =-9178679015599058965L;
     // the TicTunnel that is currently active/selected for activation
-    private @Nullable TicTunnel activeTunnel;
+    private @Nullable TunnelSpec activeTunnel;
     static final String TAG = Tunnels.class.getSimpleName();
 
     /**
@@ -74,8 +78,8 @@ public class Tunnels extends ArrayList<TicTunnel> implements Cloneable {
      * @return a boolean, true if the previous activeTunnel is still set, i.e. was null or is
      * contained in the new tunnels list
      */
-    public boolean replaceTunnelList(@NonNull List<TicTunnel> ticTunnelList) {
-        TicTunnel tunnel = getActiveTunnel();
+    public boolean replaceTunnelList(@NonNull List<? extends TunnelSpec> ticTunnelList) {
+        TunnelSpec tunnel = getActiveTunnel();
         clear();
         addAll(ticTunnelList);
         try {
@@ -108,8 +112,8 @@ public class Tunnels extends ArrayList<TicTunnel> implements Cloneable {
      * @throws IndexOutOfBoundsException when {@code location < 0 || location >= size()}
      */
     @Override
-    public TicTunnel remove(int index) {
-        TicTunnel removed = super.remove(index);
+    public TunnelSpec remove(int index) {
+        TunnelSpec removed = super.remove(index);
         if (removed.equals(activeTunnel))
             activeTunnel = null;
         return removed;
@@ -146,7 +150,7 @@ public class Tunnels extends ArrayList<TicTunnel> implements Cloneable {
      * @param collection the collection of elements to add.
      * @param activeTunnel the TicTunnel to set as active. Must be contained in collection, may be null.
      */
-    public Tunnels(Collection<? extends TicTunnel> collection, @Nullable TicTunnel activeTunnel) throws IllegalArgumentException {
+    public Tunnels(Collection<? extends TunnelSpec> collection, @Nullable TunnelSpec activeTunnel) throws IllegalArgumentException {
         super(collection);
         setActiveTunnel(activeTunnel);
     }
@@ -155,7 +159,7 @@ public class Tunnels extends ArrayList<TicTunnel> implements Cloneable {
      *
      * @return The active/selected for activation TicTunnel or null if not selected
      */
-    public @Nullable TicTunnel getActiveTunnel() {
+    public @Nullable TunnelSpec getActiveTunnel() {
         return activeTunnel;
     }
 
@@ -163,7 +167,7 @@ public class Tunnels extends ArrayList<TicTunnel> implements Cloneable {
         return activeTunnel != null;
     }
 
-    public void setActiveTunnel(@Nullable TicTunnel activeTunnel) throws IllegalArgumentException {
+    public void setActiveTunnel(@Nullable TunnelSpec activeTunnel) throws IllegalArgumentException {
         if (activeTunnel != null && !contains(activeTunnel))
             throw new IllegalArgumentException("Attempt to set an active tunnel that is not contained in the tunnel list");
         this.activeTunnel = activeTunnel;
@@ -178,7 +182,7 @@ public class Tunnels extends ArrayList<TicTunnel> implements Cloneable {
             Log.i(TAG, "No tunnels are cached");
             return false;
         }
-        for (TicTunnel tunnel: this) {
+        for (TunnelSpec tunnel: this) {
             if (!tunnel.isEnabled()) {
                 Log.i(TAG, String.format("Tunnel %s (%s) is expired", tunnel.getTunnelName(), tunnel.getTunnelId()));
                 return false; // one tunnel is expired or disabled

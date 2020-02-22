@@ -23,21 +23,54 @@
 
 package de.flyingsnail.ipv6droid.transport;
 
-import java.security.NoSuchAlgorithmException;
+import java.io.Serializable;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.util.Date;
 
-import de.flyingsnail.ipv6droid.transport.ayiya.Ayiya;
-import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
-import de.flyingsnail.ipv6droid.transport.dtls.DTLSTransporter;
-import de.flyingsnail.ipv6droid.transport.dtls.TransporterParams;
+/**
+ * Interface to interact with a tunnel specification, not knowing which kind of tunnel.
+ */
+public interface TunnelSpec extends Serializable {
+    String getTunnelName();
 
-public class TransporterBuilder {
-  public static Transporter createTransporter(TunnelSpec spec) throws NoSuchAlgorithmException, ConnectionFailedException {
-    if (Ayiya.TUNNEL_TYPE.equals(spec.getType())) {
-      return new Ayiya((TicTunnel) spec);
-    }
-    if (DTLSTransporter.TUNNEL_TYPE.equals(spec.getType())) {
-      return new DTLSTransporter((TransporterParams) spec);
-    }
-    throw new NoSuchAlgorithmException("No transport builder registered for " + spec.getType());
-  }
+    void setTunnelName(String tunnelName);
+
+    Inet4Address getIPv4Pop();
+
+    void setIPv4Pop(Inet4Address ipv4Pop);
+
+    String getTunnelId();
+
+    void setTunnelId(String tunnelId);
+
+    String getType();
+
+    Inet6Address getIpv6Endpoint();
+
+    void setIpv6Endpoint(Inet6Address ipv6Endpoint);
+
+    Inet6Address getIpv6Pop();
+
+    void setIpv6Pop(Inet6Address ipv6Pop);
+
+    int getPrefixLength();
+
+    void setPrefixLength(int prefixLength);
+
+    String getPopName();
+
+    void setPopName(String popName);
+
+    int getHeartbeatInterval();
+
+    void setHeartbeatInterval(int heartbeatInterval);
+
+    int getMtu();
+
+    void setMtu(int mtu);
+
+    Date getExpiryDate();
+
+    boolean isEnabled();
 }

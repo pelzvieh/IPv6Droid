@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2019 Dr. Andreas Feldner.
+ *  * Copyright (c) 2020 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -25,18 +25,12 @@ package de.flyingsnail.ipv6droid.transport.dtls;
 
 import android.util.Log;
 
-import org.bouncycastle.tls.CertificateRequest;
+import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
+import org.bouncycastle.tls.Certificate;
 import org.bouncycastle.tls.DTLSClientProtocol;
 import org.bouncycastle.tls.DTLSTransport;
 import org.bouncycastle.tls.DatagramTransport;
-import org.bouncycastle.tls.DefaultTlsClient;
-import org.bouncycastle.tls.DefaultTlsHeartbeat;
-import org.bouncycastle.tls.HeartbeatMode;
-import org.bouncycastle.tls.TlsAuthentication;
 import org.bouncycastle.tls.TlsClient;
-import org.bouncycastle.tls.TlsCredentials;
-import org.bouncycastle.tls.TlsHeartbeat;
-import org.bouncycastle.tls.TlsServerCertificate;
 import org.bouncycastle.tls.UDPTransport;
 import org.bouncycastle.tls.crypto.TlsCrypto;
 import org.bouncycastle.tls.crypto.impl.bc.BcTlsCrypto;
@@ -45,6 +39,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.DatagramSocket;
+import java.net.Inet4Address;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.util.Date;
@@ -54,12 +49,10 @@ import de.flyingsnail.ipv6droid.transport.Transporter;
 import de.flyingsnail.ipv6droid.transport.TransporterInputStream;
 import de.flyingsnail.ipv6droid.transport.TransporterOutputStream;
 import de.flyingsnail.ipv6droid.transport.TunnelBrokenException;
-import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
 
 public class DTLSTransporter implements Transporter {
-  public static final String TUNNEL_TYPE = "DTLSTunnel";
+  public static final String TUNNEL_TYPE = TransporterParams.TUNNEL_TYPE;
   private final static String TAG = DTLSTransporter.class.getName();
-  private TicTunnel tunnel;
   private Date lastPacketReceivedTime;
   private Date lastPacketSentTime;
   private DatagramSocket socket;
@@ -69,10 +62,43 @@ public class DTLSTransporter implements Transporter {
   private int maxPacketSize = 0;
   private boolean validPacketReceived = false;
 
+  private Inet4Address ipv4Pop;
+  private final int mtu;
+    /**
+     * The size of our receive buffers. We do not want to limit the transmission by our buffers...
+     */
+  static final int MAX_MTU = 64*1024;
+  private final int heartbeat;
 
-  public DTLSTransporter (TicTunnel tunnel) {
-    this.tunnel = tunnel;
+
+  private final Certificate certChain;
+
+  private final AsymmetricKeyParameter privateKey;
+
+  private final TlsCrypto crypto;
+
+
+  public DTLSTransporter (TransporterParams params) {
+    crypto = new BcTlsCrypto(new SecureRandom());
+
+    ipv4Pop = params.getIPv4Pop();
+    port = params.getPortPop();
+    mtu = params.getMtu();
+    heartbeat = params.getHeartbeatInterval();
+
+    try {
+      this.certChain = DTLSUtils.parseCertificateChain(crypto, params.getCertChain());
+    } catch (IOException e) {
+      throw new IllegalStateException("Incorrectly bundled, failure to read certificates", e);
+    }
+    try {
+      this.privateKey = DTLSUtils.parseBcPrivateKeyString(params.getPrivateKey());
+    } catch (IOException e) {
+      throw new IllegalStateException("Incorrectly bundled, failure to read private key", e);
+    }
+    Log.i(TAG, "DTLS transporter constructed");
   }
+
   /**
    * Yield the time when the last packet was <b>received</b>. This gives an indication if the
    * tunnel is still alive.
@@ -118,23 +144,21 @@ public class DTLSTransporter implements Transporter {
 
     // UDP connection
     socket = new DatagramSocket();
-    socket.connect(tunnel.getIPv4Pop(), port);
-    socket.setSoTimeout(0); // no read timeout
-    int mtu = tunnel.getMtu();
+    socket.connect(ipv4Pop, port);
+    socket.setSoTimeout(10000); // no read timeout
 
-    TlsCrypto crypto = new BcTlsCrypto(new SecureRandom());
-    DatagramTransport transport = new UDPTransport(socket, mtu);
-    TlsClient client = new DTlsClient(crypto);
+    DatagramTransport transport = new UDPTransport(socket, mtu) {
+        @Override
+        public int getReceiveLimit() {
+            // we do not want to limit incoming packages
+            return MAX_MTU;
+        }
+    };
+    TlsClient client = new IPv6DTlsClient(crypto, heartbeat, certChain, privateKey);
     DTLSClientProtocol protocol = new DTLSClientProtocol();
     dtls = protocol.connect(client, transport);
-    // beat it!
-    try {
-      beat();
-    } catch (TunnelBrokenException e) {
-      throw new ConnectionFailedException("Tunnel broken right from scratch", e);
-    }
 
-    Log.i(TAG, "DTLS tunnel to POP IP " + tunnel.getIPv4Pop() + " created.");
+    Log.i(TAG, "DTLS tunnel to POP IP " + ipv4Pop + " created.");
   }
 
   /**
@@ -193,9 +217,6 @@ public class DTLSTransporter implements Transporter {
       throw new IOException("beat() called on unconnected DTLS");
     if (!socket.isConnected())
       throw new TunnelBrokenException("Socket to PoP is not connected", null);
-    if (tunnel.getExpiryDate() != null && tunnel.getExpiryDate().before(new Date())) {
-      throw new TunnelBrokenException("Tunnel expiry date reached", null);
-    }
   }
 
   /**
@@ -208,6 +229,7 @@ public class DTLSTransporter implements Transporter {
    */
   @Override
   public ByteBuffer read(ByteBuffer bb) throws IOException, TunnelBrokenException {
+    Log.d(TAG, "DTLS Transport reading");
     if (socket == null || dtls == null)
       throw new IllegalStateException("read() called on unconnected DTLSTransporter");
     if (!socket.isConnected())
@@ -216,16 +238,18 @@ public class DTLSTransporter implements Transporter {
     boolean validResult = false;
     while (!validResult) {
       // read from socket
-      int bytecount = dtls.receive(bb.array(), bb.arrayOffset(), bb.capacity(), 100);
+      int bytecount = dtls.receive(bb.array(), bb.arrayOffset(), bb.capacity(), 10000);
+
 
       if (bytecount > maxPacketSize)
         maxPacketSize = bytecount;
 
       // first check some pathological results for stability reasons
-      if (bytecount < 0)
+      if (bytecount < 0) {
+        Log.i(TAG, "DTLS transporter ends: connection terminated");
         throw new TunnelBrokenException("Input stream disrupted", null);
-      else if (bytecount == 0) {
-        Log.e(TAG, "Received 0 bytes from blocking read..?");
+      } else if (bytecount == 0) {
+        Log.d(TAG, "Received 0 bytes within timeout");
         try {
           Thread.sleep(100L);
         } catch (InterruptedException e) {
@@ -266,7 +290,6 @@ public class DTLSTransporter implements Transporter {
     dtls.send(payload.array(), payload.arrayOffset()+payload.position(), payload.remaining());
 
     lastPacketSentTime = new Date();
-
   }
 
   /**
@@ -326,7 +349,11 @@ public class DTLSTransporter implements Transporter {
     socket = null; // it's useless anyway
     dtls = null;
     Log.i(TAG, "DTLS tunnel closed");
+  }
 
+  @Override
+  public String toString() {
+    return getClass().getSimpleName() + "#" + socket.getLocalAddress().getHostAddress() + ":"+ socket.getLocalPort();
   }
 
   /**
@@ -340,35 +367,4 @@ public class DTLSTransporter implements Transporter {
     this.port = port;
   }
 
-  private class DTlsClient extends DefaultTlsClient {
-    public DTlsClient(TlsCrypto crypto) {
-      super(crypto);
-    }
-
-    @Override
-    public short getHeartbeatPolicy() {
-      return HeartbeatMode.peer_allowed_to_send;
-    }
-
-    @Override
-    public TlsHeartbeat getHeartbeat() {
-      return new DefaultTlsHeartbeat(tunnel.getHeartbeatInterval(), 1000);
-    }
-
-    @Override
-    public TlsAuthentication getAuthentication() throws IOException {
-      return new TlsAuthentication() {
-        @Override
-        public void notifyServerCertificate(TlsServerCertificate serverCertificate) throws IOException {
-          // todo perform certificate check of server
-        }
-
-        @Override
-        public TlsCredentials getClientCredentials(CertificateRequest certificateRequest) throws IOException {
-          // todo implement client authentication
-          return null;
-        }
-      };
-    }
-  }
 }

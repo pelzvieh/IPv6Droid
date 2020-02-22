@@ -21,23 +21,10 @@
  *
  */
 
-package de.flyingsnail.ipv6droid.transport;
+package de.flyingsnail.ipv6droid.transport.dtls;
 
-import java.security.NoSuchAlgorithmException;
-
-import de.flyingsnail.ipv6droid.transport.ayiya.Ayiya;
-import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
-import de.flyingsnail.ipv6droid.transport.dtls.DTLSTransporter;
-import de.flyingsnail.ipv6droid.transport.dtls.TransporterParams;
-
-public class TransporterBuilder {
-  public static Transporter createTransporter(TunnelSpec spec) throws NoSuchAlgorithmException, ConnectionFailedException {
-    if (Ayiya.TUNNEL_TYPE.equals(spec.getType())) {
-      return new Ayiya((TicTunnel) spec);
+class NoSupportedAlgorithm extends Exception {
+    public NoSupportedAlgorithm(String message) {
+        super(message);
     }
-    if (DTLSTransporter.TUNNEL_TYPE.equals(spec.getType())) {
-      return new DTLSTransporter((TransporterParams) spec);
-    }
-    throw new NoSuchAlgorithmException("No transport builder registered for " + spec.getType());
-  }
 }

@@ -49,7 +49,7 @@ import java.util.List;
 import java.util.Map;
 
 import de.flyingsnail.ipv6droid.R;
-import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
+import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 import de.flyingsnail.ipv6server.restapi.SubscriptionsApi;
 import retrofit2.Call;
 import retrofit2.Response;
@@ -169,7 +169,7 @@ public class SubscriptionManager {
     /**
      * A list of TicTunnels associated with the current user's subscriptions
      */
-    private List<TicTunnel> tunnels;
+    private List<TunnelSpec> tunnels;
 
     /**
      * An instance implementing ServiceConnection by setting this object's service class when bound.
@@ -303,16 +303,16 @@ public class SubscriptionManager {
                 if (SubscriptionBuilder.getSupportedSku().contains(sku)) {
                     // this one is relevant!
                     isSubscriptionRelevant = true;
-                    Call<List<TicTunnel>> subsCall = subscriptionsClient.checkSubscriptionAndReturnTunnels(
+                    Call<List<TunnelSpec>> subsCall = subscriptionsClient.checkSubscriptionAndReturnTunnels(
                             skuData,
                             skuSignature
                     );
                     new AsyncTask<Void, Void, Exception>() {
                         @Override
                         protected Exception doInBackground(Void... params) {
-                            List<TicTunnel> subscribedTunnels;
+                            List<TunnelSpec> subscribedTunnels;
                             try {
-                                Response<List<TicTunnel>> subscribedTunnelsResponse = subsCall.execute();
+                                Response<List<TunnelSpec>> subscribedTunnelsResponse = subsCall.execute();
                                 if (!subscribedTunnelsResponse.isSuccessful()) {
                                     throw new IllegalStateException("subscribedTunnels returns exception " + subscribedTunnelsResponse.errorBody().string());
                                 }
@@ -320,7 +320,7 @@ public class SubscriptionManager {
                                 Log.d(TAG, String.format("Successfully retrieved %d tunnels from server", subscribedTunnels.size()));
                                 // add only valid tunnels to save case distinction all through
                                 // the app
-                                for (TicTunnel tunnel : subscribedTunnels) {
+                                for (TunnelSpec tunnel : subscribedTunnels) {
                                     if (tunnel.isEnabled()) {
                                         tunnels.add(tunnel);
                                         Log.d(TAG, String.format("Added valid tunnel %s", tunnel.getTunnelId()));
@@ -397,7 +397,7 @@ public class SubscriptionManager {
      *
      * @return List&lt;TicTunnel&gt;
      */
-    public List<TicTunnel> getTunnels() {
+    public List<TunnelSpec> getTunnels() {
         return tunnels;
     }
 

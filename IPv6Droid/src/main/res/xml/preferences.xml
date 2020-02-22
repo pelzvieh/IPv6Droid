@@ -1,84 +1,108 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+<!--
+  ~ /*
+  ~  * Copyright (c) 2020 Dr. Andreas Feldner.
+  ~  *
+  ~  *     This program is free software; you can redistribute it and/or modify
+  ~  *     it under the terms of the GNU General Public License as published by
+  ~  *     the Free Software Foundation; either version 2 of the License, or
+  ~  *     (at your option) any later version.
+  ~  *
+  ~  *     This program is distributed in the hope that it will be useful,
+  ~  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~  *     GNU General Public License for more details.
+  ~  *
+  ~  *     You should have received a copy of the GNU General Public License along
+  ~  *     with this program; if not, write to the Free Software Foundation, Inc.,
+  ~  *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  ~  *
+  ~  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
+  ~  */
+  ~
+  -->
+
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
     <PreferenceCategory
-        android:title="@string/pref_header_login"
-        android:key="pref_key_login_settings">
+        app:title="@string/pref_header_login"
+        app:key="pref_key_login_settings">
         <EditTextPreference
-            android:key="tic_username"
-            android:title="@string/pref_title_username"
-            android:selectAllOnFocus="true"
-            android:inputType="textPersonName"
-            android:singleLine="true"
-            android:maxLines="1"
-            />
+            app:key="tic_username"
+            app:title="@string/pref_title_username" />
 
         <!-- NOTE: EditTextPreference accepts EditText attributes. -->
         <!-- NOTE: EditTextPreference's summary should be set to its value by the activity code. -->
         <EditTextPreference
-            android:key="tic_password"
-            android:title="@string/pref_title_password"
-            android:selectAllOnFocus="true"
-            android:inputType="textPassword"
-            android:singleLine="true"
-            android:maxLines="1" />
+            app:key="tic_password"
+            app:title="@string/pref_title_password" />
 
         <!-- NOTE: EditTextPreference accepts EditText attributes. -->
         <!-- NOTE: EditTextPreference's summary should be set to its value by the activity code. -->
         <EditTextPreference
-            android:key="tic_host"
-            android:title="@string/pref_title_host"
-            android:selectAllOnFocus="true"
-            android:inputType="textUri"
-            android:singleLine="true"
-            android:maxLines="1" />
-
+            app:key="tic_host"
+            app:title="@string/pref_title_host" />
+    </PreferenceCategory>
+    <PreferenceCategory
+        app:title="@string/pref_header_autostart"
+        app:key="pref_key_start_settings">
         <SwitchPreference
-            android:key="autostart"
-            android:title="@string/pref_title_autostart"
-            android:summaryOff="@string/pref_summary_autostart_off"
-            android:summaryOn="@string/pref_summary_autostart_on"
-            android:defaultValue="false" />
+            app:key="autostart"
+            app:title="@string/pref_title_autostart"
+            app:summaryOff="@string/pref_summary_autostart_off"
+            app:summaryOn="@string/pref_summary_autostart_on"
+            app:defaultValue="false" />
 
         <Preference
-            android:key="always-on-vpn"
-            android:title="@string/activity_alwayson_setting">
+            app:key="always-on-vpn"
+            app:title="@string/activity_alwayson_setting">
             <intent android:action="android.net.vpn.SETTINGS"/>
         </Preference>
 
     </PreferenceCategory>
     <PreferenceCategory
-        android:title="@string/pref_header_routes"
-        android:key="pref_key_route_settings">
+        app:title="@string/pref_header_routes"
+        app:key="pref_key_route_settings">
         <!-- A 'parent' preference, which enables/disables child preferences (below)
-     when checked/unchecked. -->
+             when checked/unchecked. -->
         <SwitchPreference
-            android:key="routes_default"
-            android:title="@string/pref_title_routes_default"
-            android:summaryOn="@string/pref_summary_routes_default_on"
-            android:summaryOff="@string/pref_summary_routes_default_off"
-            android:defaultValue="true" />
+            app:key="routes_default"
+            app:title="@string/pref_title_routes_default"
+            app:summaryOn="@string/pref_summary_routes_default_on"
+            app:summaryOff="@string/pref_summary_routes_default_off"
+            app:defaultValue="true" />
 
         <EditTextPreference
-            android:key="routes_specific"
-            android:title="@string/pref_title_routes_specific"
-            android:defaultValue="@string/pref_default_routes_specific"
-            android:selectAllOnFocus="false"
-            android:inputType="textNoSuggestions"
-            android:singleLine="true"
-            android:maxLines="1" />
+            app:key="routes_specific"
+            app:title="@string/pref_title_routes_specific"
+            app:defaultValue="@string/pref_default_routes_specific" />
 
         <SwitchPreference
-            android:key="routes_setnameservers"
-            android:title="@string/pref_title_routes_setnameservers"
-            android:summaryOff="@string/pref_summary_routes_setnameservers_off"
-            android:summaryOn="@string/pref_summary_routes_setnameservers_on"
-            android:defaultValue="false" />
+            app:key="routes_setnameservers"
+            app:title="@string/pref_title_routes_setnameservers"
+            app:summaryOff="@string/pref_summary_routes_setnameservers_off"
+            app:summaryOn="@string/pref_summary_routes_setnameservers_on"
+            app:defaultValue="false" />
 
         <SwitchPreference
-            android:key="routes_forcetunnel"
-            android:title="@string/pref_title_force_routing"
-            android:summaryOn="@string/pref_summary_force_routing_on"
-            android:summaryOff="@string/pref_summary_force_routing_off"
-            android:defaultValue="false" />
+            app:key="routes_forcetunnel"
+            app:title="@string/pref_title_force_routing"
+            app:summaryOn="@string/pref_summary_force_routing_on"
+            app:summaryOff="@string/pref_summary_force_routing_off"
+            app:defaultValue="false" />
     </PreferenceCategory>
+
+    <PreferenceCategory
+        app:title="@string/pref_header_experimental"
+        app:key="pref_key_experimental_settings"
+        app:initialExpandedChildrenCount="0">
+        <EditTextPreference
+            app:key="dtls_key"
+            app:title="DTLS tunnel private key"/>
+        <EditTextPreference
+            app:key="dtls_certs"
+            app:title="DTLS tunnel certificat chain"
+            app:summary="Your certificate first, CA last"/>
+    </PreferenceCategory>
+
 </PreferenceScreen>
