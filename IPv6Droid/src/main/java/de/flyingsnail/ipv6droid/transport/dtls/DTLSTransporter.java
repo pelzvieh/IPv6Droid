@@ -25,6 +25,8 @@ package de.flyingsnail.ipv6droid.transport.dtls;
 
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 import org.bouncycastle.tls.Certificate;
 import org.bouncycastle.tls.DTLSClientProtocol;
@@ -56,18 +58,19 @@ public class DTLSTransporter implements Transporter {
   private Date lastPacketReceivedTime;
   private Date lastPacketSentTime;
   private DatagramSocket socket;
-  /** The port number for dtls transport */
-  private int port = 5073;
+  private int port;
   private DTLSTransport dtls = null;
   private int maxPacketSize = 0;
   private boolean validPacketReceived = false;
+
+  private final static int OVERHEAD = 92;
 
   private Inet4Address ipv4Pop;
   private final int mtu;
     /**
      * The size of our receive buffers. We do not want to limit the transmission by our buffers...
      */
-  static final int MAX_MTU = 64*1024;
+  private static final int MAX_MTU = 64*1024;
   private final int heartbeat;
 
 
@@ -85,17 +88,9 @@ public class DTLSTransporter implements Transporter {
     port = params.getPortPop();
     mtu = params.getMtu();
     heartbeat = params.getHeartbeatInterval();
+    certChain = params.getCertChain();
+    privateKey = params.getPrivateKey();
 
-    try {
-      this.certChain = DTLSUtils.parseCertificateChain(crypto, params.getCertChain());
-    } catch (IOException e) {
-      throw new IllegalStateException("Incorrectly bundled, failure to read certificates", e);
-    }
-    try {
-      this.privateKey = DTLSUtils.parseBcPrivateKeyString(params.getPrivateKey());
-    } catch (IOException e) {
-      throw new IllegalStateException("Incorrectly bundled, failure to read private key", e);
-    }
     Log.i(TAG, "DTLS transporter constructed");
   }
 
@@ -135,7 +130,7 @@ public class DTLSTransporter implements Transporter {
    * Connect the tunnel.
    */
   @Override
-  public void connect() throws IOException, ConnectionFailedException {
+  public void connect() throws IOException {
     if (socket != null) {
       throw new IllegalStateException("This AYIYA is already connected.");
     }
@@ -147,11 +142,11 @@ public class DTLSTransporter implements Transporter {
     socket.connect(ipv4Pop, port);
     socket.setSoTimeout(10000); // no read timeout
 
-    DatagramTransport transport = new UDPTransport(socket, mtu) {
+    DatagramTransport transport = new UDPTransport(socket, mtu + 2*OVERHEAD) {
         @Override
         public int getReceiveLimit() {
             // we do not want to limit incoming packages
-            return MAX_MTU;
+            return MAX_MTU - OVERHEAD;
         }
     };
     TlsClient client = new IPv6DTlsClient(crypto, heartbeat, certChain, privateKey);
@@ -222,8 +217,8 @@ public class DTLSTransporter implements Transporter {
   /**
    * Read next packet from the tunnel.
    *
-   * @param bb
-   * @return a ByteBuffer representing a read packets, with current position set to beginning of the <b>payload</b> and end set to end of payload.
+   * @param bb a ByteBuffer to receive a read packet
+   * @return the same ByteBuffer representing a read packet, with current position set to beginning of the <b>payload</b> and end set to end of payload.
    * @throws IOException           in case of network problems (probably temporary in nature)
    * @throws TunnelBrokenException in case that this tunnel is no longer usable and must be restarted
    */
@@ -286,7 +281,10 @@ public class DTLSTransporter implements Transporter {
       throw new IllegalStateException("write(byte[]) called on unconnected DTLSTransporter");
     if (!socket.isConnected())
       throw new TunnelBrokenException("Socket to PoP is closed", null);
+    if (payload.remaining() > mtu)
+      throw new IOException("Too big packet received: " + payload.remaining() + " (MTU: " + mtu + ")");
 
+    Log.d(TAG, "Sending packet of size " + payload.remaining());
     dtls.send(payload.array(), payload.arrayOffset()+payload.position(), payload.remaining());
 
     lastPacketSentTime = new Date();
@@ -352,7 +350,7 @@ public class DTLSTransporter implements Transporter {
   }
 
   @Override
-  public String toString() {
+  public @NonNull String toString() {
     return getClass().getSimpleName() + "#" + socket.getLocalAddress().getHostAddress() + ":"+ socket.getLocalPort();
   }
 
@@ -360,7 +358,7 @@ public class DTLSTransporter implements Transporter {
    * Configure this DTLSTransporter to use a different UDP port on IPv4.
    *
    * @param port an int giving the port number to use.
-   * @todo this should eventually become an attribute of TicTunnel
+   * todo this should eventually become an attribute of TicTunnel
    */
   @Override
   public void setPort(int port) {

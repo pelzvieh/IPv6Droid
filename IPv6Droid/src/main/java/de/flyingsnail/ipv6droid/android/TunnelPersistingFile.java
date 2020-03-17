@@ -30,6 +30,7 @@ import androidx.annotation.NonNull;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InvalidClassException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
@@ -74,11 +75,10 @@ public class TunnelPersistingFile implements TunnelPersisting  {
         // open private file
         InputStream is = context.openFileInput(FILE_LAST_TUNNEL);
         ObjectInputStream os = new ObjectInputStream(is);
-        //noinspection unchecked
         List<? extends TunnelSpec> cachedTunnels;
         try {
             cachedTunnels = (List<? extends TunnelSpec>)os.readObject();
-        } catch (ClassNotFoundException e) {
+        } catch (ClassNotFoundException | ClassCastException | InvalidClassException e) {
             Log.wtf(TAG, "Unable to read cached tunnels from persistence media", e);
             throw new IOException(e);
         }

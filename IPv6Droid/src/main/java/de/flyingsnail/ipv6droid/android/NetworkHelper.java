@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2019 Dr. Andreas Feldner.
+ *  * Copyright (c) 2020 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -44,6 +44,7 @@ import androidx.annotation.Nullable;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.List;
+import java.util.Objects;
 
 public class NetworkHelper  {
     /**
@@ -73,9 +74,9 @@ public class NetworkHelper  {
     /**
      * The system service ConnectivityManager
      */
-    ConnectivityManager connectivityManager;
+    private ConnectivityManager connectivityManager;
 
-    public NetworkHelper(NetworkChangeListener networkChangeListener, Context notificationContext) {
+    NetworkHelper(NetworkChangeListener networkChangeListener, Context notificationContext) {
         this.networkChangeListener = networkChangeListener;
         this.notificationContext = notificationContext;
         // resolve system service "ConnectivityManager"
@@ -85,7 +86,7 @@ public class NetworkHelper  {
     }
 
 
-    public void destroy() {
+    void destroy() {
         unregisterConnectivityReceiver();
     }
 
@@ -100,7 +101,7 @@ public class NetworkHelper  {
         @Override
         public void onReceive(Context context, @NonNull Intent intent) {
             String action = intent.getAction();
-            if (action.equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
+            if (Objects.equals(action, ConnectivityManager.CONNECTIVITY_ACTION)) {
                 Log.i(TAG, "Received connectivity action");
                 onConnectivityChange(
                         !intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false),
@@ -127,8 +128,10 @@ public class NetworkHelper  {
             networkCallback = new ConnectivityManager.NetworkCallback () {
                 @Override
                 public void onAvailable(Network network) {
-                    onConnectivityChange(true,
-                            cm.getLinkProperties(network));
+                    if (cm != null) {
+                        onConnectivityChange(true,
+                                cm.getLinkProperties(network));
+                    }
                 }
 
                 @Override
@@ -141,7 +144,9 @@ public class NetworkHelper  {
                     onConnectivityChange(false, null);
                 }
             };
-            cm.registerNetworkCallback(request, networkCallback);
+            if (cm != null) {
+                cm.registerNetworkCallback(request, networkCallback);
+            }
         }
         // anyway, register for callback on connectivity change
         registerGlobalConnectivityReceiver();
@@ -172,8 +177,12 @@ public class NetworkHelper  {
      * Revert registerGlobalConnectivityReceiver().
      */
     private void unregisterGlobalConnectivityReceiver() {
-        notificationContext.unregisterReceiver(connectivityReceiver);
-        Log.d(TAG, "un-registered CommandReceiver for global broadcasts");
+        try {
+            notificationContext.unregisterReceiver(connectivityReceiver);
+            Log.d(TAG, "un-registered CommandReceiver for global broadcasts");
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Could not unregister global connectivity receiver");
+        }
     }
 
 
@@ -207,7 +216,7 @@ public class NetworkHelper  {
         if (!foundNative && Build.VERSION.SDK_INT >= 23) {
             Network activeNetwork = cm.getActiveNetwork();
             if (activeNetwork != null) {
-                if (cm.getNetworkInfo(activeNetwork).getType() != ConnectivityManager.TYPE_VPN) {
+                if (ConnectivityManager.TYPE_VPN != cm.getNetworkInfo(activeNetwork).getType()) {
                     LinkProperties linkProperties = cm.getLinkProperties(activeNetwork);
                     networkDetails.setNativeProperties(linkProperties);
                     foundNative = true;
@@ -244,7 +253,7 @@ public class NetworkHelper  {
      *
      * @param connected the boolean indicating if the new network situation has connectivity
      */
-    void onConnectivityChange(final boolean connected, @Nullable final LinkProperties newLinkProperties) {
+    private void onConnectivityChange(final boolean connected, @Nullable final LinkProperties newLinkProperties) {
         Log.i(TAG, "Connectivity changed");
         if (connected) {
             // update cached information

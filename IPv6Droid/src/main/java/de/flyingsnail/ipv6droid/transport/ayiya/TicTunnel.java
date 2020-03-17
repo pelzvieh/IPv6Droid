@@ -25,6 +25,8 @@ package de.flyingsnail.ipv6droid.transport.ayiya;
 
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.UnknownHostException;
@@ -179,22 +181,22 @@ public class TicTunnel implements de.flyingsnail.ipv6droid.transport.TunnelSpec 
         this.ipv6Endpoint = ipv6Endpoint;
     }
 
-    @Override
+//    @Override
     public Inet6Address getIpv6Pop() {
         return ipv6Pop;
     }
 
-    @Override
+//    @Override
     public void setIpv6Pop(Inet6Address ipv6Pop) {
         this.ipv6Pop = ipv6Pop;
     }
 
-    @Override
+//    @Override
     public int getPrefixLength() {
         return prefixLength;
     }
 
-    @Override
+//    @Override
     public void setPrefixLength(int prefixLength) {
         this.prefixLength = prefixLength;
     }
@@ -245,7 +247,7 @@ public class TicTunnel implements de.flyingsnail.ipv6droid.transport.TunnelSpec 
     /**
      * Sets the explicit enabled states (user and admin enabled) to enabled. However, will not
      * reset expiry date, so isEnabled might be false after calling setEnabled(true).
-     * @param enabled
+     * @param enabled a boolean indicating if the tunnel will be enabled
      */
     public void setEnabled(boolean enabled) {
         if (enabled) {
@@ -380,7 +382,7 @@ public class TicTunnel implements de.flyingsnail.ipv6droid.transport.TunnelSpec 
      */
     @Override
     public boolean equals(Object o) {
-        return (o != null) && (o instanceof TicTunnel) && (((TicTunnel) o).getTunnelId().equals(this.tunnelId));
+        return (o instanceof TicTunnel) && (((TicTunnel) o).getTunnelId().equals(this.tunnelId));
     }
 
     /**
@@ -413,7 +415,7 @@ public class TicTunnel implements de.flyingsnail.ipv6droid.transport.TunnelSpec 
     }
 
     @Override
-    public String toString() {
+    public @NonNull String toString() {
         return tunnelName + " (" + tunnelId + "), " + type
                 + "\n Your endpoint " + ipv6Endpoint;
     }

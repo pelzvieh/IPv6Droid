@@ -235,13 +235,12 @@ class VpnThread extends Thread implements NetworkChangeListener {
                 tr = new DTLSTunnelReader(ayiyaVpnService);
                 Log.i(TAG, "Using DTLS config");
             } catch (ConnectionFailedException e1) {
-                Log.i(TAG, "Falling back to subscription tunnels");
+                Log.i(TAG, "Falling back to subscription tunnels", e1);
                 tr = new SubscriptionTunnelReader(ayiyaVpnService);
             }
         }
         this.tunnelReader = tr;
 
-        networkHelper = new NetworkHelper(this, ayiyaVpnService);
     }
 
 
@@ -249,6 +248,8 @@ class VpnThread extends Thread implements NetworkChangeListener {
     public void run() {
         closeTunnel = false;
         try {
+            networkHelper = new NetworkHelper(this, ayiyaVpnService);
+
             TrafficStats.setThreadStatsTag(TAG_PARENT_THREAD);
             handler = new Handler(applicationContext.getMainLooper());
 
@@ -324,7 +325,9 @@ class VpnThread extends Thread implements NetworkChangeListener {
     /**
      * Request the tunnel control loop (running in a different thread) to stop.
      */
-    protected void requestTunnelClose() {
+    void requestTunnelClose() {
+        if (networkHelper != null)
+            networkHelper.destroy();
         if (isIntendedToRun()) {
             Log.i(TAG, "Shutting down");
             closeTunnel = true;
@@ -383,7 +386,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
      * @throws ConnectionFailedException in case that the current configuration seems permanently defective
      */
     private void refreshRemoteEnd() throws ConnectionFailedException, InterruptedException {
-        Date lastStartAttempt = new Date(0l);
+        Date lastStartAttempt = new Date(0L);
         FileDescriptor localFD;
         try {
             localFD = refreshFD();
@@ -416,15 +419,15 @@ class VpnThread extends Thread implements NetworkChangeListener {
                 // timestamp base mechanism to prevent busy looping through e.g. IOException
                 Date now = new Date();
                 long lastIterationRun = now.getTime() - lastStartAttempt.getTime();
-                if (lastIterationRun < 1000l)
-                    Thread.sleep(1000l - lastIterationRun);
+                if (lastIterationRun < 1000L)
+                    Thread.sleep(1000L - lastIterationRun);
                 lastStartAttempt = new Date();
 
                 // setup tunnel to PoP
                 Log.i(TAG, "Connecting transporter object");
                 transporter.connect();
                 vpnStatus.setProgressPerCent(75);
-                vpnStatus.setActivity(R.string.vpnservice_activity_ping_pop);
+                vpnStatus.setStatus(VpnStatusReport.Status.Connected);
 
                 // Initialize the input and output streams from the transporter socket
                 DatagramSocket popSocket = transporter.getSocket();
@@ -447,17 +450,13 @@ class VpnThread extends Thread implements NetworkChangeListener {
                     inThread = new CopyThread(popIn, localOut, ayiyaVpnService, this, "AYIYA from POP to local", TAG_INCOMING_THREAD, 0, ingoingStatistics);
                     outThread.start();
                     inThread.start();
-                };
-                vpnStatus.setStatus(VpnStatusReport.Status.Connected);
+                }
+                vpnStatus.setActivity(R.string.vpnservice_activity_ping_pop);
                 vpnStatus.setCause(null);
 
                 // now do a ping on IPv6 level. This should involve receiving one packet
-                //noinspection ConstantConditions
-                if (tunnels.getActiveTunnel().getIpv6Pop().isReachable(10000)) {
+                if (Inet6Address.getByName(applicationContext.getString(R.string.ipv6_test_host)).isReachable(10000)) {
                     postToast(applicationContext, R.string.vpnservice_tunnel_up, Toast.LENGTH_SHORT);
-                    /* by laws of logic, a successful ping on IPv6 *must* already have set the flag
-                       validPacketReceived in the Ayiya instance.
-                     */
                 } else {
                     Log.e(TAG, "Warning: couldn't ping pop via ipv6!");
                 }
@@ -512,7 +511,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
         }
         closeTunnel = false;
 
-        Date lastStartAttempt = new Date(0l);
+        Date lastStartAttempt = new Date(0L);
         while (!closeTunnel) {
             try {
                 if (interrupted())
@@ -520,8 +519,8 @@ class VpnThread extends Thread implements NetworkChangeListener {
 
                 // timestamp base mechanism to prevent busy looping through e.g. IOException
                 long lastIterationRun = new Date().getTime() - lastStartAttempt.getTime();
-                if (lastIterationRun < 1000l)
-                    Thread.sleep(1000l - lastIterationRun);
+                if (lastIterationRun < 1000L)
+                    Thread.sleep(1000L - lastIterationRun);
                 lastStartAttempt = new Date();
 
                 // check current nativeRouting information for existing IPv6 default route
@@ -599,7 +598,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
      * Request a status update broadcast w/o a change. Simply delegates to the respective method
      * of the status object.
      */
-    public void reportStatus() {
+    void reportStatus() {
         if (vpnStatus != null)
             vpnStatus.reportStatus();
     }
@@ -640,12 +639,12 @@ class VpnThread extends Thread implements NetworkChangeListener {
      */
     private void monitoredHeartbeatLoop() throws InterruptedException, IOException, ConnectionFailedException {
         boolean timeoutSuspected = false;
-        long lastPacketDelta = 0l;
+        long lastPacketDelta = 0L;
         TunnelSpec activeTunnel = tunnels.getActiveTunnel();
-        @SuppressWarnings("ConstantConditions") long heartbeatInterval = activeTunnel.getHeartbeatInterval() * 1000l;
-        if (heartbeatInterval < 300000l && isNetworkMobile()) {
+        @SuppressWarnings("ConstantConditions") long heartbeatInterval = activeTunnel.getHeartbeatInterval() * 1000L;
+        if (heartbeatInterval < 300000L && isNetworkMobile()) {
             Log.i(TAG, "Lifting heartbeat interval to 300 secs");
-            heartbeatInterval = 300000l;
+            heartbeatInterval = 300000L;
         }
         while (!closeTunnel && (inThread != null && inThread.isAlive()) && (outThread != null && outThread.isAlive())) {
             // wait for the heartbeat interval to finish or until inThread dies.
@@ -669,7 +668,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
                 try {
                     Log.i(TAG, "Sending heartbeat");
                     transporter.beat();
-                    lastPacketDelta = 0l;
+                    lastPacketDelta = 0L;
                 } catch (TunnelBrokenException e) {
                     throw new IOException ("Ayiya object claims it is broken", e);
                 }
@@ -683,7 +682,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
                         !transporter.isValidPacketReceived() && // if the tunnel worked in a session, don't worry if it pauses - it's 100% network problems
                         checkExpiry(transporter.getLastPacketReceivedTime(),
                                 activeTunnel.getHeartbeatInterval()) &&
-                        !activeTunnel.getIpv6Pop().isReachable(10000)
+                        !Inet6Address.getByName(applicationContext.getString(R.string.ipv6_test_host)).isReachable(10000)
                 ) {
                     if (!timeoutSuspected)
                         timeoutSuspected = true;
@@ -736,7 +735,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
     /**
      * Method called by the inbound copy thread if the first packet was transmitted.
      */
-    protected void notifyFirstPacketReceived() {
+    void notifyFirstPacketReceived() {
         if (transporter.isValidPacketReceived()) {
             // major status update, just once per session
             vpnStatus.setTunnelProvedWorking(true);
@@ -794,7 +793,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
                                                          boolean suppressRouting) {
         builder.setMtu(tunnelSpecification.getMtu());
         builder.setSession(tunnelSpecification.getPopName());
-        builder.addAddress(tunnelSpecification.getIpv6Endpoint(), tunnelSpecification.getPrefixLength());
+        builder.addAddress(tunnelSpecification.getIpv6Endpoint(), /*tunnelSpecification.getPrefixLength()*/ 128);
         if (Build.VERSION.SDK_INT >= 29)
             builder.setMetered (false);
         if (!suppressRouting) {
@@ -862,12 +861,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
      * @param duration constant coding the duration
      */
     private void postToast (final @NonNull Context ctx, final int resId, final int duration) {
-        handler.post(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(ctx, resId, duration).show();
-            }
-        });
+        handler.post(() -> Toast.makeText(ctx, resId, duration).show());
     }
 
 
@@ -909,20 +903,25 @@ class VpnThread extends Thread implements NetworkChangeListener {
 
         TunnelSpec activeTunnel = tunnels.getActiveTunnel();
         assert(activeTunnel != null);
-        Statistics stats = new Statistics(
-                outgoingStatistics,
-                ingoingStatistics,
-                activeTunnel.getIPv4Pop(),
-                localIp,
-                activeTunnel.getIpv6Pop(),
-                activeTunnel.getIpv6Endpoint(),
-                activeTunnel.getMtu(),
-                networkHelper.getNativeRouteInfos(),
-                networkHelper.getVpnRouteInfos(),
-                networkHelper.getNativeDnsServers(),
-                networkHelper.getVpnDnsServers(),
-                tunnelRouted
-        );
+        Statistics stats = null;
+        try {
+            stats = new Statistics(
+                    outgoingStatistics,
+                    ingoingStatistics,
+                    activeTunnel.getIPv4Pop(),
+                    localIp,
+                    (Inet6Address)Inet6Address.getByName(applicationContext.getString(R.string.ipv6_test_host)),
+                    activeTunnel.getIpv6Endpoint(),
+                    activeTunnel.getMtu(),
+                    networkHelper.getNativeRouteInfos(),
+                    networkHelper.getVpnRouteInfos(),
+                    networkHelper.getNativeDnsServers(),
+                    networkHelper.getVpnDnsServers(),
+                    tunnelRouted
+            );
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
         return stats;
     }
 
@@ -975,6 +974,9 @@ class VpnThread extends Thread implements NetworkChangeListener {
      */
     @Override
     public void onNewConnection() {
+        // there is a race condition in the constructor so that networkhelper is not yet assigned.
+        if (networkHelper == null)
+            return;
         // check if our routing is still valid, otherwise invalidate vpnFD
         if (isTunnelRoutingRequired() ^ tunnelRouted) {
             Log.i(TAG, "tunnel routing requirement changed, forcing re-build of local vpn socket");

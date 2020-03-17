@@ -45,6 +45,7 @@ import androidx.appcompat.widget.Toolbar;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Objects;
 
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.MainActivity;
@@ -105,12 +106,17 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_subscribe_tunnel);
-        Toolbar myToolbar = (Toolbar) findViewById(R.id.subscriptionsToolbar);
+        Toolbar myToolbar = findViewById(R.id.subscriptionsToolbar);
         setSupportActionBar(myToolbar);
 
         try {
-            //noinspection ConstantConditions
-            if (MainActivity.isConfigurationRequired(this, false)) {
+            boolean cachedTunnelsAvailable;
+            try {
+                cachedTunnelsAvailable = !new TunnelPersistingFile(getApplicationContext()).readTunnels().isEmpty();
+            } catch (IOException | NullPointerException e) {
+                cachedTunnelsAvailable = false;
+            }
+            if (MainActivity.isConfigurationRequired(this, cachedTunnelsAvailable)) {
                 getSupportActionBar().setIcon(R.drawable.ic_launcher);
             } else {
                 getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -284,6 +290,11 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
                 ).format(validUntilDate)
         );
         validUntilLine.setVisibility(View.VISIBLE);
+        try {
+            Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
+        } catch (NullPointerException e) {
+            Log.d(TAG,  "No action bar");
+        }
     }
 
     /**

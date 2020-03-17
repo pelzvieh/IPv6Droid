@@ -26,11 +26,8 @@ package de.flyingsnail.ipv6droid.android;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
+import android.util.Log;
 
-import java.io.IOException;
-import java.net.Inet4Address;
-import java.net.Inet6Address;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,78 +35,56 @@ import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 import de.flyingsnail.ipv6droid.transport.dtls.TransporterParams;
 
+/**
+ * Reads available DTLS tunnels based on configuration.
+ */
 public class DTLSTunnelReader implements TunnelReader {
-    private final Context context;
 
     private final static String TAG = DTLSTunnelReader.class.getSimpleName();
 
-    private final String keyConfig;
+    private final TransporterParams params;
 
-    private final List<String> certConfig;
-    private final int heartbeat;
-    private final Inet4Address ipv4PoP;
-    private final Inet6Address ipv6PoP;
-    private final int portPoP;
-    private final Inet6Address myIpv6;
-    private final int mtu;
-    private final String popName;
-    private final int prefixLength;
-    private final String tunnelId;
-    private final String tunnelName;
-
+    /**
+     * Initialise the TunnelReader. In contrast to TicTunnel implementation, all work is already
+     * done when successfully initialized from the App configuration.
+     * @param context the Android Context, used to access shared preferences.
+     * @throws ConnectionFailedException in case of parse errors of the configuration.
+     */
     public DTLSTunnelReader (Context context) throws ConnectionFailedException {
-        this.context = context;
 
         // load DTLS Configuration
         SharedPreferences myPreferences = PreferenceManager.getDefaultSharedPreferences(context);
-        keyConfig = myPreferences.getString("dtls_key", "");
+        final String keyConfig = myPreferences.getString("dtls_key", "");
         String concattedCerts = myPreferences.getString("dtls_certs", "");
 
         if (keyConfig.isEmpty() || concattedCerts.isEmpty())
             throw new ConnectionFailedException("No DTLS credentials configured", null);
         String[] certStrings = concattedCerts.split("-----BEGIN CERTIFICATE-----");
-        certConfig = new ArrayList<>(certStrings.length);
+        List<String> certConfig = new ArrayList<>(certStrings.length);
         for (String certString: certStrings) {
             certString = certString.trim();
             if (!certString.isEmpty()) {
                 certConfig.add("-----BEGIN CERTIFICATE-----\n" + certString);
             }
         }
-
-        // todo build params and perform parsing here
-
-        heartbeat = 10000; // todo probably OK to turn into a constant
+        params = new TransporterParams();
+        // build params and perform parsing
         try {
-            ipv4PoP = (Inet4Address)Inet4Address.getByName("192.168.1.161"); // todo read from certificate
-            ipv6PoP = (Inet6Address)Inet6Address.getByName("2a06:1c41:c1::1"); // todo read from certificate
-            portPoP = 5072; // todo read from certificate
-            myIpv6 = (Inet6Address)Inet6Address.getByName("2a06:1c41:c1::6"); // todo read from certificate
-        } catch (UnknownHostException e) {
-            throw new ConnectionFailedException("Could not resolve host name", e);
+            params.setCertChainEncoded(certConfig);
+            params.setPrivateKeyEncoded(keyConfig);
+        } catch (IllegalArgumentException illegal) {
+            throw new ConnectionFailedException("Invalid certificate configuration", illegal);
         }
-        mtu = 1300; // todo check, probably OK as constant
-        popName = "flyingsnail"; // todo read from certificate issuer
-        prefixLength = 64; // todo check what this is required for
-        tunnelId = "1"; // todo read from certificate
-        tunnelName = "my DTLS"; // todo read from certificate subject name
+        params.setHeartbeatInterval(10000); // todo probably OK to turn into a constant
+        params.setMtu(1300);
+        params.setTunnelId("DTLS");
+
+        Log.i(TAG, "DTLSTunnelReader initialized");
     }
 
     @Override
-    public List<? extends TunnelSpec> queryTunnels() throws ConnectionFailedException, IOException {
-        TransporterParams params = new TransporterParams();
-        params.setCertChain(certConfig);
-        params.setPrivateKey(keyConfig);
-        params.setHeartbeatInterval(heartbeat);
-        params.setIPv4Pop(ipv4PoP);
-        params.setIpv6Pop(ipv6PoP);
-        params.setPortPop(portPoP);
-        params.setIpv6Endpoint(myIpv6);
-        params.setMtu(mtu);
-        params.setPopName(popName);
-        params.setPrefixLength(prefixLength);
-        params.setTunnelId(tunnelId);
-        params.setTunnelName(tunnelName);
-        List<TunnelSpec> myTunnels = new ArrayList<TunnelSpec>(1);
+    public List<? extends TunnelSpec> queryTunnels() {
+        List<TunnelSpec> myTunnels = new ArrayList<>(1);
         myTunnels.add(params);
         return myTunnels;
     }

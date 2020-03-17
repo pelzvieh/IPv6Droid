@@ -23,10 +23,16 @@
 
 package de.flyingsnail.ipv6droid.transport.dtls;
 
+import android.util.Log;
+
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.asn1.pkcs.RSAPrivateKey;
 import org.bouncycastle.asn1.sec.ECPrivateKey;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
+import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.Extensions;
+import org.bouncycastle.asn1.x509.GeneralName;
+import org.bouncycastle.asn1.x509.GeneralNames;
 import org.bouncycastle.asn1.x9.X9ObjectIdentifiers;
 import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 import org.bouncycastle.crypto.params.RSAPrivateCrtKeyParameters;
@@ -51,6 +57,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.math.BigInteger;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
@@ -64,13 +74,18 @@ import java.util.Vector;
  * Refer to the @link{https://github.com/bcgit/bc-java/blob/master/tls/src/test/java/org/bouncycastle/tls/test/TlsTestUtils.java} BC implementation.
  */
 class DTLSUtils {
+    private static String TAG = DTLSUtils.class.getName();
+
+    private DTLSUtils() {}
+
+
     public static TlsCredentialedDecryptor loadEncryptionCredentials(TlsContext context, Certificate certificate, AsymmetricKeyParameter privateKey) {
         TlsCrypto crypto = context.getCrypto();
 
         return new BcDefaultTlsCredentialedDecryptor((BcTlsCrypto)crypto, certificate, privateKey);
     }
 
-    public static AsymmetricKeyParameter loadBcPrivateKeyResource(String keyResource) throws IOException {
+    private static AsymmetricKeyParameter loadBcPrivateKeyResource(String keyResource) throws IOException {
         PemObject pem = loadPemResource(keyResource);
         switch (pem.getType()) {
             case "PRIVATE KEY":
@@ -92,7 +107,7 @@ class DTLSUtils {
         throw new IllegalArgumentException("No supported private key in resource " + keyResource);
     }
 
-    public static AsymmetricKeyParameter parseBcPrivateKeyString(String keyString) throws IOException {
+    static AsymmetricKeyParameter parseBcPrivateKeyString(String keyString) throws IOException {
         PemObject pem = parsePemString(keyString);
         switch (pem.getType()) {
             case "PRIVATE KEY":
@@ -114,11 +129,11 @@ class DTLSUtils {
         throw new IllegalArgumentException("No supported private key encoded in supplied string");
     }
 
-    public static Certificate loadCertificateChain (TlsContext context, String[] certResources) throws IOException {
+    private static Certificate loadCertificateChain (TlsContext context, String[] certResources) throws IOException {
         return loadCertificateChain(context.getCrypto(), certResources);
     }
 
-    public static Certificate loadCertificateChain(TlsCrypto crypto, String[] certResources) throws IOException {
+    private static Certificate loadCertificateChain(TlsCrypto crypto, String[] certResources) throws IOException {
         TlsCertificate[] chain = new TlsCertificate[certResources.length];
         for (int i = 0; i < certResources.length; ++i)
         {
@@ -137,7 +152,7 @@ class DTLSUtils {
      * @return a Certificate representing the certificate chain.
      * @throws IOException in case of parsing errors
      */
-    public static Certificate parseCertificateChain(TlsCrypto crypto, List<String> certStrings) throws IOException {
+    static Certificate parseCertificateChain(TlsCrypto crypto, List<String> certStrings) throws IOException {
         ArrayList<TlsCertificate> chain = new ArrayList<>(certStrings.size());
         for (String certString: certStrings) {
             chain.add(parseCertificateString(crypto, certString));
@@ -214,7 +229,7 @@ class DTLSUtils {
 
 
 
-    public static TlsCredentialedSigner loadSignerCredentials(TlsContext context,
+    static TlsCredentialedSigner loadSignerCredentials(TlsContext context,
                                                        Vector<SignatureAndHashAlgorithm> supportedSignatureAlgorithms,
                                                        short signatureAlgorithm,
                                                        Certificate certificate,
@@ -226,8 +241,91 @@ class DTLSUtils {
         return new BcDefaultTlsCredentialedSigner(cryptoParams, (BcTlsCrypto)crypto, privateKey, certificate, signatureAndHashAlgorithm);
     }
 
-    static public boolean areSameCertificate(TlsCertificate a, TlsCertificate b) throws IOException {
+    static boolean areSameCertificate(TlsCertificate a, TlsCertificate b) throws IOException {
         return Arrays.areEqual(a.getEncoded(), b.getEncoded());
+    }
+
+
+    /**
+     * Examines the SubjectAlternateNames extensions of the supplied certificate and probes for one
+     * of type IPAdress. Reconstructs the IP address from the hexdump representation and returns
+     * the first name found to be an IPv6Adress.
+     * @param cert the TlsCertificate to read a subjectAlternativeName IPv6 address from
+     * @return null if no matching extension was found or the Inet6Adress reconstructed from cert
+     */
+    static Inet6Address getIpv6AlternativeName(TlsCertificate cert)  {
+        try {
+            Extensions extensions = org.bouncycastle.asn1.x509.Certificate.getInstance(cert.getEncoded()).getTBSCertificate().getExtensions();
+            if (extensions == null) {
+                Log.i(TAG, "No certificate extensions presented");
+                return null;
+            }
+            GeneralNames generalNames = GeneralNames.fromExtensions(extensions, Extension.subjectAlternativeName);
+            for (GeneralName generalName : generalNames.getNames()) {
+                if (generalName.getTagNo() == GeneralName.iPAddress) {
+                    InetAddress inetAddress = InetAddress.getByAddress(
+                            new BigInteger(generalName.getName().toString().substring(1), 16).toByteArray());
+                    if (inetAddress instanceof Inet6Address) {
+                        Log.i(TAG, "Supplied cert contains IPv6 subject alternative name: " + inetAddress);
+                        return (Inet6Address) inetAddress;
+                    } else {
+                        Log.d(TAG, "Found subject alternative name IP address, but not IPv6: " + inetAddress);
+                    }
+                } else {
+                    Log.d(TAG, "Found subject alternative name which is not IP: " + generalName.getName());
+                }
+            }
+            Log.d(TAG, "Supplied cert did not contain an IPv6 subject alternative name");
+        } catch (Throwable t) {
+            Log.e(TAG, "severe problem occurred", t);
+        }
+        return null;
+    }
+
+    /**
+     * Returns the issuer name of the supplied TlsCertificate.
+     * @param cert the TlsCertificate to read a subjectAlternativeName from
+     * @return null if no matching extension was found or the Inet6Adress reconstructed from cert
+     * @throws IOException on encoding errors on the ASN 1 level
+     */
+    static String getIssuerName(TlsCertificate cert) throws IOException {
+        return org.bouncycastle.asn1.x509.Certificate.getInstance(cert.getEncoded()).getTBSCertificate().getIssuer().toString();
+    }
+
+    /**
+     * Examines the IssuerAlternateNames extensions of the supplied certificate and probes for one
+     * of type otherName.
+     * @param cert the TlsCertificate to read a subjectAlternativeName from
+     * @return null if no matching extension was found or the Inet6Adress reconstructed from cert
+     * @throws IOException on encoding errors on the ASN 1 level
+     */
+    static URL getIssuerUrl(TlsCertificate cert) throws IOException {
+        Extensions extensions = org.bouncycastle.asn1.x509.Certificate.getInstance(cert.getEncoded()).getTBSCertificate().getExtensions();
+        if (extensions == null) {
+            Log.i(TAG, "No certificate extensions presented");
+            return null;
+        }
+        GeneralNames generalNames = GeneralNames.fromExtensions(extensions, Extension.issuerAlternativeName);
+        for (GeneralName generalName: generalNames.getNames()) {
+            if (generalName.getTagNo() == GeneralName.uniformResourceIdentifier) {
+                return new URL(generalName.getName().toString());
+            } else {
+                Log.d(TAG, "Found issuer alternative name which is not otherName: "+ generalName.getName());
+            }
+        }
+        Log.d(TAG, "Supplied cert did not contain an otherName issuer alternative name");
+        return null;
+    }
+
+    /**
+     * Examines the IssuerAlternateNames extensions of the supplied certificate and probes for one
+     * of type otherName.
+     * @param cert the TlsCertificate to read a subjectAlternativeName from
+     * @return null if no matching extension was found or the Inet6Adress reconstructed from cert
+     * @throws IOException on encoding errors on the ASN 1 level
+     */
+    static String getSubjectName(TlsCertificate cert) throws IOException {
+        return org.bouncycastle.asn1.x509.Certificate.getInstance(cert.getEncoded()).getTBSCertificate().getSubject().toString();
     }
 
 }

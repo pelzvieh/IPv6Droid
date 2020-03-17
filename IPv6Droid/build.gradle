@@ -28,7 +28,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.5.3'
+        classpath 'com.android.tools.build:gradle:3.6.1'
     }
 }
 apply plugin: 'com.android.application'
@@ -69,13 +69,25 @@ android {
         // but continue the build even when errors are found:
         abortOnError false
     }
+    buildTypes {
+        release {
+            buildConfigField("java.lang.String", "target_host", "\"\"")
+        }
+        debug {
+            matchingFallbacks = []
+            buildConfigField("java.lang.String", "target_host", "\"\"")
+        }
+        debug_internal {
+            initWith debug
+            buildConfigField("java.lang.String", "target_host", "\"ipv6test\"")
+        }
+    }
 
 }
 
 dependencies {
-    implementation 'com.squareup.retrofit2:retrofit:2.7.1'
-    implementation 'com.squareup.retrofit2:converter-jackson:2.7.1'
-    implementation 'com.squareup.retrofit2:converter-scalars:2.7.1'
+    implementation 'com.squareup.retrofit2:retrofit:2.7.2'
+    implementation 'com.squareup.retrofit2:converter-gson:2.7.2'
     implementation 'androidx.annotation:annotation:1.1.0'
     implementation 'org.jetbrains.trove4j:trove4j:20160824'
     implementation 'androidx.constraintlayout:constraintlayout:1.1.3'

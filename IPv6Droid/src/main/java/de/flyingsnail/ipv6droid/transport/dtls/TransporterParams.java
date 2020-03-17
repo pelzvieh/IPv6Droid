@@ -23,31 +23,135 @@
 
 package de.flyingsnail.ipv6droid.transport.dtls;
 
+import android.os.AsyncTask;
+import android.util.Log;
+
+import androidx.annotation.NonNull;
+
+import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
+import org.bouncycastle.tls.Certificate;
+import org.bouncycastle.tls.crypto.TlsCrypto;
+import org.bouncycastle.tls.crypto.impl.bc.BcTlsCrypto;
+
+import java.io.IOException;
+import java.io.ObjectStreamException;
+import java.io.Serializable;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.URL;
+import java.net.UnknownHostException;
+import java.security.SecureRandom;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
-public class TransporterParams implements TunnelSpec {
-    public static final String TUNNEL_TYPE = "DTLSTunnel";
+public class TransporterParams implements TunnelSpec, Serializable {
+    private static final String TAG = TransporterParams.class.getName();
+    static final String TUNNEL_TYPE = "DTLSTunnel";
+    private TlsCrypto crypto;
 
     private Inet4Address ipv4Pop;
     private int portPop;
     private int mtu;
     private int heartbeat;
-    private String privateKey;
-    private List<String> certChain;
+    private String privateKeyEncoded;
+    private List<String> certChainEncoded;
     private String tunnelName;
     private String tunnelId;
     private Inet6Address ipv6Endpoint;
-    private Inet6Address ipv6Pop;
-    private int prefixLength;
+    //private Inet6Address ipv6Pop;
+    //private int prefixLength;
     private String popName;
+    private Certificate certChain;
+    private AsymmetricKeyParameter privateKey;
+    private AsyncTask<Void, Void, Inet4Address> hostResolver;
+
+    // Serialization
+    private void writeObject(java.io.ObjectOutputStream out)
+            throws IOException {
+        Log.i (TAG, "Serializing");
+        out.writeObject(ipv4Pop);
+        out.writeInt(portPop);
+        out.writeInt(mtu);
+        out.writeInt(heartbeat);
+        out.writeObject(privateKeyEncoded);
+        out.writeObject(certChainEncoded);
+        out.writeObject(tunnelName);
+        out.writeObject(tunnelId);
+        out.writeObject(ipv6Endpoint);
+        out.writeObject(popName);
+        out.writeObject(hostResolver);
+    }
+
+    // Deserialization
+    private void readObject(java.io.ObjectInputStream in)
+            throws IOException, ClassNotFoundException {
+        Log.i(TAG, "Deserializing");
+        crypto = new BcTlsCrypto(new SecureRandom());
+        ipv4Pop = (Inet4Address)in.readObject();
+        portPop = in.readInt();
+        mtu = in.readInt();
+        heartbeat = in.readInt();
+        privateKeyEncoded = (String) in.readObject();
+        privateKey = DTLSUtils.parseBcPrivateKeyString(privateKeyEncoded);
+        try {
+            certChainEncoded = (List<String>) in.readObject();
+        } catch (ClassCastException e) {
+            throw new IOException(e);
+        }
+        certChain = DTLSUtils.parseCertificateChain(crypto, certChainEncoded);
+        tunnelName = (String) in.readObject();
+        tunnelId = (String) in.readObject();
+        ipv6Endpoint = (Inet6Address) in.readObject();
+        popName = (String) in.readObject();
+        try {
+            hostResolver = (AsyncTask<Void, Void, Inet4Address>) in.readObject();
+        } catch (ClassCastException e) {
+            throw new IOException(e);
+        }
+    }
+
+    private void readObjectNoData()
+            throws ObjectStreamException {
+        throw new ObjectStreamException(getClass().getName()) {
+        };
+    }
+
+
+    public TransporterParams() {
+        Log.i (TAG, "Constructing");
+        crypto = new BcTlsCrypto(new SecureRandom());
+    }
 
     @Override
     public Inet4Address getIPv4Pop() {
+        // at first call we need to get the resolver's result
+        if (hostResolver != null) {
+            Log.i (TAG, "Reading IPv4 address from async resolver");
+            synchronized (this) {
+                if (hostResolver.getStatus() == AsyncTask.Status.PENDING)
+                    // this can happen after de-serialization
+                    hostResolver.execute();
+                int attempt = 0;
+                while (hostResolver != null && attempt++ < 2) {
+                    try {
+                        ipv4Pop = hostResolver.get();
+                        hostResolver = null;
+                    } catch (ExecutionException e) {
+                        Log.i (TAG, "Async resolver didn't resolve, try again", e);
+                        hostResolver.execute(); // try resolving again
+                    } catch (InterruptedException e) {
+                        Log.w(TAG, "Interrupted while reading resolved address");
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }
+        }
+
         return ipv4Pop;
     }
 
@@ -86,7 +190,7 @@ public class TransporterParams implements TunnelSpec {
         this.ipv6Endpoint = ipv6Endpoint;
     }
 
-    @Override
+    /*@Override
     public Inet6Address getIpv6Pop() {
         return ipv6Pop;
     }
@@ -104,7 +208,7 @@ public class TransporterParams implements TunnelSpec {
     @Override
     public void setPrefixLength(int prefixLength) {
         this.prefixLength = prefixLength;
-    }
+    }*/
 
     @Override
     public String getPopName() {
@@ -130,6 +234,7 @@ public class TransporterParams implements TunnelSpec {
     @Override
     public void setIPv4Pop(Inet4Address ipv4Pop) {
         this.ipv4Pop = ipv4Pop;
+        hostResolver = null;
     }
 
     public int getPortPop() {
@@ -160,19 +265,100 @@ public class TransporterParams implements TunnelSpec {
         this.heartbeat = heartbeat;
     }
 
-    public String getPrivateKey() {
+    public String getPrivateKeyEncoded() {
+        return privateKeyEncoded;
+    }
+
+    public void setPrivateKeyEncoded(String privateKeyEncoded) {
+        this.privateKeyEncoded = privateKeyEncoded;
+
+        try {
+            this.privateKey = DTLSUtils.parseBcPrivateKeyString(privateKeyEncoded);
+        } catch (IOException e) {
+            throw new IllegalStateException("Incorrectly bundled, failure to read private key", e);
+        }
+    }
+
+    public List<String> getCertChainEncoded() {
+        return certChainEncoded;
+    }
+
+    public AsymmetricKeyParameter getPrivateKey() {
         return privateKey;
     }
 
-    public void setPrivateKey(String privateKey) {
-        this.privateKey = privateKey;
-    }
-
-    public List<String> getCertChain() {
+    public Certificate getCertChain() {
         return certChain;
     }
 
-    public void setCertChain(List<String> certChain) {
-        this.certChain = certChain;
+    /**
+     * This initializes all attributes from the certificate.
+     * @param certChainEncoded a List&lt;String&gt; with the PEM encoded x509 certificate chain of this
+     *                  client. The client's cert at position 0, the CA at the end.
+     */
+    public void setCertChainEncoded(List<String> certChainEncoded) {
+        Log.i(TAG, "Setting encoded certificate and reading data from it");
+        this.certChainEncoded = certChainEncoded;
+        try {
+            this.certChain = DTLSUtils.parseCertificateChain(crypto, certChainEncoded);
+            if (certChain.getLength() < 2) {
+                throw new IllegalArgumentException("Supplied certificate chain is missing the CA certificate");
+            }
+            // initialise attributes from certificate
+            setIpv6Endpoint(DTLSUtils.getIpv6AlternativeName(certChain.getCertificateAt(0)));
+            setPopName(DTLSUtils.getIssuerName(certChain.getCertificateAt(0)));
+            setTunnelName(DTLSUtils.getSubjectName(certChain.getCertificateAt(0)));
+            URL popUrl = DTLSUtils.getIssuerUrl(certChain.getCertificateAt(0));
+            if (popUrl == null)
+                throw new IllegalArgumentException("No POP URL included in certificate");
+            int port = popUrl.getPort();
+            if (port <= 0) {
+                throw new IllegalArgumentException("No port is included in URL read from certificate");
+            }
+            setPortPop(port);
+            if (hostResolver != null && hostResolver.getStatus() == AsyncTask.Status.RUNNING)
+                hostResolver.cancel(true);
+            hostResolver = new UrlResolver(popUrl).execute();
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Incorrectly configured, failure to parse certificates", e);
+        }
     }
+
+    /**
+     * Helper class for resolving URLs asynchronously. Call execute to start resolving, call
+     * get()
+     */
+    private static class UrlResolver extends AsyncTask<Void, Void, Inet4Address> implements Serializable {
+        private final URL popUrl;
+
+        /**
+         * Constructor.
+         * @param popUrl the URL whose host name should be resolved to Inet4Adress.
+         */
+        public UrlResolver (URL popUrl) {
+            this.popUrl = popUrl;
+        }
+
+        @Override
+        protected Inet4Address doInBackground(Void ... voids) {
+            Log.i(getClass().getName(), "Resolving hostname from URL " + popUrl);
+            try {
+                for (InetAddress address : InetAddress.getAllByName(popUrl.getHost())) {
+                    if (address instanceof Inet4Address) {
+                        Log.d(getClass().getName(), "Resolved to " + address);
+                        return (Inet4Address)address;
+                    }
+                }
+            } catch (UnknownHostException e) {
+                throw new IllegalArgumentException("Cannot resolve configured issuer URL");
+            }
+            return null;
+        }
+    }
+
+    @Override
+    public @NonNull String toString() {
+        return tunnelName + " (" + tunnelId + "), DTLS\n Your endpoint " + ipv6Endpoint.getHostAddress();
+    }
+
 }

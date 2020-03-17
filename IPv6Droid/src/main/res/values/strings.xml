@@ -87,7 +87,6 @@
     <string name="channel_errors_description">Error messages from IPv6 tunnel</string>
     <string name="channel_status_description">Current status of IPv6 tunnel</string>
 
-    <!-- TODO: Remove or change this placeholder text -->
     <string name="intro_app_title">Introduction to IPv6Droid</string>
     <string name="intro_app_description">IPv6Droid is an Android client to use certain types of IPv6 tunnels, in order to bring IPv6 support to Android mobile devices on networks that do not support IPv6, plus use any kind of server-side NAT and therefore disabling the most boadly available types of IPv6 tunnels. Specifically, all mobile networks in Germany at the time of writing meet both criteria.</string>
     <string name="subscription">Subscription</string>
@@ -105,4 +104,6 @@
     <string name="user_subscription_no_service">Google subscription service is not available at the moment. We will retry the attempt later.</string>
     <string name="user_subscription_no_service_on_this_device">Google subscription services are not available on this device - please contact support.</string>
     <string name="pref_header_experimental">Experimental settings</string>
+    <string name="ipv6_test_host" translatable="false">2a06:1c40::309</string>
+    <string name="subscription_default_url_base" translatable="false">https://flyingsnail.de/services/services/</string>
 </resources>

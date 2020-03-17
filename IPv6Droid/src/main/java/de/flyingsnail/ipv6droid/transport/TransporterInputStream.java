@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2019 Dr. Andreas Feldner.
+ *  * Copyright (c) 2020 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@ import androidx.annotation.NonNull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Objects;
 
 import de.flyingsnail.ipv6droid.transport.ayiya.Ayiya;
@@ -44,18 +45,19 @@ public class TransporterInputStream extends InputStream {
   }
 
   private void ensureBuffer() throws IOException {
-        ByteBuffer myByteBuffer = streamBuffer.get();
-        if (myByteBuffer == null) {
-            byte[] actualBuffer = new byte[2* Ayiya.OVERHEAD + transporter.getMtu()];
+        ByteBuffer buffer = streamBuffer.get();
+        if (buffer == null) {
             // a new Thread, a new buffer.
-            // wrap it into a byte buffer which keeps track of position and length ("limit")
-            myByteBuffer = ByteBuffer.wrap(actualBuffer);
-            myByteBuffer.limit(0); // initially no bytes inside
-            streamBuffer.set (myByteBuffer);
+            // a byte buffer which keeps track of position and length ("limit")
+            buffer = ByteBuffer
+                    .allocate(2* Ayiya.OVERHEAD + transporter.getMtu());
+            buffer.limit(0); // initially no bytes inside
+            buffer.order(ByteOrder.BIG_ENDIAN);
+            streamBuffer.set (buffer);
         }
-        while (!myByteBuffer.hasRemaining()) {
+        while (!buffer.hasRemaining()) {
             try {
-                transporter.read(myByteBuffer);
+                transporter.read(buffer);
             } catch (TunnelBrokenException e) {
                 throw new IOException(e);
             }
@@ -76,10 +78,10 @@ public class TransporterInputStream extends InputStream {
     @Override
     public int read(@NonNull byte[] buffer, int offset, int length) throws IOException {
         ensureBuffer();
-        ByteBuffer myByteBuffer = Objects.requireNonNull(streamBuffer.get());
-        int byteCount = Math.min(myByteBuffer.remaining(), length);
-        myByteBuffer.get(buffer, offset, byteCount);
-        if (myByteBuffer.hasRemaining())
+        ByteBuffer byteBuffer = Objects.requireNonNull(streamBuffer.get());
+        int byteCount = Math.min(byteBuffer.remaining(), length);
+        byteBuffer.get(buffer, offset, byteCount);
+        if (byteBuffer.hasRemaining())
             Log.e(TAG, "Warning: InputStream.read supplied with a buffer too small to read a full Datagram");
         return byteCount;
     }

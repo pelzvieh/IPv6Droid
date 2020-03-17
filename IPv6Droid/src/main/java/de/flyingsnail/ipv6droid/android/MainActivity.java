@@ -90,11 +90,6 @@ public class MainActivity extends AppCompatActivity {
     private TextView causeView;
     /** The Tunnels object that holds the list of available tunnels plus the currently selected one */
     private Tunnels tunnels;
-/*    private TicTunnel selectedTunnel;
-    private List<TicTunnel> availableTunnels;*/
-    //@todo maintaining the event list in an Activity is nonsense, as it would receive events only when visible
-    //private Deque<VpnStatusReport> lastEvents;
-    //private final int EVENT_LENGTH=10;
 
     /**
      * The Action name for a vpn stop broadcast intent.
@@ -134,18 +129,18 @@ public class MainActivity extends AppCompatActivity {
 
         PreferenceManager.setDefaultValues(getApplicationContext(), R.xml.preferences, false);
 
-        Toolbar myToolbar = (Toolbar) findViewById(R.id.mainToolbar);
+        Toolbar myToolbar = findViewById(R.id.mainToolbar);
         setSupportActionBar(myToolbar);
         myToolbar.setLogo(R.drawable.ic_launcher);
 
 
         // init handles to GUI elements
-        activity = (TextView) findViewById(R.id.statusText);
-        progress = (ProgressBar) findViewById(R.id.progressBar);
-        status = (ImageView) findViewById(R.id.statusImage);
-        redundantStartButton = (Button) findViewById(R.id.redundant_start_button);
-        tunnelListView = (ListView) findViewById(R.id.tunnelList);
-        causeView = (TextView) findViewById(R.id.cause);
+        activity = findViewById(R.id.statusText);
+        progress = findViewById(R.id.progressBar);
+        status = findViewById(R.id.statusImage);
+        redundantStartButton = findViewById(R.id.redundant_start_button);
+        tunnelListView = findViewById(R.id.tunnelList);
+        causeView = findViewById(R.id.cause);
         tunnels = new Tunnels();
         ArrayAdapter<TunnelSpec> adapter = new ArrayAdapter<TunnelSpec>(MainActivity.this,
                 R.layout.tunnellist_template);
@@ -238,7 +233,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        // @todo writing back the tunnels list should not depend on a visible Activity getting paused.
         if (!tunnels.isEmpty() && tunnels.isTunnelActive() && statusReceiver.isTunnelProven()) {
             Log.i (TAG, "We have an updated tunnel list and will write it back to cache");
             try {
@@ -427,7 +421,7 @@ public class MainActivity extends AppCompatActivity {
         private void updateUi () {
             int imageRes = R.drawable.off;
             VpnStatusReport.Status status = statusReport.getStatus();
-            Log.i(TAG, "received status update: " + String.valueOf(statusReport));
+            Log.i(TAG, "received status update: " + statusReport);
 
             switch (status) {
                 case Connected:

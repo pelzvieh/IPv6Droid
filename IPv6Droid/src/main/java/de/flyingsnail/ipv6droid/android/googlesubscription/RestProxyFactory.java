@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2016 Dr. Andreas Feldner.
+ *  * Copyright (c) 2020 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -23,22 +23,30 @@
 
 package de.flyingsnail.ipv6droid.android.googlesubscription;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
+import java.net.Inet4Address;
+import java.util.Date;
+
 import de.flyingsnail.ipv6server.restapi.SubscriptionsApi;
 import retrofit2.Retrofit;
-import retrofit2.converter.jackson.JacksonConverterFactory;
-import retrofit2.converter.scalars.ScalarsConverterFactory;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 
 /**
  * Create stubs on the REST api of IPv6server
  * Created by pelzi on 27.06.16.
  */
-public class RestProxyFactory {
-    public static SubscriptionsApi createSubscriptionsClient() {
+class RestProxyFactory {
+    static SubscriptionsApi createSubscriptionsClient(String baseUrl) {
+        Gson gson = new GsonBuilder()
+                .registerTypeAdapter(Inet4Address.class, new SimpleInetDeserializer())
+                .registerTypeAdapter(Date.class, new SimpleDateSerializer())
+                .create();
         Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl("https://flyingsnail.de/services/services/")
-                .addConverterFactory(ScalarsConverterFactory.create())
-                .addConverterFactory(JacksonConverterFactory.create())
+                .baseUrl(baseUrl)
+                .addConverterFactory(GsonConverterFactory.create(gson))
                 .build();
         return retrofit.create(SubscriptionsApi.class);
     }

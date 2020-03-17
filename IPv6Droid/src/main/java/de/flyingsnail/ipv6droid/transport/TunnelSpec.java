@@ -50,13 +50,13 @@ public interface TunnelSpec extends Serializable {
 
     void setIpv6Endpoint(Inet6Address ipv6Endpoint);
 
-    Inet6Address getIpv6Pop();
+    //Inet6Address getIpv6Pop();
 
-    void setIpv6Pop(Inet6Address ipv6Pop);
+    //void setIpv6Pop(Inet6Address ipv6Pop);
 
-    int getPrefixLength();
+    //int getPrefixLength();
 
-    void setPrefixLength(int prefixLength);
+    //void setPrefixLength(int prefixLength);
 
     String getPopName();
 

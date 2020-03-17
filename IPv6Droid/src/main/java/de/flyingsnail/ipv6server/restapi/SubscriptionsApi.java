@@ -23,11 +23,9 @@
 
 package de.flyingsnail.ipv6server.restapi;
 
-import java.io.IOException;
 import java.util.List;
 
-import de.flyingsnail.ipv6droid.transport.TunnelSpec;
-import de.flyingsnail.ipv6server.svc.SubscriptionRejectedException;
+import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
 import retrofit2.Call;
 import retrofit2.http.DELETE;
 import retrofit2.http.Field;
@@ -47,7 +45,6 @@ public interface SubscriptionsApi {
    * claimed subscription later.
    *
    * @return the String representing the unique payload
-   * @throws IOException in case of communication problems with the server.
    */
   @GET("subscriptions/new")
   @Headers("Accept: application/json")
@@ -57,7 +54,6 @@ public interface SubscriptionsApi {
    * Invalidate a payload (if it is not already used). The client indicates by this call
    * that it is about to forget this payload anyway, so no further calls involving this
    * payload will occur.
-   * @throws IOException in case of communication problems with the server.
    */
   @DELETE("subscriptions/{payload}")
   Call<Void> deleteUnusedPayload(@Path("payload") String payload);
@@ -76,12 +72,10 @@ public interface SubscriptionsApi {
    * @param subscriptionData the Subscription JSON string as sent by Google
    * @param signature the corresponding signature string as sent by Google
    * @return a List of TicTunnel objects constructed
-   * @throws IOException in case of technical problems
-   * @throws SubscriptionRejectedException in case of definitive falsification of data
    */
   @FormUrlEncoded
   @POST("subscriptions/check")
-  Call<List<TunnelSpec>> checkSubscriptionAndReturnTunnels(
+  Call<List<TicTunnel>> checkSubscriptionAndReturnTunnels(
           @Field("data") String subscriptionData,
           @Field("signature") String signature);
 }

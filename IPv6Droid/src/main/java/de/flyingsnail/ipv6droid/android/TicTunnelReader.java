@@ -63,7 +63,6 @@ public class TicTunnelReader implements TunnelReader {
         // load configuration
         SharedPreferences myPreferences = PreferenceManager.getDefaultSharedPreferences(context);
         ticConfiguration = loadTicConfiguration(myPreferences);
-        // todo implement proper handling of googlesubscription re-check
         if (GOOGLESUBSCRIPTION.equals(ticConfiguration.getServer())) {
             throw new ConnectionFailedException("Google subscription managed tunnels cannot be verified by TIC", null);
         }
@@ -100,8 +99,6 @@ public class TicTunnelReader implements TunnelReader {
         }
 
         // Initialize new Tic object
-        // @todo extract as public method that allows the Android Activity to actively query tunnels
-        // @todo generalize to cope with Google Subscriptions token alternatively to ticConfig
         Tic tic = new Tic(ticConfiguration, contextInfo);
         try {
             tic.connect();

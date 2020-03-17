@@ -32,10 +32,10 @@ import de.flyingsnail.ipv6droid.transport.dtls.TransporterParams;
 
 public class TransporterBuilder {
   public static Transporter createTransporter(TunnelSpec spec) throws NoSuchAlgorithmException, ConnectionFailedException {
-    if (Ayiya.TUNNEL_TYPE.equals(spec.getType())) {
+    if (spec instanceof TicTunnel) {
       return new Ayiya((TicTunnel) spec);
     }
-    if (DTLSTransporter.TUNNEL_TYPE.equals(spec.getType())) {
+    if (spec instanceof TransporterParams) {
       return new DTLSTransporter((TransporterParams) spec);
     }
     throw new NoSuchAlgorithmException("No transport builder registered for " + spec.getType());

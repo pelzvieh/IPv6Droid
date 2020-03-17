@@ -37,19 +37,24 @@ import com.android.billingclient.api.BillingClientStateListener;
 import com.android.billingclient.api.BillingFlowParams;
 import com.android.billingclient.api.BillingResult;
 import com.android.billingclient.api.Purchase;
+import com.android.billingclient.api.PurchaseHistoryRecord;
 import com.android.billingclient.api.PurchasesUpdatedListener;
 import com.android.billingclient.api.SkuDetails;
 import com.android.billingclient.api.SkuDetailsParams;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import de.flyingsnail.ipv6droid.BuildConfig;
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
+import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
 import de.flyingsnail.ipv6server.restapi.SubscriptionsApi;
 import retrofit2.Call;
 import retrofit2.Response;
@@ -62,7 +67,7 @@ public class SubscriptionManager {
 
     private static final int RESPONSE_CODE_OK = 0;
     private static final int RC_BUY = 3;
-    static Map<Integer, SubscriptionCheckResultListener.ResultType> codeMapping = new HashMap<Integer, SubscriptionCheckResultListener.ResultType>() {{
+    private static Map<Integer, SubscriptionCheckResultListener.ResultType> codeMapping = new HashMap<Integer, SubscriptionCheckResultListener.ResultType>() {{
         put (BillingResponseCode.OK, SubscriptionCheckResultListener.ResultType.PURCHASE_COMPLETED);
         put (BillingResponseCode.BILLING_UNAVAILABLE, SubscriptionCheckResultListener.ResultType.PURCHASE_FAILED);
         put (BillingResponseCode.DEVELOPER_ERROR, SubscriptionCheckResultListener.ResultType.NO_SERVICE_PERMANENT);
@@ -113,7 +118,7 @@ public class SubscriptionManager {
     /**
      * The client representing the SubscrptionsApi of the IPv6Server.
      */
-    SubscriptionsApi subscriptionsClient;
+    private SubscriptionsApi subscriptionsClient;
 
     /**
      * An instance of the Google BillingClient.
@@ -123,7 +128,7 @@ public class SubscriptionManager {
     /**
      * The SubscriptionCheckResultListener that should be informed about this Manager's progress.
      */
-    private SubscriptionCheckResultListener listener;
+    final private SubscriptionCheckResultListener listener;
 
     /**
      * The Context that constructed this Manager.
@@ -158,7 +163,18 @@ public class SubscriptionManager {
         listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.NO_SERVICE_AUTO_RECOVERY,
                 context.getString(R.string.SubManStartingUp));
 
-        subscriptionsClient = RestProxyFactory.createSubscriptionsClient();
+        URI baseUrl;
+        try {
+            baseUrl = new URI(context.getString(R.string.subscription_default_url_base));
+            String overrideHost = BuildConfig.target_host;
+            if (!overrideHost.trim().isEmpty()) {
+                baseUrl = new URI ("http", baseUrl.getUserInfo(), overrideHost,
+                        8080, baseUrl.getPath(), baseUrl.getQuery(), baseUrl.getFragment());
+            }
+        } catch (URISyntaxException e) {
+            throw new IllegalStateException("App packaging faulty, illegal URL: " + e);
+        }
+        subscriptionsClient = RestProxyFactory.createSubscriptionsClient(baseUrl.toString());
         googleBillingClient = BillingClient.newBuilder(context).
                 setListener(googlePurchasesUpdatesListener).
                 enablePendingPurchases().
@@ -177,6 +193,7 @@ public class SubscriptionManager {
     private BillingClientStateListener stateListener = new BillingClientStateListener() {
         @Override
         public void onBillingServiceDisconnected() {
+            Log.i(TAG, "Billing service is disconnected");
             listener.onSubscriptionCheckResult(
                     SubscriptionCheckResultListener.ResultType.NO_SERVICE_AUTO_RECOVERY,
                     originatingContext.getString(R.string.SubManConnectionLost));
@@ -303,21 +320,22 @@ public class SubscriptionManager {
                 if (SubscriptionBuilder.getSupportedSku().contains(sku)) {
                     // this one is relevant!
                     isSubscriptionRelevant = true;
-                    Call<List<TunnelSpec>> subsCall = subscriptionsClient.checkSubscriptionAndReturnTunnels(
+                    Call<List<TicTunnel>> subsCall = subscriptionsClient.checkSubscriptionAndReturnTunnels(
                             skuData,
                             skuSignature
                     );
                     new AsyncTask<Void, Void, Exception>() {
                         @Override
                         protected Exception doInBackground(Void... params) {
-                            List<TunnelSpec> subscribedTunnels;
+                            List<TicTunnel> subscribedTunnels;
                             try {
-                                Response<List<TunnelSpec>> subscribedTunnelsResponse = subsCall.execute();
+                                Response<List<TicTunnel>> subscribedTunnelsResponse = subsCall.execute();
                                 if (!subscribedTunnelsResponse.isSuccessful()) {
-                                    throw new IllegalStateException("subscribedTunnels returns exception " + subscribedTunnelsResponse.errorBody().string());
+                                    throw new IllegalStateException("subscribedTunnels returns exception " +
+                                            (subscribedTunnelsResponse.errorBody() != null ? subscribedTunnelsResponse.errorBody().string() : "<none>"));
                                 }
                                 subscribedTunnels = subscribedTunnelsResponse.body();
-                                Log.d(TAG, String.format("Successfully retrieved %d tunnels from server", subscribedTunnels.size()));
+                                Log.d(TAG, String.format("Successfully retrieved %d tunnels from server", subscribedTunnels != null ? subscribedTunnels.size() : 0));
                                 // add only valid tunnels to save case distinction all through
                                 // the app
                                 for (TunnelSpec tunnel : subscribedTunnels) {
@@ -340,6 +358,23 @@ public class SubscriptionManager {
                                     listener.onSubscriptionCheckResult(
                                             SubscriptionCheckResultListener.ResultType.TEMPORARY_PROBLEM,
                                             e.toString());
+                                    // nasty inconsistencies of the internal cache of BillingClient were seen
+                                    // when purchases were cancelled
+                                    googleBillingClient.queryPurchaseHistoryAsync(BillingClient.SkuType.SUBS,
+                                            (billingResult, purchasesList) -> {
+                                                Log.i(TAG, "Received online update of purchases");
+                                                if (purchasesList == null || purchasesList.isEmpty()) {
+                                                    listener.onSubscriptionCheckResult(
+                                                            SubscriptionCheckResultListener.ResultType.NO_SUBSCRIPTIONS,
+                                                            "Status corrected online"
+                                                    );
+                                                } else {
+                                                    for (PurchaseHistoryRecord record: purchasesList) {
+                                                        Log.i(TAG, "Purchase " + record.getSku() + ": " + record.getPurchaseToken());
+                                                    }
+                                                }
+                                            });
+
                                 } else {
                                     listener.onSubscriptionCheckResult(
                                             SubscriptionCheckResultListener.ResultType.CHECK_FAILED,

@@ -31,6 +31,7 @@ import androidx.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.BigInteger;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
@@ -382,7 +383,9 @@ public class Ayiya implements Transporter {
 
         // now hash and buffer content diverge. We need to calculate the hash first, because it goes here
         sha1.update(hashedPassword);
+        payload.mark();
         sha1.update(payload);
+        payload.reset();
         byte[] hash = sha1.digest();
         assert(hash.length == 20);
 
@@ -532,7 +535,8 @@ public class Ayiya implements Transporter {
         // check if correct sender id. Strictly speaking not correct, as the sender could use our
         // id. This is considered valid here because in assertion mode we're using this method for
         // our own packets as well.
-        Inet6Address sender = (Inet6Address)Inet6Address.getByAddress(Arrays.copyOfRange(packet, 8+offset, 24+offset));
+        Inet6Address sender = (Inet6Address)Inet6Address.getByAddress(
+                Arrays.copyOfRange(packet, 8+offset, 24+offset));
         if (!sender.equals(ipv6Pop) && !sender.equals(ipv6Local)) {
             Log.e(TAG, "Received packet from invalid sender id " + sender);
             return false;
@@ -571,6 +575,9 @@ public class Ayiya implements Transporter {
             return false;
         }
 
+        // print packet to android log
+        Log.v(TAG, "Valid packet: " + new BigInteger(1, packet).toString(16));
+
         // this packet appears to be valid!
         return true;
     }
@@ -591,7 +598,7 @@ public class Ayiya implements Transporter {
         }
 
         // check "magic" bytes
-        if (packet[offset + 0] == 0 && packet[offset + 2] == 0 && packet [offset + 3] == 0) {
+        if (packet[offset] == 0 && packet[offset + 2] == 0 && packet [offset + 3] == 0) {
             ErrorCode errorCode = getErrorCode(packet, offset + 1, 3);
             if (errorCode == null) {
                 Log.w(TAG, "Received strange packet, correct length and magic bytes, but unkown error code");
@@ -626,7 +633,9 @@ public class Ayiya implements Transporter {
             Log.wtf(TAG, "SHA1 no longer available???", e);
             throw new TunnelBrokenException("Cannot build ayiya struct", e);
         }
-        assert(checkValidity(ayiyaPacket, 0, ayiyaPacket.length));
+        if (!checkValidity(ayiyaPacket, 0, ayiyaPacket.length)) {
+            throw new AssertionError();
+        }
         DatagramPacket dgPacket = new DatagramPacket(ayiyaPacket, ayiyaPacket.length, socket.getRemoteSocketAddress());
         socket.send(dgPacket);
         lastPacketSentTime = new Date();
@@ -671,7 +680,7 @@ public class Ayiya implements Transporter {
 
     /**
      * Configure this AYIYA to use a different UDP port on IPv4.
-     * @todo this should eventually become an attribute of TicTunnel
+     * todo this should eventually become an attribute of TicTunnel
      * @param port an int giving the port number to use.
      */
     @Override

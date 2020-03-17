@@ -38,11 +38,11 @@ public class StatisticsActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_statistics);
-        Toolbar myToolbar = (Toolbar) findViewById(R.id.statisticsToolbar);
+        Toolbar myToolbar = findViewById(R.id.statisticsToolbar);
         setSupportActionBar(myToolbar);
         try {
             //noinspection ConstantConditions
-            getSupportActionBar().setHomeButtonEnabled(true);
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         } catch (NullPointerException npe) {
             Log.d(TAG, "No action bar", npe);
         }
