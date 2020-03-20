@@ -41,6 +41,11 @@ repositories {
 }
 
 android {
+    signingConfigs {
+        release {
+            storeFile file('/Users/pelzi/.android/flying-snail.jks')
+        }
+    }
     compileSdkVersion 29
 
     defaultConfig {

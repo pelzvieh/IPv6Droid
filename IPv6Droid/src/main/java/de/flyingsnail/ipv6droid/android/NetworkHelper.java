@@ -118,8 +118,7 @@ public class NetworkHelper  {
      * Register to be called in event of internet available.
      */
     private void registerConnectivityReceiver() {
-        if (Build.VERSION.SDK_INT >= 23) {
-            ConnectivityManager cm = notificationContext.getSystemService(ConnectivityManager.class);
+        if (Build.VERSION.SDK_INT >= 23 && connectivityManager != null) {
             NetworkRequest.Builder builder = new NetworkRequest.Builder().
                     addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).
                     addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN);
@@ -128,9 +127,9 @@ public class NetworkHelper  {
             networkCallback = new ConnectivityManager.NetworkCallback () {
                 @Override
                 public void onAvailable(Network network) {
-                    if (cm != null) {
+                    if (connectivityManager != null) {
                         onConnectivityChange(true,
-                                cm.getLinkProperties(network));
+                                connectivityManager.getLinkProperties(network));
                     }
                 }
 
@@ -144,16 +143,14 @@ public class NetworkHelper  {
                     onConnectivityChange(false, null);
                 }
             };
-            if (cm != null) {
-                cm.registerNetworkCallback(request, networkCallback);
-            }
+            connectivityManager.registerNetworkCallback(request, networkCallback);
         }
         // anyway, register for callback on connectivity change
         registerGlobalConnectivityReceiver();
     }
 
     private void unregisterConnectivityReceiver() {
-        if (Build.VERSION.SDK_INT >= 23) {
+        if (Build.VERSION.SDK_INT >= 23 && connectivityManager != null) {
             connectivityManager.unregisterNetworkCallback(
                     networkCallback
             );

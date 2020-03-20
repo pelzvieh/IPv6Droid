@@ -1,21 +1,24 @@
 <!--
-  ~ Copyright (c) 2015 Dr. Andreas Feldner.
+  ~ /*
+  ~  * Copyright (c) 2020 Dr. Andreas Feldner.
+  ~  *
+  ~  *     This program is free software; you can redistribute it and/or modify
+  ~  *     it under the terms of the GNU General Public License as published by
+  ~  *     the Free Software Foundation; either version 2 of the License, or
+  ~  *     (at your option) any later version.
+  ~  *
+  ~  *     This program is distributed in the hope that it will be useful,
+  ~  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~  *     GNU General Public License for more details.
+  ~  *
+  ~  *     You should have received a copy of the GNU General Public License along
+  ~  *     with this program; if not, write to the Free Software Foundation, Inc.,
+  ~  *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  ~  *
+  ~  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
+  ~  */
   ~
-  ~     This program is free software; you can redistribute it and/or modify
-  ~     it under the terms of the GNU General Public License as published by
-  ~     the Free Software Foundation; either version 2 of the License, or
-  ~     (at your option) any later version.
-  ~
-  ~     This program is distributed in the hope that it will be useful,
-  ~     but WITHOUT ANY WARRANTY; without even the implied warranty of
-  ~     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  ~     GNU General Public License for more details.
-  ~
-  ~     You should have received a copy of the GNU General Public License along
-  ~     with this program; if not, write to the Free Software Foundation, Inc.,
-  ~     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-  ~
-  ~ Contact information and current version at http://www.flying-snail.de/IPv6Droid
   -->
 
 <RelativeLayout
@@ -30,10 +33,21 @@
     android:layout_weight="1"
     tools:context=".android.MainActivity">
 
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/mainToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        android:elevation="4dp"
+        android:layout_alignParentTop="true"
+        android:theme="@style/ThemeOverlay.AppCompat.ActionBar"
+        android:popupTheme="@style/ThemeOverlay.AppCompat.Light"/>
+
     <FrameLayout
         android:id="@+id/statistics"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
+        android:layout_below="@id/mainToolbar"
         android:layout_alignParentRight="true"
         android:layout_marginLeft="@dimen/activity_horizontal_margin"
         android:background="?android:attr/detailsElementBackground" >
@@ -51,7 +65,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceSmall"
-        android:layout_alignParentTop="true"
+        android:layout_below="@id/mainToolbar"
         android:layout_toLeftOf="@id/statistics"
         android:text="@string/main_activity_please_start"
         android:visibility="invisible"
@@ -118,7 +132,7 @@
     <FrameLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
+        android:layout_below="@id/mainToolbar"
         android:layout_toLeftOf="@id/statistics"
         android:layout_alignParentLeft="true"
         >
@@ -137,7 +151,7 @@
         android:id="@+id/tunnelList"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/earthView"
+        android:layout_below="@id/cause"
         android:layout_toLeftOf="@id/statistics"
         android:choiceMode="singleChoice"
         tools:listitem="@android:layout/simple_list_item_2"

@@ -133,7 +133,6 @@ public class MainActivity extends AppCompatActivity {
         setSupportActionBar(myToolbar);
         myToolbar.setLogo(R.drawable.ic_launcher);
 
-
         // init handles to GUI elements
         activity = findViewById(R.id.statusText);
         progress = findViewById(R.id.progressBar);

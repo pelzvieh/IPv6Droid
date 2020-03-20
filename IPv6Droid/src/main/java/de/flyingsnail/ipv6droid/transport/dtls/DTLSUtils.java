@@ -191,6 +191,8 @@ class DTLSUtils {
         PemReader p = new PemReader(new StringReader(pemString));
         PemObject o = p.readPemObject();
         p.close();
+        if (o == null)
+            throw new IllegalArgumentException("Supplied string is not valid PEM");
         return o;
     }
 

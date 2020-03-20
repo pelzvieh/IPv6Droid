@@ -123,7 +123,7 @@
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:id="@+id/tunnelList"
-        android:layout_below="@id/linearLayout"
+        android:layout_below="@id/cause"
         android:layout_centerHorizontal="true"
         android:choiceMode="singleChoice"
         tools:listitem="@android:layout/simple_list_item_2"
