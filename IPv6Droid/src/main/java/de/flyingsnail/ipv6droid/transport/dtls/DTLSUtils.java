@@ -28,11 +28,15 @@ import android.util.Log;
 import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
 import org.bouncycastle.asn1.pkcs.RSAPrivateKey;
 import org.bouncycastle.asn1.sec.ECPrivateKey;
+import org.bouncycastle.asn1.x500.RDN;
+import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.Extensions;
 import org.bouncycastle.asn1.x509.GeneralName;
 import org.bouncycastle.asn1.x509.GeneralNames;
+import org.bouncycastle.asn1.x509.Time;
+import org.bouncycastle.asn1.x509.X509ObjectIdentifiers;
 import org.bouncycastle.asn1.x9.X9ObjectIdentifiers;
 import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 import org.bouncycastle.crypto.params.RSAPrivateCrtKeyParameters;
@@ -62,6 +66,7 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Vector;
 
@@ -295,6 +300,19 @@ class DTLSUtils {
     }
 
     /**
+     * Returns the expiry date of the supplied TlsCertificate.
+     * @param cert the TlsCertificate to read the expiryDate from
+     * @return the Date of expiry of this certificate, or null if no such attribute encoded
+     * @throws IOException on encoding errors on the ASN 1 level
+     */
+    static Date getExpiryDate(TlsCertificate cert) throws IOException {
+        Time endDate = org.bouncycastle.asn1.x509.Certificate.getInstance(cert.getEncoded()).getTBSCertificate().getEndDate();
+        return (endDate == null) ?
+                new Date(new Date().getTime() + 1000L*3600L*24L*365L) : // in one year
+                endDate.getDate();
+    }
+
+    /**
      * Examines the IssuerAlternateNames extensions of the supplied certificate and probes for one
      * of type otherName.
      * @param cert the TlsCertificate to read a subjectAlternativeName from
@@ -320,14 +338,30 @@ class DTLSUtils {
     }
 
     /**
-     * Examines the IssuerAlternateNames extensions of the supplied certificate and probes for one
-     * of type otherName.
-     * @param cert the TlsCertificate to read a subjectAlternativeName from
-     * @return null if no matching extension was found or the Inet6Adress reconstructed from cert
+     * Reads the subject name from the supplied certificate.
+     * @param cert the TlsCertificate to read a subjectName from
+     * @return null if no matching extension was found or the X500Name read from cert's subject name
      * @throws IOException on encoding errors on the ASN 1 level
      */
-    static String getSubjectName(TlsCertificate cert) throws IOException {
-        return org.bouncycastle.asn1.x509.Certificate.getInstance(cert.getEncoded()).getTBSCertificate().getSubject().toString();
+    static X500Name getSubjectName(TlsCertificate cert) throws IOException {
+        return org.bouncycastle.asn1.x509.Certificate.getInstance(cert.getEncoded()).getTBSCertificate().getSubject();
+    }
+
+    /**
+     * Reads the common name part of the subject name from the supplied certificate.
+     * @param cert the TlsCertificate to read the subjectName from
+     * @return null if no matching extension was found, or no common name part is in the subjectName,
+     *          or the String representing the common name (without CN= prefix).
+     * @throws IOException on encoding errors on the ASN 1 level
+     */
+    static String getSubjectCommonName(TlsCertificate cert) throws IOException {
+        X500Name x500Name = getSubjectName(cert);
+        if (x500Name == null)
+            return null;
+        RDN[] rdns = x500Name.getRDNs(X509ObjectIdentifiers.commonName);
+        if (rdns == null || rdns.length == 0)
+            return null;
+        return rdns[0].getFirst().getValue().toString();
     }
 
 }

@@ -200,6 +200,16 @@ class VpnThread extends Thread implements NetworkChangeListener {
      * The outgoing statistics collector.
      */
     private final TransmissionStatistics outgoingStatistics;
+    /**
+     * The Date when the local side of the tunnel was created
+     * (should be equivalent of connection stability to apps using the tunnel).
+     */
+    private Date startedAt;
+    /**
+     * A counter of how often the remote end was reconnected during lifetime of local end
+     * (i.e. since "startedAt").
+     */
+    private int reconnectCount;
 
     /**
      * The constructor setting all required fields.
@@ -240,7 +250,8 @@ class VpnThread extends Thread implements NetworkChangeListener {
             }
         }
         this.tunnelReader = tr;
-
+        this.startedAt = new Date(0l);
+        this.reconnectCount = 0;
     }
 
 
@@ -479,6 +490,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
                 cleanCopyThreads();
                 localIp = null;
             }
+            reconnectCount++;
         }
         Log.i(VpnThread.TAG, "refreshRemoteEnd loop terminated - " +
                 (closeTunnel ? "explicit close down requested" : "TUN device invalid"));
@@ -536,6 +548,8 @@ class VpnThread extends Thread implements NetworkChangeListener {
                         vpnFD = builderNotRouted.establish();
                         tunnelRouted = false;
                     }
+                    startedAt = new Date();
+                    reconnectCount = 0;
                 } catch (NullPointerException npe) {
                     vpnFD = null;
                     Log.e (TAG, "NullPointerException from VpnService.Builder call", npe);
@@ -908,6 +922,8 @@ class VpnThread extends Thread implements NetworkChangeListener {
             stats = new Statistics(
                     outgoingStatistics,
                     ingoingStatistics,
+                    startedAt,
+                    reconnectCount,
                     activeTunnel.getIPv4Pop(),
                     localIp,
                     (Inet6Address)Inet6Address.getByName(applicationContext.getString(R.string.ipv6_test_host)),

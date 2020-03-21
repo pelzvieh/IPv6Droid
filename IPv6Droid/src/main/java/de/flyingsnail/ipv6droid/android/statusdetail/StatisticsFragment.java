@@ -1,21 +1,24 @@
 /*
- * Copyright (c) 2015 Dr. Andreas Feldner.
  *
- *     This program is free software; you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation; either version 2 of the License, or
- *     (at your option) any later version.
+ *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  *
+ *  *     This program is free software; you can redistribute it and/or modify
+ *  *     it under the terms of the GNU General Public License as published by
+ *  *     the Free Software Foundation; either version 2 of the License, or
+ *  *     (at your option) any later version.
+ *  *
+ *  *     This program is distributed in the hope that it will be useful,
+ *  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  *     GNU General Public License for more details.
+ *  *
+ *  *     You should have received a copy of the GNU General Public License along
+ *  *     with this program; if not, write to the Free Software Foundation, Inc.,
+ *  *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *  *
+ *  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License along
- *     with this program; if not, write to the Free Software Foundation, Inc.,
- *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  */
 
 package de.flyingsnail.ipv6droid.android.statusdetail;
@@ -57,6 +60,9 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
 
     private AyiyaVpnService.StatisticsBinder statisticsBinder;
 
+
+    private TextView startedAt;
+    private TextView reconnects;
     private TextView bytesReceivedView;
     private TextView bytesTransmittedView;
     private TextView mtuView;
@@ -142,29 +148,31 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
         // Inflate the layout for this fragment
         View myView = inflater.inflate(R.layout.fragment_statistics, container, false);
 
-        bytesReceivedView = (TextView)myView.findViewById(R.id.statistics_bytes_received);
-        bytesTransmittedView = (TextView)myView.findViewById(R.id.statistics_bytes_transmitted);
-        packetsReceivedView = (TextView)myView.findViewById(R.id.statistics_packets_received);
-        packetsTransmittedView = (TextView)myView.findViewById(R.id.statistics_packets_transmitted);
-        bytesPerBurstReceivedView = (TextView)myView.findViewById(R.id.statistics_bytes_per_burst_received);
-        bytesPerBurstTransmittedView = (TextView)myView.findViewById(R.id.statistics_bytes_per_burst_transmitted);
-        packetsPerBurstReceivedView = (TextView)myView.findViewById(R.id.statistics_packets_per_burst_received);
-        packetsPerBurstTransmittedView = (TextView)myView.findViewById(R.id.statistics_packets_per_burst_transmitted);
-        timeLapseBetweenBurstsReceivedView = (TextView)myView.findViewById(R.id.statistics_pause_between_bursts_received);
-        timeLapseBetweenBurstsTransmittedView = (TextView)myView.findViewById(R.id.statistics_pause_between_bursts_transmitted);
-        timeSpanPerBurstReceivedView = (TextView)myView.findViewById(R.id.statistics_time_of_burst_received);
-        timeSpanPerBurstTransmittedView = (TextView)myView.findViewById(R.id.statistics_time_of_burst_transmitted);
-        mtuView = (TextView)myView.findViewById(R.id.statistics_mtu);
-        brokerIPv4View = (TextView)myView.findViewById(R.id.statistics_brokeripv4);
-        brokerIPv6View = (TextView)myView.findViewById(R.id.statistics_brokeripv6);
-        myIPv4View = (TextView)myView.findViewById(R.id.statistics_myipv4);
-        myIPv6View = (TextView)myView.findViewById(R.id.statistics_myipv6);
-        nativeRoutesView = (TextView)myView.findViewById(R.id.statistics_native_routes);
-        vpnRoutesView = (TextView)myView.findViewById(R.id.statistics_vpn_routes);
-        nativeDnsView = (TextView)myView.findViewById(R.id.statistics_native_dns);
-        vpnDnsView = (TextView)myView.findViewById(R.id.statistics_vpn_dns);
-        isRoutedView = (TextView)myView.findViewById(R.id.statistics_isrouted);
-        timestampView = (TextView)myView.findViewById(R.id.statistics_timestamp);
+        startedAt = myView.findViewById(R.id.statistics_start_datetime);
+        reconnects = myView.findViewById(R.id.statistics_reconnects);
+        bytesReceivedView = myView.findViewById(R.id.statistics_bytes_received);
+        bytesTransmittedView = myView.findViewById(R.id.statistics_bytes_transmitted);
+        packetsReceivedView = myView.findViewById(R.id.statistics_packets_received);
+        packetsTransmittedView = myView.findViewById(R.id.statistics_packets_transmitted);
+        bytesPerBurstReceivedView = myView.findViewById(R.id.statistics_bytes_per_burst_received);
+        bytesPerBurstTransmittedView = myView.findViewById(R.id.statistics_bytes_per_burst_transmitted);
+        packetsPerBurstReceivedView = myView.findViewById(R.id.statistics_packets_per_burst_received);
+        packetsPerBurstTransmittedView = myView.findViewById(R.id.statistics_packets_per_burst_transmitted);
+        timeLapseBetweenBurstsReceivedView = myView.findViewById(R.id.statistics_pause_between_bursts_received);
+        timeLapseBetweenBurstsTransmittedView = myView.findViewById(R.id.statistics_pause_between_bursts_transmitted);
+        timeSpanPerBurstReceivedView = myView.findViewById(R.id.statistics_time_of_burst_received);
+        timeSpanPerBurstTransmittedView = myView.findViewById(R.id.statistics_time_of_burst_transmitted);
+        mtuView = myView.findViewById(R.id.statistics_mtu);
+        brokerIPv4View = myView.findViewById(R.id.statistics_brokeripv4);
+        brokerIPv6View = myView.findViewById(R.id.statistics_brokeripv6);
+        myIPv4View = myView.findViewById(R.id.statistics_myipv4);
+        myIPv6View = myView.findViewById(R.id.statistics_myipv6);
+        nativeRoutesView = myView.findViewById(R.id.statistics_native_routes);
+        vpnRoutesView = myView.findViewById(R.id.statistics_vpn_routes);
+        nativeDnsView = myView.findViewById(R.id.statistics_native_dns);
+        vpnDnsView = myView.findViewById(R.id.statistics_vpn_dns);
+        isRoutedView = myView.findViewById(R.id.statistics_isrouted);
+        timestampView = myView.findViewById(R.id.statistics_timestamp);
         Log.i(TAG, "Successfully created view");
         return myView;
     }
@@ -270,6 +278,8 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
                 myView.setVisibility(View.INVISIBLE);
             } else {
                 myView.setVisibility(View.VISIBLE);
+                updateTextView(startedAt, timestampFormatter.format(stats.getStartedAt()));
+                updateTextView(reconnects, stats.getReconnectCount());
                 updateTextView(bytesTransmittedView, numberFormat.format(stats.getBytesTransmitted()));
                 updateTextView(bytesReceivedView, numberFormat.format(stats.getBytesReceived()));
                 updateTextView(packetsTransmittedView, numberFormat.format(stats.getPacketsTransmitted()));
@@ -283,10 +293,10 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
                 updateTextView(timeLapseBetweenBurstsTransmittedView, numberFormat.format(stats.getTimeLapseBetweenBurstsTransmitted()));
                 updateTextView(timeLapseBetweenBurstsReceivedView, numberFormat.format(stats.getTimeLapseBetweenBurstsReceived()));
                 updateTextView(mtuView, stats.getMtu());
-                updateTextView(brokerIPv4View, stats.getBrokerIPv4());
-                updateTextView(brokerIPv6View, stats.getBrokerIPv6());
-                updateTextView(myIPv4View, stats.getMyIPv4());
-                updateTextView(myIPv6View, stats.getMyIPv6());
+                updateTextView(brokerIPv4View, stats.getBrokerIPv4().getHostAddress());
+                updateTextView(brokerIPv6View, stats.getBrokerIPv6().getHostAddress());
+                updateTextView(myIPv4View, stats.getMyIPv4().getHostAddress());
+                updateTextView(myIPv6View, stats.getMyIPv6().getHostAddress());
                 updateTextView(nativeRoutesView, stats.getNativeRouting());
                 updateTextView(vpnRoutesView, stats.getVpnRouting());
                 updateTextView(nativeDnsView, stats.getNativeDnsSetting());

@@ -30,6 +30,7 @@ import androidx.annotation.NonNull;
 
 import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 import org.bouncycastle.tls.Certificate;
+import org.bouncycastle.tls.crypto.TlsCertificate;
 import org.bouncycastle.tls.crypto.TlsCrypto;
 import org.bouncycastle.tls.crypto.impl.bc.BcTlsCrypto;
 
@@ -62,28 +63,24 @@ public class TransporterParams implements TunnelSpec, Serializable {
     private String tunnelName;
     private String tunnelId;
     private Inet6Address ipv6Endpoint;
-    //private Inet6Address ipv6Pop;
-    //private int prefixLength;
     private String popName;
     private Certificate certChain;
     private AsymmetricKeyParameter privateKey;
     private AsyncTask<Void, Void, Inet4Address> hostResolver;
+    private Date expiryDate;
 
     // Serialization
+    private static final long serialVersionUID = 2L;
+
     private void writeObject(java.io.ObjectOutputStream out)
             throws IOException {
         Log.i (TAG, "Serializing");
         out.writeObject(ipv4Pop);
-        out.writeInt(portPop);
         out.writeInt(mtu);
         out.writeInt(heartbeat);
         out.writeObject(privateKeyEncoded);
         out.writeObject(certChainEncoded);
-        out.writeObject(tunnelName);
         out.writeObject(tunnelId);
-        out.writeObject(ipv6Endpoint);
-        out.writeObject(popName);
-        out.writeObject(hostResolver);
     }
 
     // Deserialization
@@ -92,26 +89,15 @@ public class TransporterParams implements TunnelSpec, Serializable {
         Log.i(TAG, "Deserializing");
         crypto = new BcTlsCrypto(new SecureRandom());
         ipv4Pop = (Inet4Address)in.readObject();
-        portPop = in.readInt();
         mtu = in.readInt();
         heartbeat = in.readInt();
-        privateKeyEncoded = (String) in.readObject();
-        privateKey = DTLSUtils.parseBcPrivateKeyString(privateKeyEncoded);
+        setPrivateKeyEncoded ((String) in.readObject());
         try {
-            certChainEncoded = (List<String>) in.readObject();
+            setCertChainEncoded ((List<String>) in.readObject());
         } catch (ClassCastException e) {
             throw new IOException(e);
         }
-        certChain = DTLSUtils.parseCertificateChain(crypto, certChainEncoded);
-        tunnelName = (String) in.readObject();
         tunnelId = (String) in.readObject();
-        ipv6Endpoint = (Inet6Address) in.readObject();
-        popName = (String) in.readObject();
-        try {
-            hostResolver = (AsyncTask<Void, Void, Inet4Address>) in.readObject();
-        } catch (ClassCastException e) {
-            throw new IOException(e);
-        }
     }
 
     private void readObjectNoData()
@@ -190,26 +176,6 @@ public class TransporterParams implements TunnelSpec, Serializable {
         this.ipv6Endpoint = ipv6Endpoint;
     }
 
-    /*@Override
-    public Inet6Address getIpv6Pop() {
-        return ipv6Pop;
-    }
-
-    @Override
-    public void setIpv6Pop(Inet6Address ipv6Pop) {
-        this.ipv6Pop = ipv6Pop;
-    }
-
-    @Override
-    public int getPrefixLength() {
-        return prefixLength;
-    }
-
-    @Override
-    public void setPrefixLength(int prefixLength) {
-        this.prefixLength = prefixLength;
-    }*/
-
     @Override
     public String getPopName() {
         return popName;
@@ -222,7 +188,7 @@ public class TransporterParams implements TunnelSpec, Serializable {
 
     @Override
     public Date getExpiryDate() {
-        return new Date(new Date().getTime() + 1000L*60*60*24*365);
+        return expiryDate;
     }
 
     @Override
@@ -305,10 +271,11 @@ public class TransporterParams implements TunnelSpec, Serializable {
                 throw new IllegalArgumentException("Supplied certificate chain is missing the CA certificate");
             }
             // initialise attributes from certificate
-            setIpv6Endpoint(DTLSUtils.getIpv6AlternativeName(certChain.getCertificateAt(0)));
-            setPopName(DTLSUtils.getIssuerName(certChain.getCertificateAt(0)));
-            setTunnelName(DTLSUtils.getSubjectName(certChain.getCertificateAt(0)));
-            URL popUrl = DTLSUtils.getIssuerUrl(certChain.getCertificateAt(0));
+            TlsCertificate myCert = certChain.getCertificateAt(0);
+            setIpv6Endpoint(DTLSUtils.getIpv6AlternativeName(myCert));
+            setPopName(DTLSUtils.getIssuerName(myCert));
+            setTunnelName(DTLSUtils.getSubjectCommonName(myCert));
+            URL popUrl = DTLSUtils.getIssuerUrl(myCert);
             if (popUrl == null)
                 throw new IllegalArgumentException("No POP URL included in certificate");
             int port = popUrl.getPort();
@@ -316,12 +283,17 @@ public class TransporterParams implements TunnelSpec, Serializable {
                 throw new IllegalArgumentException("No port is included in URL read from certificate");
             }
             setPortPop(port);
+            setExpiryDate(DTLSUtils.getExpiryDate(myCert));
             if (hostResolver != null && hostResolver.getStatus() == AsyncTask.Status.RUNNING)
                 hostResolver.cancel(true);
             hostResolver = new UrlResolver(popUrl).execute();
         } catch (IOException e) {
             throw new IllegalArgumentException("Incorrectly configured, failure to parse certificates", e);
         }
+    }
+
+    private void setExpiryDate(Date expiryDate) {
+        this.expiryDate = expiryDate;
     }
 
     /**

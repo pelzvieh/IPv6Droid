@@ -106,4 +106,6 @@
     <string name="pref_header_experimental">Experimental settings</string>
     <string name="ipv6_test_host" translatable="false">2a06:1c40::309</string>
     <string name="subscription_default_url_base" translatable="false">https://flyingsnail.de/services/services/</string>
+    <string name="statistics_started_at">Started at</string>
+    <string name="statistics_reconnects">Reconnects</string>
 </resources>

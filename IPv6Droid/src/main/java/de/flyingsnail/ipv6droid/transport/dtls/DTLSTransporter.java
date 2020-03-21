@@ -232,18 +232,13 @@ public class DTLSTransporter implements Transporter {
 
     boolean validResult = false;
     while (!validResult) {
-      // read from socket
-      int bytecount = dtls.receive(bb.array(), bb.arrayOffset(), bb.capacity(), 10000);
-
+      // read from socket, no sensible timeout required as dtls will handle alive messages
+      int bytecount = dtls.receive(bb.array(), bb.arrayOffset(), bb.capacity(), Integer.MAX_VALUE);
 
       if (bytecount > maxPacketSize)
         maxPacketSize = bytecount;
 
-      // first check some pathological results for stability reasons
-      if (bytecount < 0) {
-        Log.i(TAG, "DTLS transporter ends: connection terminated");
-        throw new TunnelBrokenException("Input stream disrupted", null);
-      } else if (bytecount == 0) {
+      if (bytecount <= 0) {
         Log.d(TAG, "Received 0 bytes within timeout");
         try {
           Thread.sleep(100L);
