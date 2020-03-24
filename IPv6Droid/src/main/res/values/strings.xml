@@ -108,4 +108,5 @@
     <string name="subscription_default_url_base" translatable="false">https://flyingsnail.de/services/services/</string>
     <string name="statistics_started_at">Started at</string>
     <string name="statistics_reconnects">Reconnects</string>
+    <string name="vpnthread_interrupted">We\'re interrupted</string>
 </resources>

@@ -70,7 +70,7 @@ public class TransporterParams implements TunnelSpec, Serializable {
     private Date expiryDate;
 
     // Serialization
-    private static final long serialVersionUID = 2L;
+    private static final long serialVersionUID = 3L;
 
     private void writeObject(java.io.ObjectOutputStream out)
             throws IOException {
@@ -80,7 +80,6 @@ public class TransporterParams implements TunnelSpec, Serializable {
         out.writeInt(heartbeat);
         out.writeObject(privateKeyEncoded);
         out.writeObject(certChainEncoded);
-        out.writeObject(tunnelId);
     }
 
     // Deserialization
@@ -97,7 +96,6 @@ public class TransporterParams implements TunnelSpec, Serializable {
         } catch (ClassCastException e) {
             throw new IOException(e);
         }
-        tunnelId = (String) in.readObject();
     }
 
     private void readObjectNoData()
@@ -272,7 +270,10 @@ public class TransporterParams implements TunnelSpec, Serializable {
             }
             // initialise attributes from certificate
             TlsCertificate myCert = certChain.getCertificateAt(0);
-            setIpv6Endpoint(DTLSUtils.getIpv6AlternativeName(myCert));
+            Inet6Address myIpv6 = DTLSUtils.getIpv6AlternativeName(myCert);
+            if (myIpv6 == null)
+                throw new IllegalArgumentException("Supplied certificate is missing the IPv6 IP as alternative name");
+            setIpv6Endpoint(myIpv6);
             setPopName(DTLSUtils.getIssuerName(myCert));
             setTunnelName(DTLSUtils.getSubjectCommonName(myCert));
             URL popUrl = DTLSUtils.getIssuerUrl(myCert);
@@ -284,6 +285,7 @@ public class TransporterParams implements TunnelSpec, Serializable {
             }
             setPortPop(port);
             setExpiryDate(DTLSUtils.getExpiryDate(myCert));
+            setTunnelId(myCert.getSerialNumber().toString(16));
             if (hostResolver != null && hostResolver.getStatus() == AsyncTask.Status.RUNNING)
                 hostResolver.cancel(true);
             hostResolver = new UrlResolver(popUrl).execute();
@@ -330,7 +332,7 @@ public class TransporterParams implements TunnelSpec, Serializable {
 
     @Override
     public @NonNull String toString() {
-        return tunnelName + " (" + tunnelId + "), DTLS\n Your endpoint " + ipv6Endpoint.getHostAddress();
+        return tunnelName + " (" + tunnelId + "), DTLS\n Your endpoint " + (ipv6Endpoint == null ? "-" : ipv6Endpoint.getHostAddress());
     }
 
 }

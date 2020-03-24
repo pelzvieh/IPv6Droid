@@ -75,9 +75,8 @@ public class DTLSTunnelReader implements TunnelReader {
         } catch (IllegalArgumentException illegal) {
             throw new ConnectionFailedException("Invalid certificate configuration", illegal);
         }
-        params.setHeartbeatInterval(10000); // todo probably OK to turn into a constant
+        params.setHeartbeatInterval(10*60*1000); // 10 Minutes
         params.setMtu(1300);
-        params.setTunnelId("DTLS");
 
         Log.i(TAG, "DTLSTunnelReader initialized");
     }

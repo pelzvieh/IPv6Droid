@@ -51,10 +51,12 @@ import de.flyingsnail.ipv6droid.transport.Transporter;
 import de.flyingsnail.ipv6droid.transport.TransporterInputStream;
 import de.flyingsnail.ipv6droid.transport.TransporterOutputStream;
 import de.flyingsnail.ipv6droid.transport.TunnelBrokenException;
+import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
 public class DTLSTransporter implements Transporter {
   public static final String TUNNEL_TYPE = TransporterParams.TUNNEL_TYPE;
   private final static String TAG = DTLSTransporter.class.getName();
+  private final TransporterParams params;
   private Date lastPacketReceivedTime;
   private Date lastPacketSentTime;
   private DatagramSocket socket;
@@ -84,6 +86,7 @@ public class DTLSTransporter implements Transporter {
   public DTLSTransporter (TransporterParams params) {
     crypto = new BcTlsCrypto(new SecureRandom());
 
+    this.params = params;
     ipv4Pop = params.getIPv4Pop();
     port = params.getPortPop();
     mtu = params.getMtu();
@@ -92,6 +95,16 @@ public class DTLSTransporter implements Transporter {
     privateKey = params.getPrivateKey();
 
     Log.i(TAG, "DTLS transporter constructed");
+  }
+
+  /**
+   * Get the specification of the tunnel that this transporter runs.
+   *
+   * @return TunnelSpec the TunnelSpec of this transporter
+   */
+  @Override
+  public TunnelSpec getTunnelSpec() {
+    return params;
   }
 
   /**
@@ -140,7 +153,7 @@ public class DTLSTransporter implements Transporter {
     // UDP connection
     socket = new DatagramSocket();
     socket.connect(ipv4Pop, port);
-    socket.setSoTimeout(10000); // no read timeout
+    socket.setSoTimeout(0); // no read timeout
 
     DatagramTransport transport = new UDPTransport(socket, mtu + 2*OVERHEAD) {
         @Override

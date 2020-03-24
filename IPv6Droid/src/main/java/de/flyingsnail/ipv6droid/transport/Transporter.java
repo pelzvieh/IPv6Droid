@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2019 Dr. Andreas Feldner.
+ *  * Copyright (c) 2020 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -31,6 +31,12 @@ import java.nio.ByteBuffer;
 import java.util.Date;
 
 public interface Transporter {
+  /**
+   * Get the specification of the tunnel that this transporter runs.
+   * @return TunnelSpec the TunnelSpec of this transporter
+   */
+  TunnelSpec getTunnelSpec();
+
   /**
    * Yield the time when the last packet was <b>received</b>. This gives an indication if the
    * tunnel is still alive.
@@ -133,5 +139,5 @@ public interface Transporter {
    * Return the number of bytes of overhead required by this transport on each packet.
    * @return an int giving the number of bytes of overhead
    */
-  public int getOverhead();
+  int getOverhead();
 }

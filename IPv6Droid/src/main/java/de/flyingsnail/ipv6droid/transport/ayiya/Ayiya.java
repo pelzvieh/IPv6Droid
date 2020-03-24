@@ -51,6 +51,7 @@ import de.flyingsnail.ipv6droid.transport.Transporter;
 import de.flyingsnail.ipv6droid.transport.TransporterInputStream;
 import de.flyingsnail.ipv6droid.transport.TransporterOutputStream;
 import de.flyingsnail.ipv6droid.transport.TunnelBrokenException;
+import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
 /**
  * AYIYA - Anything In Anything
@@ -74,6 +75,7 @@ public class Ayiya implements Transporter {
 
     /** The TicTunnel type supported by this Transporter */
     public static final String TUNNEL_TYPE = "ayiya";
+    private final TicTunnel tunnel;
 
     /** The port number for AYIYA */
     private int port = 5072;
@@ -121,6 +123,16 @@ public class Ayiya implements Transporter {
 
     private Date lastPacketReceivedTime = new Date();
     private Date lastPacketSentTime = new Date();
+
+    /**
+     * Get the specification of the tunnel that this transporter runs.
+     *
+     * @return TunnelSpec the TunnelSpec of this transporter
+     */
+    @Override
+    public TunnelSpec getTunnelSpec() {
+        return tunnel;
+    }
 
     /**
      * Yield the time when the last packet was <b>received</b>. This gives an indication if the
@@ -235,6 +247,7 @@ public class Ayiya implements Transporter {
         ipv6Pop = tunnel.getIpv6Pop();
         mtu = tunnel.getMtu();
         expiry = tunnel.getExpiryDate();
+        this.tunnel = tunnel;
 
         // we only need the hash of the password
         try {

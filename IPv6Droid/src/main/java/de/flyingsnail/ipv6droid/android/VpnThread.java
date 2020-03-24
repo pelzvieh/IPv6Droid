@@ -28,7 +28,6 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
-import android.net.LinkProperties;
 import android.net.NetworkInfo;
 import android.net.RouteInfo;
 import android.net.TrafficStats;
@@ -61,16 +60,14 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 import de.flyingsnail.ipv6droid.R;
-import de.flyingsnail.ipv6droid.android.googlesubscription.SubscribeTunnelActivity;
 import de.flyingsnail.ipv6droid.android.statistics.Statistics;
 import de.flyingsnail.ipv6droid.android.statistics.TransmissionStatistics;
 import de.flyingsnail.ipv6droid.transport.AuthenticationFailedException;
 import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
 import de.flyingsnail.ipv6droid.transport.Transporter;
 import de.flyingsnail.ipv6droid.transport.TransporterBuilder;
-import de.flyingsnail.ipv6droid.transport.TunnelBrokenException;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
-import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
+import de.flyingsnail.ipv6droid.transport.ayiya.Ayiya;
 
 /**
  * This class does the actual work, i.e. logs in to TIC, reads available tunnels and starts
@@ -81,11 +78,6 @@ class VpnThread extends Thread implements NetworkChangeListener {
      * The tag for logging.
      */
     private static final String TAG = VpnThread.class.getName();
-
-    /**
-     * Time that we must wait before contacting TIC again. This applies to cached tunnels even!
-     */
-    private static final int TIC_RECHECK_BLOCKED_MILLISECONDS = 60 * 60 * 1000; // 60 minutes
 
     /**
      * The IPv6 address of the Google DNS servers.
@@ -337,8 +329,6 @@ class VpnThread extends Thread implements NetworkChangeListener {
      * Request the tunnel control loop (running in a different thread) to stop.
      */
     void requestTunnelClose() {
-        if (networkHelper != null)
-            networkHelper.destroy();
         if (isIntendedToRun()) {
             Log.i(TAG, "Shutting down");
             closeTunnel = true;
@@ -346,12 +336,23 @@ class VpnThread extends Thread implements NetworkChangeListener {
             setName(getName() + " (shutting down)");
             interrupt();
         }
+        if (networkHelper != null)
+            networkHelper.destroy();
     }
 
     /**
      * Request copy threads to close, reset thread fields, and close transporter object
      */
     private synchronized void cleanCopyThreads() {
+        final Transporter myTransporter = transporter; // avoid race condition
+        if (myTransporter != null) {
+            try {
+                myTransporter.close();
+            } catch (Exception e) {
+                Log.e(TAG, "Cannot close transporter object", e);
+            }
+        }
+        // by closing the transporter, we were shooting the copy threads in their feet anyway
         final CopyThread myInThread = inThread; // Race-Conditions vermeiden
         if (myInThread != null) {
             inThread = null;
@@ -361,14 +362,6 @@ class VpnThread extends Thread implements NetworkChangeListener {
         if (myOutThread != null) {
             outThread = null;
             myOutThread.stopCopy();
-        }
-        final Transporter myAyiya = transporter; // Race-Conditions vermeiden
-        if (myAyiya != null) {
-            try {
-                myAyiya.close();
-            } catch (Exception e) {
-                Log.e(TAG, "Cannot close transporter object", e);
-            }
         }
     }
     /**
@@ -419,7 +412,6 @@ class VpnThread extends Thread implements NetworkChangeListener {
                     throw new InterruptedException("Tunnel loop has interrupted status set");
 
                 // ensure we're online
-                vpnStatus.setActivity(R.string.vpnservice_activity_reconnect);
                 waitOnConnectivity();
 
                 // Re-Check if we should close down, as this can easily happen when waiting on connectivity
@@ -465,6 +457,11 @@ class VpnThread extends Thread implements NetworkChangeListener {
                 vpnStatus.setActivity(R.string.vpnservice_activity_ping_pop);
                 vpnStatus.setCause(null);
 
+                Monitor vpnMonitor =
+                        transporter instanceof Ayiya ?
+                                new HeartbeatMonitor(this, inThread, outThread) :
+                                new SimpleMonitor(this, inThread, outThread);
+
                 // now do a ping on IPv6 level. This should involve receiving one packet
                 if (Inet6Address.getByName(applicationContext.getString(R.string.ipv6_test_host)).isReachable(10000)) {
                     postToast(applicationContext, R.string.vpnservice_tunnel_up, Toast.LENGTH_SHORT);
@@ -475,7 +472,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
                 vpnStatus.setActivity(R.string.vpnservice_activity_online);
 
                 // loop until interrupted or tunnel defective
-                monitoredHeartbeatLoop();
+                vpnMonitor.loop();
                 Log.i(TAG, "monitored heartbeat loop ended");
                 localFD = refreshFD();
             } catch (IOException e) {
@@ -484,7 +481,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
                 vpnStatus.setCause(e);
                 vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
             } catch (InterruptedException e) {
-                Log.i(VpnThread.TAG, "refresh remote end loop received interrupt", e);
+                Log.i(VpnThread.TAG, "refresh remote end loop received interrupt");
                 throw e;
             } finally {
                 cleanCopyThreads();
@@ -570,7 +567,8 @@ class VpnThread extends Thread implements NetworkChangeListener {
                 Log.i(TAG, "Refreshing remote VPN end stopped");
 
             } catch (InterruptedException e) {
-                Log.i(VpnThread.TAG, "refresh tunnel loop received interrupt", e);
+                ayiyaVpnService.notifyUserOfError(R.string.vpnthread_interrupted, e);
+                throw new ConnectionFailedException(e.getMessage(), e);
             } catch (ConnectionFailedException e) {
                 throw e;
             } catch (Throwable t) {
@@ -625,7 +623,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
      * Check if we're on network
      * @return true if we're online
      */
-    private boolean isDeviceConnected() {
+    boolean isDeviceConnected() {
         NetworkInfo ni = networkHelper.getConnectivityManager().getActiveNetworkInfo();
         return ni != null && ni.isConnected();
     }
@@ -634,115 +632,35 @@ class VpnThread extends Thread implements NetworkChangeListener {
      * Check if we're on mobile network
      * @return true if we're on a mobile network currently
      */
-    private boolean isNetworkMobile() {
+    boolean isNetworkMobile() {
         NetworkInfo ni = networkHelper.getConnectivityManager().getActiveNetworkInfo();
         return ni != null && ni.getType() == ConnectivityManager.TYPE_MOBILE;
     }
 
-    /**
-     * This loop monitors the two copy threads and generates heartbeats in the heartbeat
-     * interval. It detects tunnel defects by a number of means and exits by one of its
-     * declared exceptions when either it is no longer intended to run or the given transporter doesn't
-     * seem to work any more. It just exits if one of the copy threads terminated (see there).
-     *
-     * @throws IOException in case of a (usually temporary) technical problem with the current transporter.
-     *   Often, this means that our IP address did change.
-     * @throws ConnectionFailedException in case of a more fundamental problem, e.g. if the tunnel
-     *   is not enabled any more in TIC, or the given and up-to-date TIC information in the tunnel
-     *   repeatedly doesn't lead to a working tunnel.
-     */
-    private void monitoredHeartbeatLoop() throws InterruptedException, IOException, ConnectionFailedException {
-        boolean timeoutSuspected = false;
-        long lastPacketDelta = 0L;
-        TunnelSpec activeTunnel = tunnels.getActiveTunnel();
-        @SuppressWarnings("ConstantConditions") long heartbeatInterval = activeTunnel.getHeartbeatInterval() * 1000L;
-        if (heartbeatInterval < 300000L && isNetworkMobile()) {
-            Log.i(TAG, "Lifting heartbeat interval to 300 secs");
-            heartbeatInterval = 300000L;
-        }
-        while (!closeTunnel && (inThread != null && inThread.isAlive()) && (outThread != null && outThread.isAlive())) {
-            // wait for the heartbeat interval to finish or until inThread dies.
-            // Note: the inThread is reading from the network socket to the POP
-            // in case of network changes, this socket breaks immediately, so
-            // inThread crashes on external network changes even if no transfer
-            // is active.
-            inThread.join(heartbeatInterval - lastPacketDelta);
-            if (closeTunnel)
-                break;
-            // re-check cached network information
-            final Transporter myAyiya = transporter; // prevents race condition on null check below
-            if (!isCurrentSocketAdressStillValid())
-                networkHelper.updateNetworkDetails(null);
-            // determine last package transmission time
-            lastPacketDelta = new Date().getTime() - transporter.getLastPacketSentTime().getTime();
-            // if no traffic occurred, send a heartbeat package
-            if ((inThread != null && inThread.isAlive()) &&
-                    (outThread != null && outThread.isAlive()) &&
-                    lastPacketDelta >= heartbeatInterval - 100) {
-                try {
-                    Log.i(TAG, "Sending heartbeat");
-                    transporter.beat();
-                    lastPacketDelta = 0L;
-                } catch (TunnelBrokenException e) {
-                    throw new IOException ("Ayiya object claims it is broken", e);
-                }
+    NetworkHelper getNetworkHelper() {
+        return networkHelper;
+    }
 
-                /* See if we're receiving packets:
-                   no valid packet after one heartbeat - definitely not working
-                   no new packets for more than heartbeat interval? Might be device sleep!
-                   but if not pingable, probably broken.
-                   In the latter case we give it another heartbeat interval time to recover. */
-                if (isDeviceConnected() &&
-                        !transporter.isValidPacketReceived() && // if the tunnel worked in a session, don't worry if it pauses - it's 100% network problems
-                        checkExpiry(transporter.getLastPacketReceivedTime(),
-                                activeTunnel.getHeartbeatInterval()) &&
-                        !Inet6Address.getByName(applicationContext.getString(R.string.ipv6_test_host)).isReachable(10000)
-                ) {
-                    if (!timeoutSuspected)
-                        timeoutSuspected = true;
-                    else if (activeTunnel instanceof TicTunnel && new Date().getTime() - ((TicTunnel)activeTunnel).getCreationDate().getTime()
-                            > TIC_RECHECK_BLOCKED_MILLISECONDS) {
-                        // todo explicit AYIYA code, refactor out of here
-                        boolean tunnelChanged;
-                        try {
-                            tunnelChanged = readTunnels(); // no need to update activeTunnel - we're going to quit
-                        } catch (IOException ioe) {
-                            Log.i (VpnThread.TAG, "TIC and Ayiya both disturbed - assuming network problems", ioe);
-                            continue;
-                        }
-                        if (tunnelChanged) {
-                            vpnStatus.setTunnels(tunnels); // update tunnel list in MainActivity
-                            // TIC had new data - signal a configuration problem to rebuild tunnel
-                            throw new ConnectionFailedException("TIC information changed", null);
-                        } else {
-                            throw new ConnectionFailedException("This TIC tunnel doesn't receive data", null);
-                        }
-                    }
-                } else
-                    timeoutSuspected = false;
+    Transporter getTransporter() {
+        return transporter;
+    }
 
-                Log.i(TAG, "Sent heartbeat.");
-            }
+
+    void ayiyaTunnelRefresh() throws ConnectionFailedException {
+        // todo explicit AYIYA code, refactor out of here
+        boolean tunnelChanged;
+        try {
+            tunnelChanged = readTunnels(); // no need to update activeTunnel - we're going to quit
+        } catch (IOException ioe) {
+            Log.i(VpnThread.TAG, "TIC and Ayiya both disturbed - assuming network problems", ioe);
+            return;
         }
-        Log.i(TAG, "Terminated loop of current transporter object (interrupt or end of a copy thread)");
-        Throwable deathCause = null;
-        final CopyThread myInThread = inThread;
-        final CopyThread myOutThread = outThread;
-        if (myInThread != null && !myInThread.isAlive())
-            deathCause = myInThread.getDeathCause();
-        if (deathCause == null && myOutThread != null && !myOutThread.isAlive())
-            deathCause = myOutThread.getDeathCause();
-        if (deathCause != null) {
-            if (deathCause instanceof TunnelBrokenException) {
-                // launch SubscribeTunnelActivity to re-check subscription status
-                Log.i(TAG, "Forcing re-check of subscrioption after a TunnelBrokenException", deathCause);
-                // @todo sollte eigentlich ohne Benutzer-Sichtbarkeit funktionieren
-                Intent setupIntent = new Intent(ayiyaVpnService, SubscribeTunnelActivity.class);
-                ayiyaVpnService.startActivity(setupIntent);
-                throw new IOException("Ayiya claims it is broken", deathCause);
-            }
-            if (deathCause instanceof IOException)
-                throw (IOException) deathCause;
+        if (tunnelChanged) {
+            vpnStatus.setTunnels(tunnels); // update tunnel list in MainActivity
+            // TIC had new data - signal a configuration problem to rebuild tunnel
+            throw new ConnectionFailedException("TIC information changed", null);
+        } else {
+            throw new ConnectionFailedException("This TIC tunnel doesn't receive data", null);
         }
     }
 
@@ -784,7 +702,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
         return tunnelChanged;
     }
 
-    private static boolean checkExpiry (@NonNull Date lastReceived, int heartbeatInterval) {
+    static boolean checkExpiry(@NonNull Date lastReceived, int heartbeatInterval) {
         Calendar oldestExpectedPacket = Calendar.getInstance();
         oldestExpectedPacket.add(Calendar.SECOND, -heartbeatInterval);
         if (lastReceived.before(oldestExpectedPacket.getTime())) {
@@ -860,6 +778,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
      */
     private void waitOnConnectivity() throws InterruptedException {
         while (!isDeviceConnected()) {
+            vpnStatus.setProgressPerCent(45);
             vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
             vpnStatus.setActivity(R.string.vpnservice_activity_reconnect);
             synchronized (vpnStatus) {
@@ -876,32 +795,6 @@ class VpnThread extends Thread implements NetworkChangeListener {
      */
     private void postToast (final @NonNull Context ctx, final int resId, final int duration) {
         handler.post(() -> Toast.makeText(ctx, resId, duration).show());
-    }
-
-
-    /**
-     * Read route and DNS info of the currently active and the VPN network. Weird code, but the best
-     * I could imagine out of the ConnectivityManager API. In API versions 28, network changes
-     * are no longer handled by CONNECTIVITY_ACTION broadcast, but by requestNetwork callback methods.
-     * These provide the required details as parameters.
-     *
-     * <p>So when running in version 28 following,
-     * we only use this method to</p>
-     * <ul>
-     * <li>store the supplied value of native network properties</li>
-     * <li>enumerate the network properties of our VPN network</li>
-     * </ul>
-     * <p>In result, the networkDetails field will be updated.</p>
-     */
-    private void updateNetworkDetails(@Nullable final LinkProperties newLinkProperties) {
-
-        // force-set native link properties to supplied information
-
-        // direct way to read network available from API 23
-
-        // reconstruct link properties for VPN network, and, prior to API 23, attempt to
-        // find the native network's link properties.
-        networkHelper.updateNetworkDetails(newLinkProperties);
     }
 
     /**
@@ -949,7 +842,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
      *
      * @return true if the current local address still matches one of the link addresses
      */
-    private boolean isCurrentSocketAdressStillValid() {
+    boolean isCurrentSocketAdressStillValid() {
         Transporter myAyiya = transporter; // prevents race condition on null check below
         return networkHelper.isCurrentSocketAdressStillValid(myAyiya != null ? myAyiya.getSocket() : null);
     }
@@ -1052,5 +945,9 @@ class VpnThread extends Thread implements NetworkChangeListener {
     @Override
     public void onDisconnected() {
         Log.i(TAG, "We're not connected anyway.");
+    }
+
+    Context getApplicationContext() {
+        return applicationContext;
     }
 }

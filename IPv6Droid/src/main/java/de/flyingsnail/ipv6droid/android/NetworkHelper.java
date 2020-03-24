@@ -23,10 +23,7 @@
 
 package de.flyingsnail.ipv6droid.android;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
@@ -35,7 +32,6 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.net.NetworkRequest;
 import android.net.RouteInfo;
-import android.os.Build;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -44,7 +40,6 @@ import androidx.annotation.Nullable;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.List;
-import java.util.Objects;
 
 public class NetworkHelper  {
     /**
@@ -57,9 +52,7 @@ public class NetworkHelper  {
      */
     private final NetworkChangeListener networkChangeListener;
 
-    /** Old style (pre Android 23) global connectivity receiver */
-    private ConnectivityReceiver connectivityReceiver;
-    /** New style (post Android 23) local connectivity receiver */
+    /** New style local connectivity receiver */
     private ConnectivityManager.NetworkCallback networkCallback;
 
 
@@ -81,33 +74,14 @@ public class NetworkHelper  {
         this.notificationContext = notificationContext;
         // resolve system service "ConnectivityManager"
         connectivityManager = (ConnectivityManager) notificationContext.getSystemService(Context.CONNECTIVITY_SERVICE);
-        updateNetworkDetails(null);
+        Network currentlyActiveNetwork = connectivityManager.getActiveNetwork();
+        updateNetworkDetails(currentlyActiveNetwork, connectivityManager.getLinkProperties(currentlyActiveNetwork));
         registerConnectivityReceiver();
     }
 
 
     void destroy() {
         unregisterConnectivityReceiver();
-    }
-
-    /**
-     * Inner class to handle connectivity changes.
-     * Generally obsolete, will only be used on Android versions prior to 23.
-     */
-    public class ConnectivityReceiver extends BroadcastReceiver {
-        private ConnectivityReceiver() {
-        }
-
-        @Override
-        public void onReceive(Context context, @NonNull Intent intent) {
-            String action = intent.getAction();
-            if (Objects.equals(action, ConnectivityManager.CONNECTIVITY_ACTION)) {
-                Log.i(TAG, "Received connectivity action");
-                onConnectivityChange(
-                        !intent.getBooleanExtra(ConnectivityManager.EXTRA_NO_CONNECTIVITY, false),
-                        null);
-            }
-        }
     }
 
     ConnectivityManager getConnectivityManager() {
@@ -118,127 +92,60 @@ public class NetworkHelper  {
      * Register to be called in event of internet available.
      */
     private void registerConnectivityReceiver() {
-        if (Build.VERSION.SDK_INT >= 23 && connectivityManager != null) {
+        // register specific connectivity callback
+        if (connectivityManager != null) {
             NetworkRequest.Builder builder = new NetworkRequest.Builder().
                     addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).
-                    addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN);
+                    addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN).
+                    addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
             NetworkRequest request = builder.build();
 
             networkCallback = new ConnectivityManager.NetworkCallback () {
                 @Override
-                public void onAvailable(Network network) {
-                    if (connectivityManager != null) {
-                        onConnectivityChange(true,
-                                connectivityManager.getLinkProperties(network));
-                    }
-                }
-
-                @Override
                 public void onLinkPropertiesChanged(Network network, LinkProperties linkProperties) {
-                    onConnectivityChange(true, linkProperties);
+                    onConnectivityChange(true, network, linkProperties);
                 }
 
                 @Override
                 public void onLost(Network network) {
-                    onConnectivityChange(false, null);
+                    onConnectivityChange(false, network, null);
                 }
             };
             connectivityManager.registerNetworkCallback(request, networkCallback);
         }
-        // anyway, register for callback on connectivity change
-        registerGlobalConnectivityReceiver();
     }
 
     private void unregisterConnectivityReceiver() {
-        if (Build.VERSION.SDK_INT >= 23 && connectivityManager != null) {
-            connectivityManager.unregisterNetworkCallback(
-                    networkCallback
-            );
-        }
-        unregisterGlobalConnectivityReceiver();
-    }
-
-    /**
-     * Register an instance of connectivityReceiver for global CONNECTIVITY_ACTIONs.
-     * This was once documented to be obsolete, but in 2019 again to be usable.
-     */
-    private void registerGlobalConnectivityReceiver() {
-        connectivityReceiver = new ConnectivityReceiver();
-        final IntentFilter intentFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
-
-        notificationContext.registerReceiver(connectivityReceiver, intentFilter);
-        Log.d(TAG, "registered CommandReceiver for global broadcasts");
-    }
-
-    /**
-     * Revert registerGlobalConnectivityReceiver().
-     */
-    private void unregisterGlobalConnectivityReceiver() {
-        try {
-            notificationContext.unregisterReceiver(connectivityReceiver);
-            Log.d(TAG, "un-registered CommandReceiver for global broadcasts");
-        } catch (IllegalArgumentException e) {
-            Log.e(TAG, "Could not unregister global connectivity receiver");
+        if (connectivityManager != null) {
+            connectivityManager.unregisterNetworkCallback (networkCallback);
         }
     }
 
-
     /**
-     * Read route and DNS info of the currently active and the VPN network. Weird code, but the best
-     * I could imagine out of the ConnectivityManager API. In API versions 28, network changes
+     * Network changes
      * are no longer handled by CONNECTIVITY_ACTION broadcast, but by requestNetwork callback methods.
      * These provide the required details as parameters.
      *
-     * <p>So when running in version 28 following,
-     * we only use this method to</p>
+     * <p>So we only use this method to</p>
      * <ul>
      * <li>store the supplied value of native network properties</li>
      * <li>enumerate the network properties of our VPN network</li>
      * </ul>
      * <p>In result, the networkDetails field will be updated.</p>
      */
-    void updateNetworkDetails(@Nullable final LinkProperties newLinkProperties) {
-        boolean foundNative = false; // we need to try different approaches to get native network depending on API version
-
+    void updateNetworkDetails(@NonNull final Network network, @Nullable final LinkProperties newLinkProperties) {
+        Log.i(TAG, "Updating cached network details");
         // force-set native link properties to supplied information
         if (newLinkProperties != null) {
-            networkDetails.setNativeProperties(newLinkProperties);
-            foundNative = true;
+            networkDetails.setNativeProperties(network, newLinkProperties);
         }
-
-        Log.d(TAG, "updateNetworkDetails trying to read native link properties");
         ConnectivityManager cm = getConnectivityManager();
-
-        // direct way to read network available from API 23
-        if (!foundNative && Build.VERSION.SDK_INT >= 23) {
-            Network activeNetwork = cm.getActiveNetwork();
-            if (activeNetwork != null) {
-                if (ConnectivityManager.TYPE_VPN != cm.getNetworkInfo(activeNetwork).getType()) {
-                    LinkProperties linkProperties = cm.getLinkProperties(activeNetwork);
-                    networkDetails.setNativeProperties(linkProperties);
-                    foundNative = true;
-                } else {
-                    Log.w(TAG, "ConnectivityManager.getActiveNetwork returned our VPN");
-                }
-            }
-        }
-
-        // reconstruct link properties for VPN network, and, prior to API 23, attempt to
-        // find the native network's link properties.
-        NetworkInfo activeNetworkInfo = cm.getActiveNetworkInfo();
-        if (activeNetworkInfo != null) {
-            for (Network n : cm.getAllNetworks()) {
-                NetworkInfo ni = cm.getNetworkInfo(n);
-                if (ni != null) {
-                    LinkProperties linkProperties = cm.getLinkProperties(n);
-                    if (!foundNative
-                            && ni.getType() == activeNetworkInfo.getType()
-                            && ni.getSubtype() == activeNetworkInfo.getSubtype()) {
-                        networkDetails.setNativeProperties(linkProperties);
-                        foundNative = true;
-                    } else if (ni.getType() == ConnectivityManager.TYPE_VPN) {
-                        networkDetails.setVpnProperties(linkProperties);
-                    }
+        for (Network n : cm.getAllNetworks()) {
+            NetworkInfo ni = cm.getNetworkInfo(n);
+            LinkProperties linkProperties = cm.getLinkProperties(n);
+            if (ni != null) {
+                if (ni.getType() == ConnectivityManager.TYPE_VPN) {
+                    networkDetails.setVpnProperties(linkProperties);
                 }
             }
         }
@@ -250,17 +157,19 @@ public class NetworkHelper  {
      *
      * @param connected the boolean indicating if the new network situation has connectivity
      */
-    private void onConnectivityChange(final boolean connected, @Nullable final LinkProperties newLinkProperties) {
+    private void onConnectivityChange(final boolean connected,
+                                      final @NonNull Network network,
+                                      @Nullable final LinkProperties newLinkProperties) {
         Log.i(TAG, "Connectivity changed");
         if (connected) {
             // update cached information
-            updateNetworkDetails(newLinkProperties);
+            updateNetworkDetails(network, newLinkProperties);
 
             // notify caller on network connected
             networkChangeListener.onNewConnection();
-
         } // we have connectivity
         else {
+            updateNetworkDetails(network, null);
             networkChangeListener.onDisconnected();
         }
     }

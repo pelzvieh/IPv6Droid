@@ -104,5 +104,8 @@
     <string name="user_subscription_no_service">Der Abo-Dienst von Google ist gerade nicht verfügbar, wir versuchen es bald noch einmal.</string>
     <string name="user_subscription_no_service_on_this_device">Auf diesem Gerät stehen keine Google-Abonnements zur Verfügung. Kontaktieren Sie uns bitte für andere Optionen.</string>
     <string name="pref_header_experimental">Experimentelle Einstellungen</string>
+    <string name="statistics_started_at">Start um</string>
+    <string name="statistics_reconnects">Wiederverbindung</string>
+    <string name="vpnthread_interrupted">Tunnel abgebrochen</string>
 
 </resources>

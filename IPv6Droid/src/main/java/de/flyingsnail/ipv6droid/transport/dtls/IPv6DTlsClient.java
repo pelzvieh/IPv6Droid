@@ -92,7 +92,7 @@ class IPv6DTlsClient extends DefaultTlsClient {
 
     @Override
     public TlsHeartbeat getHeartbeat() {
-        return new DefaultTlsHeartbeat(heartbeat, 1000);
+        return new DefaultTlsHeartbeat(heartbeat, 10000);
     }
 
     /**
