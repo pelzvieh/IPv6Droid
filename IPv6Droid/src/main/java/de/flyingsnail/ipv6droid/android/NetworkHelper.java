@@ -169,7 +169,7 @@ public class NetworkHelper  {
             networkChangeListener.onNewConnection();
         } // we have connectivity
         else {
-            updateNetworkDetails(network, null);
+            networkDetails.unsetNetwork(network);
             networkChangeListener.onDisconnected();
         }
     }

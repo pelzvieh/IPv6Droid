@@ -324,7 +324,7 @@ public class TransporterParams implements TunnelSpec, Serializable {
                     }
                 }
             } catch (UnknownHostException e) {
-                throw new IllegalArgumentException("Cannot resolve configured issuer URL");
+                Log.e(TAG, "Cannot resolve configured issuer URL", e);
             }
             return null;
         }

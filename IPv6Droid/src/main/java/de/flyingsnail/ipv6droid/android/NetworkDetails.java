@@ -31,6 +31,7 @@ import androidx.annotation.NonNull;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -38,7 +39,7 @@ import java.util.Map;
  * A container for the relevant network information in the context of a running VPN tunnel.
  */
 class NetworkDetails {
-    private Map<Network,LinkProperties> nativeProperties;
+    private Map<Network,LinkProperties> nativeProperties = new HashMap<>();
     private Network currentNativeNetwork;
     private LinkProperties vpnProperties;
 
@@ -67,7 +68,7 @@ class NetworkDetails {
      * @param network the Network that is now available
      * @param nativeProperties the LinkProperties of the Link associated with the given Network.
      */
-    public void setNativeProperties(Network network, LinkProperties nativeProperties) {
+    public void setNativeProperties(@NonNull Network network, @NonNull LinkProperties nativeProperties) {
         if (currentNativeNetwork == null) {
             currentNativeNetwork = network;
         }

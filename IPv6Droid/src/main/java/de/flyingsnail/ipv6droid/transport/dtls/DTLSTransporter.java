@@ -153,7 +153,8 @@ public class DTLSTransporter implements Transporter {
     // UDP connection
     socket = new DatagramSocket();
     socket.connect(ipv4Pop, port);
-    socket.setSoTimeout(0); // no read timeout
+    // we need a timeout for the connect phase, otherwise we're facing infinite hangs
+    socket.setSoTimeout(10000);
 
     DatagramTransport transport = new UDPTransport(socket, mtu + 2*OVERHEAD) {
         @Override
@@ -165,6 +166,9 @@ public class DTLSTransporter implements Transporter {
     TlsClient client = new IPv6DTlsClient(crypto, heartbeat, certChain, privateKey);
     DTLSClientProtocol protocol = new DTLSClientProtocol();
     dtls = protocol.connect(client, transport);
+
+    // after the connect, we do not want a timeout
+    socket.setSoTimeout(heartbeat); // with every heartbeat interval, there should be communication
 
     Log.i(TAG, "DTLS tunnel to POP IP " + ipv4Pop + " created.");
   }
