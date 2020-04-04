@@ -95,8 +95,7 @@ class HeartbeatMonitor implements Monitor {
             // determine last package transmission time
             lastPacketDelta = new Date().getTime() - transporter.getLastPacketSentTime().getTime();
             // if no traffic occurred, send a heartbeat package
-            if ((inThread != null && inThread.isAlive()) &&
-                    (outThread != null && outThread.isAlive()) &&
+            if (inThread.isAlive() && outThread.isAlive() &&
                     lastPacketDelta >= heartbeatInterval - 100) {
                 try {
                     Log.i(TAG, "Sending heartbeat");
