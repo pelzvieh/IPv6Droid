@@ -121,7 +121,7 @@ class HeartbeatMonitor implements Monitor {
                         timeoutSuspected = true;
                     else if (activeTunnel instanceof TicTunnel && new Date().getTime() - ((TicTunnel)activeTunnel).getCreationDate().getTime()
                             > TIC_RECHECK_BLOCKED_MILLISECONDS) {
-                        vpnThread.ayiyaTunnelRefresh();
+                        ayiyaTunnelRefresh();
                         continue;
                     }
                 } else
@@ -146,6 +146,22 @@ class HeartbeatMonitor implements Monitor {
             } else {
                 throw new IOException(deathCause);
             }
+        }
+    }
+
+    private void ayiyaTunnelRefresh() throws ConnectionFailedException {
+        boolean tunnelChanged;
+        try {
+            tunnelChanged = vpnThread.readTunnels(); // no need to update activeTunnel - we're going to quit
+        } catch (IOException ioe) {
+            Log.i(TAG, "TIC and Ayiya both disturbed - assuming network problems", ioe);
+            return;
+        }
+        if (tunnelChanged) {
+            // TIC had new data - signal a configuration problem to rebuild tunnel
+            throw new ConnectionFailedException("TIC information changed", null);
+        } else {
+            throw new ConnectionFailedException("This TIC tunnel doesn't receive data", null);
         }
     }
 }

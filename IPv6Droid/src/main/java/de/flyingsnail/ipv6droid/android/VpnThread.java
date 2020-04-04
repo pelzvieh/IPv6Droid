@@ -646,24 +646,6 @@ class VpnThread extends Thread implements NetworkChangeListener {
     }
 
 
-    void ayiyaTunnelRefresh() throws ConnectionFailedException {
-        // todo explicit AYIYA code, refactor out of here
-        boolean tunnelChanged;
-        try {
-            tunnelChanged = readTunnels(); // no need to update activeTunnel - we're going to quit
-        } catch (IOException ioe) {
-            Log.i(VpnThread.TAG, "TIC and Ayiya both disturbed - assuming network problems", ioe);
-            return;
-        }
-        if (tunnelChanged) {
-            vpnStatus.setTunnels(tunnels); // update tunnel list in MainActivity
-            // TIC had new data - signal a configuration problem to rebuild tunnel
-            throw new ConnectionFailedException("TIC information changed", null);
-        } else {
-            throw new ConnectionFailedException("This TIC tunnel doesn't receive data", null);
-        }
-    }
-
     /**
      * Method called by the inbound copy thread if the first packet was transmitted.
      */
@@ -683,7 +665,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
      * @throws ConnectionFailedException if some permanent problem exists with TIC and the current config
      * @throws IOException if some (hopefully transient) technical problem came up.
      */
-    private boolean readTunnels() throws ConnectionFailedException, IOException {
+    boolean readTunnels() throws ConnectionFailedException, IOException {
         boolean tunnelChanged = false;
 
         List<? extends TunnelSpec> availableTunnels = tunnelReader.queryTunnels();
@@ -698,6 +680,8 @@ class VpnThread extends Thread implements NetworkChangeListener {
             if (tunnels.size() == 1) {
                 tunnels.setActiveTunnel(tunnels.get(0));
             }
+            // update tunnel list in status and indirectly MainActivity
+            vpnStatus.setTunnels(tunnels);
         }
         return tunnelChanged;
     }
