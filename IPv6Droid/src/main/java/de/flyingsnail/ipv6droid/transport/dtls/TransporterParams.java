@@ -41,8 +41,6 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.URL;
 import java.net.UnknownHostException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.util.Date;
 import java.util.List;
@@ -67,8 +65,7 @@ public class TransporterParams implements TunnelSpec, Serializable {
     private Inet6Address ipv6Endpoint;
     private String popName;
     private Certificate certChain;
-    private PrivateKey privateKey;
-    private PublicKey publicKey;
+    private AndroidBackedKeyPair keyPair;
     private AsyncTask<Void, Void, Inet4Address> hostResolver;
     private Date expiryDate;
 
@@ -246,21 +243,11 @@ public class TransporterParams implements TunnelSpec, Serializable {
      */
     public void setPrivateKeyAlias(String privateKeyAlias) throws IOException, IllegalStateException, IllegalArgumentException {
         this.privateKeyAlias = privateKeyAlias;
-        final AndroidBackedKeyPair kp = new AndroidBackedKeyPair (privateKeyAlias);
-        this.privateKey = kp.getPrivateKey();
-        this.publicKey = kp.getPublicKey();
+        keyPair = new AndroidBackedKeyPair (privateKeyAlias);
     }
 
     public List<String> getCertChainEncoded() {
         return certChainEncoded;
-    }
-
-    public PrivateKey getPrivateKey() {
-        return privateKey;
-    }
-
-    public PublicKey getPublicKey() {
-        return publicKey;
     }
 
     public Certificate getCertChain() {
@@ -308,6 +295,10 @@ public class TransporterParams implements TunnelSpec, Serializable {
 
     private void setExpiryDate(Date expiryDate) {
         this.expiryDate = expiryDate;
+    }
+
+    public AndroidBackedKeyPair getKeyPair() {
+        return keyPair;
     }
 
     /**

@@ -25,58 +25,30 @@ package de.flyingsnail.ipv6droid.transport.dtls;
 
 import android.util.Log;
 
-import org.bouncycastle.asn1.pkcs.PrivateKeyInfo;
-import org.bouncycastle.asn1.pkcs.RSAPrivateKey;
-import org.bouncycastle.asn1.sec.ECPrivateKey;
 import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.Extensions;
 import org.bouncycastle.asn1.x509.GeneralName;
 import org.bouncycastle.asn1.x509.GeneralNames;
 import org.bouncycastle.asn1.x509.Time;
 import org.bouncycastle.asn1.x509.X509ObjectIdentifiers;
-import org.bouncycastle.asn1.x9.X9ObjectIdentifiers;
-import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
-import org.bouncycastle.crypto.params.RSAPrivateCrtKeyParameters;
-import org.bouncycastle.crypto.util.PrivateKeyFactory;
 import org.bouncycastle.tls.Certificate;
-import org.bouncycastle.tls.DefaultTlsCredentialedSigner;
-import org.bouncycastle.tls.SignatureAlgorithm;
-import org.bouncycastle.tls.SignatureAndHashAlgorithm;
-import org.bouncycastle.tls.TlsContext;
-import org.bouncycastle.tls.TlsCredentialedDecryptor;
-import org.bouncycastle.tls.TlsCredentialedSigner;
-import org.bouncycastle.tls.TlsUtils;
 import org.bouncycastle.tls.crypto.TlsCertificate;
 import org.bouncycastle.tls.crypto.TlsCrypto;
-import org.bouncycastle.tls.crypto.TlsCryptoParameters;
-import org.bouncycastle.tls.crypto.TlsSigner;
-import org.bouncycastle.tls.crypto.TlsStreamSigner;
-import org.bouncycastle.tls.crypto.impl.bc.BcDefaultTlsCredentialedDecryptor;
-import org.bouncycastle.tls.crypto.impl.bc.BcTlsCrypto;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.io.pem.PemObject;
 import org.bouncycastle.util.io.pem.PemReader;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.math.BigInteger;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.URL;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
-import java.security.Signature;
-import java.security.SignatureException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Vector;
 
 /**
  * This is a collection of static methods to help loading standard PEM resources into the somewhat
@@ -91,69 +63,6 @@ class DTLSUtils {
 
     private DTLSUtils() {}
 
-
-    public static TlsCredentialedDecryptor loadEncryptionCredentials(TlsContext context, Certificate certificate, AsymmetricKeyParameter privateKey) {
-        TlsCrypto crypto = context.getCrypto();
-
-        return new BcDefaultTlsCredentialedDecryptor((BcTlsCrypto)crypto, certificate, privateKey);
-    }
-
-    private static AsymmetricKeyParameter loadBcPrivateKeyResource(String keyResource) throws IOException {
-        PemObject pem = loadPemResource(keyResource);
-        switch (pem.getType()) {
-            case "PRIVATE KEY":
-                return PrivateKeyFactory.createKey(pem.getContent());
-            case "RSA PRIVATE KEY":
-                // this is the relevant case with the bundled resources
-                RSAPrivateKey rsa = RSAPrivateKey.getInstance(pem.getContent());
-                return new RSAPrivateCrtKeyParameters(rsa.getModulus(), rsa.getPublicExponent(),
-                        rsa.getPrivateExponent(), rsa.getPrime1(), rsa.getPrime2(), rsa.getExponent1(),
-                        rsa.getExponent2(), rsa.getCoefficient());
-            case "EC PRIVATE KEY":
-                ECPrivateKey pKey = ECPrivateKey.getInstance(pem.getContent());
-                AlgorithmIdentifier algId = new AlgorithmIdentifier(X9ObjectIdentifiers.id_ecPublicKey, pKey.getParameters());
-                PrivateKeyInfo privInfo = new PrivateKeyInfo(algId, pKey);
-                return PrivateKeyFactory.createKey(privInfo);
-            case "ENCRYPTED PRIVATE KEY":
-                throw new UnsupportedOperationException("Encrypted PKCS#8 keys not supported");
-        }
-        throw new IllegalArgumentException("No supported private key in resource " + keyResource);
-    }
-
-    static AsymmetricKeyParameter parseBcPrivateKeyString(String keyString) throws IOException {
-        PemObject pem = parsePemString(keyString);
-        switch (pem.getType()) {
-            case "PRIVATE KEY":
-                return PrivateKeyFactory.createKey(pem.getContent());
-            case "RSA PRIVATE KEY":
-                // this is the relevant case with the bundled resources
-                RSAPrivateKey rsa = RSAPrivateKey.getInstance(pem.getContent());
-                return new RSAPrivateCrtKeyParameters(rsa.getModulus(), rsa.getPublicExponent(),
-                        rsa.getPrivateExponent(), rsa.getPrime1(), rsa.getPrime2(), rsa.getExponent1(),
-                        rsa.getExponent2(), rsa.getCoefficient());
-            case "EC PRIVATE KEY":
-                ECPrivateKey pKey = ECPrivateKey.getInstance(pem.getContent());
-                AlgorithmIdentifier algId = new AlgorithmIdentifier(X9ObjectIdentifiers.id_ecPublicKey, pKey.getParameters());
-                PrivateKeyInfo privInfo = new PrivateKeyInfo(algId, pKey);
-                return PrivateKeyFactory.createKey(privInfo);
-            case "ENCRYPTED PRIVATE KEY":
-                throw new UnsupportedOperationException("Encrypted PKCS#8 keys not supported");
-        }
-        throw new IllegalArgumentException("No supported private key encoded in supplied string");
-    }
-
-    private static Certificate loadCertificateChain (TlsContext context, String[] certResources) throws IOException {
-        return loadCertificateChain(context.getCrypto(), certResources);
-    }
-
-    private static Certificate loadCertificateChain(TlsCrypto crypto, String[] certResources) throws IOException {
-        TlsCertificate[] chain = new TlsCertificate[certResources.length];
-        for (int i = 0; i < certResources.length; ++i)
-        {
-            chain[i] = loadCertificateResource(crypto, certResources[i]);
-        }
-        return new Certificate(chain);
-    }
 
     /**
      * Parse the supplied List of PEM encoded strings into a Certificate object representing
@@ -173,31 +82,12 @@ class DTLSUtils {
         return new Certificate(chain.toArray(new TlsCertificate[0]));
     }
 
-    private static TlsCertificate loadCertificateResource(TlsCrypto crypto, String certResource) throws IOException {
-        PemObject pem = loadPemResource(certResource);
-        if (pem != null && pem.getType().endsWith("CERTIFICATE")) {
-            return crypto.createCertificate(pem.getContent());
-        }
-        throw new IllegalArgumentException("'resource' doesn't specify a valid certificate");
-    }
-
     private static TlsCertificate parseCertificateString(TlsCrypto crypto, String certString) throws IOException {
         PemObject pem = parsePemString(certString);
         if (pem != null && pem.getType().endsWith("CERTIFICATE")) {
             return crypto.createCertificate(pem.getContent());
         }
         throw new IllegalArgumentException("Supplied PEM string doesn't specify a valid certificate");
-    }
-
-    private static PemObject loadPemResource(String pemResource) throws IOException {
-        InputStream s = DTLSUtils.class.getResourceAsStream(pemResource);
-        if (s == null) {
-            throw new IOException("Resource "+ pemResource + " not found in classpath");
-        }
-        PemReader p = new PemReader(new InputStreamReader(s));
-        PemObject o = p.readPemObject();
-        p.close();
-        return o;
     }
 
     private static PemObject parsePemString(String pemString) throws IOException {
@@ -207,65 +97,6 @@ class DTLSUtils {
         if (o == null)
             throw new IllegalArgumentException("Supplied string is not valid PEM");
         return o;
-    }
-
-    private static SignatureAndHashAlgorithm algorithmForCode (Vector<SignatureAndHashAlgorithm> supportedSignatureAlgorithms, short signatureAlgorithm)  throws NoSupportedAlgorithm {
-        if (supportedSignatureAlgorithms == null) {
-            supportedSignatureAlgorithms = (Vector<SignatureAndHashAlgorithm>)TlsUtils.getDefaultSignatureAlgorithms(signatureAlgorithm);
-        }
-
-        SignatureAndHashAlgorithm signatureAndHashAlgorithm = null;
-        for (SignatureAndHashAlgorithm alg: supportedSignatureAlgorithms) {
-            if (alg.getSignature() == signatureAlgorithm) {
-                // Just grab the first one we find
-                signatureAndHashAlgorithm = alg;
-                break;
-            }
-        }
-
-        if (signatureAndHashAlgorithm == null) {
-            throw new NoSupportedAlgorithm("None of the supported signature algorithms generates the required signature type");
-        }
-        return signatureAndHashAlgorithm;
-    }
-
-
-    static TlsCredentialedSigner loadSignerCredentials(TlsContext context,
-                                                       Vector<SignatureAndHashAlgorithm> supportedSignatureAlgorithms,
-                                                       short signatureAlgorithm,
-                                                       Certificate certificate,
-                                                       PrivateKey privateKey) throws NoSupportedAlgorithm {
-        TlsCrypto crypto = context.getCrypto();
-        TlsCryptoParameters cryptoParams = new TlsCryptoParameters(context);
-        SignatureAndHashAlgorithm signatureAndHashAlgorithm = algorithmForCode(supportedSignatureAlgorithms, signatureAlgorithm);
-
-        TlsSigner signer = new TlsSigner() {
-            @Override
-            public byte[] generateRawSignature(SignatureAndHashAlgorithm algorithm, byte[] hash) throws IOException {
-                Signature s = null;
-                if (algorithm.getSignature() != SignatureAlgorithm.rsa)
-                    throw new IOException("Signature algorithm of algorithm  not supported: " + algorithm.toString());
-                try {
-                    s = Signature.getInstance("SHA256withRSA"); // todo derive from algorithm, or at least check it to be the one supported algorithm
-                    s.initSign(privateKey);
-                    s.update(hash);
-                    byte[] signature = s.sign();
-                    return signature;
-                } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
-                    throw new IOException("Cannot create requested signature", e);
-                }
-            }
-
-            @Override
-            public TlsStreamSigner getStreamSigner(SignatureAndHashAlgorithm algorithm) throws IOException {
-                return null; // this is actually the same implementation as used with BcTlsRSASigner.... wtf?!
-            }
-        };
-        return new DefaultTlsCredentialedSigner(
-                cryptoParams,
-                signer,
-                certificate,
-                signatureAndHashAlgorithm);
     }
 
     static boolean areSameCertificate(TlsCertificate a, TlsCertificate b) throws IOException {

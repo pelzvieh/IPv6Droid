@@ -43,10 +43,10 @@ import java.io.OutputStream;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.nio.ByteBuffer;
-import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.util.Date;
 
+import de.flyingsnail.ipv6droid.android.dtlsrequest.AndroidBackedKeyPair;
 import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
 import de.flyingsnail.ipv6droid.transport.Transporter;
 import de.flyingsnail.ipv6droid.transport.TransporterInputStream;
@@ -58,6 +58,7 @@ public class DTLSTransporter implements Transporter {
   public static final String TUNNEL_TYPE = TransporterParams.TUNNEL_TYPE;
   private final static String TAG = DTLSTransporter.class.getName();
   private final TransporterParams params;
+  private final AndroidBackedKeyPair keyPair;
   private Date lastPacketReceivedTime;
   private Date lastPacketSentTime;
   private DatagramSocket socket;
@@ -79,8 +80,6 @@ public class DTLSTransporter implements Transporter {
 
   private final Certificate certChain;
 
-  private final PrivateKey privateKey;
-
   private final TlsCrypto crypto;
 
 
@@ -97,7 +96,7 @@ public class DTLSTransporter implements Transporter {
     mtu = params.getMtu();
     heartbeat = params.getHeartbeatInterval();
     certChain = params.getCertChain();
-    privateKey = params.getPrivateKey();
+    keyPair = params.getKeyPair();
 
     Log.i(TAG, "DTLS transporter constructed");
   }
@@ -168,7 +167,7 @@ public class DTLSTransporter implements Transporter {
             return MAX_MTU - OVERHEAD;
         }
     };
-    TlsClient client = new IPv6DTlsClient(crypto, heartbeat, certChain, privateKey);
+    TlsClient client = new IPv6DTlsClient(crypto, heartbeat, certChain, keyPair);
     DTLSClientProtocol protocol = new DTLSClientProtocol();
     dtls = protocol.connect(client, transport);
 

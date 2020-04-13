@@ -32,9 +32,9 @@ import org.bouncycastle.tls.ClientCertificateType;
 import org.bouncycastle.tls.DefaultTlsHeartbeat;
 import org.bouncycastle.tls.HeartbeatMode;
 import org.bouncycastle.tls.ProtocolVersion;
-import org.bouncycastle.tls.SignatureAlgorithm;
 import org.bouncycastle.tls.SignatureAndHashAlgorithm;
 import org.bouncycastle.tls.TlsAuthentication;
+import org.bouncycastle.tls.TlsCredentialedSigner;
 import org.bouncycastle.tls.TlsCredentials;
 import org.bouncycastle.tls.TlsFatalAlert;
 import org.bouncycastle.tls.TlsHeartbeat;
@@ -49,6 +49,8 @@ import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.dtlsrequest.AndroidBackedKeyPair;
+
 import static org.bouncycastle.tls.CipherSuite.TLS_DHE_RSA_WITH_AES_128_CBC_SHA256;
 
 /**
@@ -60,6 +62,7 @@ class IPv6DTlsClient extends AbstractTlsClient {
     private final int heartbeat;
 
     private final TlsCertificate trustedCA;
+    private final AndroidBackedKeyPair androidBackedKeyPair;
 
     private Logger logger = Logger.getLogger(DTLSUtils.class.getName());
 
@@ -72,13 +75,13 @@ class IPv6DTlsClient extends AbstractTlsClient {
      * @param crypto the TlsCrypto object to use with this TLS client.
      * @param heartbeat the heartbeat interval in milliseconds.
      * @param certChain a Certificate object carrying the complete certificate chain.
-     * @param privateKey a AsymmetricKeyParameter giving the corresponding private key.
+     * @param androidBackedKeyPair an AndroidBackedKeyPair object referring to the RSA keypair to use
      */
-    public IPv6DTlsClient(TlsCrypto crypto, int heartbeat, Certificate certChain, PrivateKey privateKey) {
+    public IPv6DTlsClient(TlsCrypto crypto, int heartbeat, Certificate certChain, AndroidBackedKeyPair androidBackedKeyPair) {
         super(crypto);
         this.heartbeat = heartbeat;
         this.certChain = certChain;
-        this.privateKey = privateKey;
+        this.androidBackedKeyPair = androidBackedKeyPair;
 
         trustedCA = certChain.getCertificateAt(certChain.getLength()-1);
     }
@@ -122,23 +125,32 @@ class IPv6DTlsClient extends AbstractTlsClient {
             }
 
             @Override
-            public TlsCredentials getClientCredentials(CertificateRequest certificateRequest) throws IOException {
+            public TlsCredentials getClientCredentials(CertificateRequest certificateRequest) {
                 logger.info("Client credentials requested");
                 short[] certificateTypes = certificateRequest.getCertificateTypes();
                 if (certificateTypes == null || !Arrays.contains(certificateTypes, ClientCertificateType.rsa_sign)) {
+                    logger.warning("Client certificate type rsa_sign not supported");
                     return null;
                 }
                 Vector<SignatureAndHashAlgorithm> clientSigAlgs = (Vector<SignatureAndHashAlgorithm>)context.getSecurityParametersHandshake().getClientSigAlgs();
-
-                try {
-                    return DTLSUtils.loadSignerCredentials(context, clientSigAlgs,
-                            SignatureAlgorithm.rsa, certChain, privateKey);
-                } catch (NoSupportedAlgorithm noSupportedAlgorithm) {
-                    throw new IOException(noSupportedAlgorithm);
+                TlsCredentialedSigner tlsCredentialedSigner = androidBackedKeyPair.getTlsCredentialedSigner(certChain);
+                if (!clientSigAlgs.contains(tlsCredentialedSigner.getSignatureAndHashAlgorithm())) {
+                    logger.warning("Signature algorithm SHA256withRSA not supported");
+                    return null;
                 }
+                return tlsCredentialedSigner;
             }
         };
     }
+
+    @Override
+    protected Vector getSupportedSignatureAlgorithms() {
+        Vector supportedAlgorithm = new Vector(1);
+        supportedAlgorithm.add(androidBackedKeyPair.getSignatureAndHashAlgorithm());
+        return supportedAlgorithm;
+    }
+
+
 
     @Override
     public void notifyAlertRaised(short alertLevel, short alertDescription, String message, Throwable cause) {

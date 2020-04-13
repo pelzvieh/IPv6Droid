@@ -28,15 +28,18 @@ import android.security.keystore.KeyProperties;
 import android.util.Log;
 
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
-import org.bouncycastle.asn1.pkcs.RSAPrivateKey;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
-import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
-import org.bouncycastle.crypto.params.RSAPrivateCrtKeyParameters;
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder;
+import org.bouncycastle.tls.Certificate;
+import org.bouncycastle.tls.HashAlgorithm;
+import org.bouncycastle.tls.SignatureAlgorithm;
+import org.bouncycastle.tls.SignatureAndHashAlgorithm;
+import org.bouncycastle.tls.TlsCredentialedSigner;
+import org.bouncycastle.tls.crypto.TlsStreamSigner;
 
 import java.io.ByteArrayOutputStream;
 import java.io.CharArrayWriter;
@@ -56,7 +59,6 @@ import java.security.Signature;
 import java.security.SignatureException;
 import java.security.UnrecoverableEntryException;
 import java.security.cert.CertificateException;
-import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -70,6 +72,9 @@ public class AndroidBackedKeyPair {
     private final KeyPair keyPair;
 
     private final String alias;
+
+    private final static SignatureAndHashAlgorithm myAlgorithm = new SignatureAndHashAlgorithm(HashAlgorithm.sha256, SignatureAlgorithm.rsa);
+
 
     /*
      * Generate a new RSA key pair entry in the Android Keystore by
@@ -88,7 +93,7 @@ public class AndroidBackedKeyPair {
                     new KeyGenParameterSpec.Builder(
                         alias,
                         KeyProperties.PURPOSE_SIGN | KeyProperties.PURPOSE_VERIFY)
-                    .setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
+                    .setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512, KeyProperties.DIGEST_NONE)
                     .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE, KeyProperties.ENCRYPTION_PADDING_RSA_PKCS1, KeyProperties.ENCRYPTION_PADDING_RSA_OAEP)
                     .setSignaturePaddings(KeyProperties.SIGNATURE_PADDING_RSA_PKCS1, KeyProperties.SIGNATURE_PADDING_RSA_PSS)
                     .build());
@@ -149,6 +154,55 @@ public class AndroidBackedKeyPair {
                 ((KeyStore.PrivateKeyEntry) entry).getPrivateKey());
     }
 
+    public SignatureAndHashAlgorithm getSignatureAndHashAlgorithm() {
+        return myAlgorithm;
+    }
+
+    public TlsCredentialedSigner getTlsCredentialedSigner(Certificate certificate) {
+        return new TlsCredentialedSigner() {
+            @Override
+            public byte[] generateRawSignature(byte[] hash) throws IOException {
+                Signature s;
+                try {
+                    s = Signature.getInstance("NONEwithRSA");
+                    s.initSign(getPrivateKey());
+                    s.update(hash);
+                    byte[] signature = s.sign();
+                    return signature;
+                } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
+                    throw new IOException("Cannot create requested signature", e);
+                }
+            }
+
+            @Override
+            public SignatureAndHashAlgorithm getSignatureAndHashAlgorithm() {
+                return AndroidBackedKeyPair.this.getSignatureAndHashAlgorithm();
+            }
+
+            @Override
+            public TlsStreamSigner getStreamSigner() {
+                return new TlsStreamSigner() {
+                    final ContentSigner delegate = getContentSigner();
+
+                    @Override
+                    public OutputStream getOutputStream() {
+                        return delegate.getOutputStream();
+                    }
+
+                    @Override
+                    public byte[] getSignature() {
+                        return delegate.getSignature();
+                    }
+                };
+            }
+
+            @Override
+            public Certificate getCertificate() {
+                return certificate;
+            }
+        };
+    }
+
     public PrivateKey getPrivateKey() {
         return keyPair.getPrivate();
     }
@@ -157,33 +211,8 @@ public class AndroidBackedKeyPair {
         return keyPair.getPublic();
     }
 
-
-    public AsymmetricKeyParameter getEncoidedPrivateKey() {
-        // todo conversion of conversion of conversion, is it really the efficient way to go?
-        byte[] rawBytes = keyPair.getPrivate().getEncoded();
-        if (rawBytes == null)
-            throw new IllegalStateException("Cannot get encoded representation of private key");
-        PKCS8EncodedKeySpec pkcs8 = new PKCS8EncodedKeySpec(rawBytes);
-        if (pkcs8 == null)
-            throw new IllegalStateException("Could not generate PKCS#8 representation of private key");
-        RSAPrivateKey rsa = RSAPrivateKey.getInstance(pkcs8.getEncoded());
-        if (rsa == null)
-            throw new IllegalStateException("Could not instatiate RSA private key representation of private key");
-        return new RSAPrivateCrtKeyParameters(rsa.getModulus(), rsa.getPublicExponent(),
-                rsa.getPrivateExponent(), rsa.getPrime1(), rsa.getPrime2(), rsa.getExponent1(),
-                rsa.getExponent2(), rsa.getCoefficient());
-/*
-        RSAPublicKey rsaP = (RSAPublicKey) keyPair.getPublic();
-        RSAPrivateCrtKeyParameters parms = new RSAPrivateCrtKeyParameters(rsa.getModulus(), rsaP.getPublicExponent(),
-                rsa.getPrivateExponent(), rsa.getPrime1(), rsa.getPrime2(), rsa.getExponent1(),
-                rsa.getExponent2(), rsa.getCoefficient());
-        RSAPrivateKey.getInstance()
-        new AsymmetricKeyParameter()*/
-    }
-
-    public String getCertificationRequest() throws IOException {
-        JcaPKCS10CertificationRequestBuilder builder = new JcaPKCS10CertificationRequestBuilder(new X500Name("CN="+alias), getPublicKey());
-        PKCS10CertificationRequest request = builder.build(new ContentSigner() {
+    public ContentSigner getContentSigner() {
+        return new ContentSigner() {
             private ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
             @Override
@@ -210,7 +239,12 @@ public class AndroidBackedKeyPair {
                     throw new IllegalStateException("Cannot calculate a signature", e);
                 }
             }
-        });
+        };
+    }
+
+    public String getCertificationRequest() throws IOException {
+        JcaPKCS10CertificationRequestBuilder builder = new JcaPKCS10CertificationRequestBuilder(new X500Name("C=DE,ST=Hessen,L=Niederdorfelden,O=Flying Furry CSnail Creature,OU=IPv6Droid,CN="+alias), getPublicKey());
+        PKCS10CertificationRequest request = builder.build(getContentSigner());
         CharArrayWriter charWriter = new CharArrayWriter();
         JcaPEMWriter pemWriter = new JcaPEMWriter(charWriter);
         pemWriter.writeObject(request);

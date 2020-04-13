@@ -124,18 +124,14 @@ public class SettingsFragment extends PreferenceFragmentCompat {
                 if (preference instanceof TwoStatePreference)
                     return;
                 if ("dtls_key_alias".equals(key)) {
-                    try {
-                        preference.setSummary(new AndroidBackedKeyPair(sharedPreferences.getString(key, "")).getCertificationRequest());
-                    } catch (IOException | RuntimeException e) {
-                        preference.setSummary("E: " + e.getMessage());
-                    }
+                    preference.setSummary(sharedPreferences.getString(key, ""));
                 } else if (preference instanceof EditTextPreference && key.contains("password")) {
                     String value = sharedPreferences.getString(key, "");
                     if (!value.isEmpty())
                         preference.setSummary (R.string.password_set);
                     else
                         preference.setSummary (R.string.password_unset);
-                } else if (preference instanceof EditTextPreference){
+                } else if (preference instanceof EditTextPreference) {
                     preference.setSummary(sharedPreferences.getString(key, ""));
                 }
             };
