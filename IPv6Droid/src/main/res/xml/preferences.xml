@@ -96,8 +96,13 @@
         app:title="@string/pref_header_experimental"
         app:key="pref_key_experimental_settings"
         app:initialExpandedChildrenCount="0">
-        <EditTextPreference
-            app:key="dtls_key"
+        <Preference
+            app:key="dtls_key_create"
+            app:title="@string/pref_header_dtls_key_create"
+            app:fragment="de.flyingsnail.ipv6droid.android.dtlsrequest.KeyRequestFragment">
+        </Preference>
+        <ListPreference
+            app:key="dtls_key_alias"
             app:title="DTLS tunnel private key"/>
         <EditTextPreference
             app:key="dtls_certs"

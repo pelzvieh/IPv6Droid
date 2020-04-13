@@ -62,14 +62,14 @@ import static android.app.Notification.PRIORITY_LOW;
  * The Android service controlling the VpnThread.
  * Created by pelzi on 15.08.13.
  */
-public class AyiyaVpnService extends VpnService {
+public class IPv6DroidVpnService extends VpnService {
 
-    private static final String TAG = AyiyaVpnService.class.getName();
-    private static final String SESSION_NAME = AyiyaVpnService.class.getSimpleName();
+    private static final String TAG = IPv6DroidVpnService.class.getName();
+    private static final String SESSION_NAME = IPv6DroidVpnService.class.getSimpleName();
 
-    public static final String EXTRA_CACHED_TUNNELS = AyiyaVpnService.class.getName() + ".CACHED_TUNNEL";
+    public static final String EXTRA_CACHED_TUNNELS = IPv6DroidVpnService.class.getName() + ".CACHED_TUNNEL";
 
-    public static final String STATISTICS_INTERFACE = Objects.requireNonNull(AyiyaVpnService.class.getPackage()).getName() + ".Statistics";
+    public static final String STATISTICS_INTERFACE = Objects.requireNonNull(IPv6DroidVpnService.class.getPackage()).getName() + ".Statistics";
     private static final String CHANNEL_ERRORS_ID = "deadbeef";
     private static final String CHANNEL_STATUS_ID = "42";
 
@@ -107,7 +107,7 @@ public class AyiyaVpnService extends VpnService {
     private Tunnels cachedTunnels;
     private boolean errorNotification;
 
-    public AyiyaVpnService() {
+    public IPv6DroidVpnService() {
         cachedTunnels = null;
     }
 
@@ -145,6 +145,8 @@ public class AyiyaVpnService extends VpnService {
             Log.i(TAG, "no persisted tunnels information");
         } catch (IOException e) {
             Log.e(TAG, "Can't load persisted tunnels", e);
+            Toast.makeText(this, R.string.vpnservice_toast_cache_unreadable, Toast.LENGTH_SHORT)
+                    .show();
         }
     }
 
@@ -257,7 +259,7 @@ public class AyiyaVpnService extends VpnService {
     }
 
     /**
-     * Create a new instance of AyiyaVpnService.Builder. This method exists solely for VpnThread.
+     * Create a new instance of IPv6DroidVpnService.Builder. This method exists solely for VpnThread.
      *
      * @return a new instance.
      */
@@ -402,7 +404,7 @@ public class AyiyaVpnService extends VpnService {
                     thread.reportStatus();
                 }
             } else if (vpnShouldRun) {
-                Log.e(TAG, "AyiyaVpnService's thread is broken altough it should run");
+                Log.e(TAG, "IPv6DroidVpnService's thread is broken altough it should run");
             }
         }
     }

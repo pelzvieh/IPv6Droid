@@ -24,7 +24,6 @@
 package de.flyingsnail.ipv6droid.android;
 
 import android.content.Context;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 
@@ -78,9 +77,8 @@ public class TunnelPersistingFile implements TunnelPersisting  {
         List<? extends TunnelSpec> cachedTunnels;
         try {
             cachedTunnels = (List<? extends TunnelSpec>)os.readObject();
-        } catch (ClassNotFoundException | ClassCastException | InvalidClassException e) {
-            Log.wtf(TAG, "Unable to read cached tunnels from persistence media", e);
-            throw new IOException(e);
+        } catch (ClassNotFoundException | InvalidClassException | RuntimeException e) {
+            throw new IOException("Unable to read tunnel definitions from persistence media", e);
         }
         if (cachedTunnels instanceof Tunnels) {
             return (Tunnels) cachedTunnels;

@@ -28,6 +28,7 @@ import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -54,10 +55,10 @@ public class DTLSTunnelReader implements TunnelReader {
 
         // load DTLS Configuration
         SharedPreferences myPreferences = PreferenceManager.getDefaultSharedPreferences(context);
-        final String keyConfig = myPreferences.getString("dtls_key", "");
+        final String keyAlias = myPreferences.getString("dtls_key_alias", "");
         String concattedCerts = myPreferences.getString("dtls_certs", "");
 
-        if (keyConfig.isEmpty() || concattedCerts.isEmpty())
+        if (keyAlias.isEmpty() || concattedCerts.isEmpty())
             throw new ConnectionFailedException("No DTLS credentials configured", null);
         String[] certStrings = concattedCerts.split("-----BEGIN CERTIFICATE-----");
         List<String> certConfig = new ArrayList<>(certStrings.length);
@@ -71,8 +72,8 @@ public class DTLSTunnelReader implements TunnelReader {
         // build params and perform parsing
         try {
             params.setCertChainEncoded(certConfig);
-            params.setPrivateKeyEncoded(keyConfig);
-        } catch (IllegalArgumentException illegal) {
+            params.setPrivateKeyAlias(keyAlias);
+        } catch (IOException | IllegalArgumentException | IllegalStateException illegal) {
             throw new ConnectionFailedException("Invalid certificate configuration", illegal);
         }
         params.setHeartbeatInterval(10*60*1000); // 10 Minutes

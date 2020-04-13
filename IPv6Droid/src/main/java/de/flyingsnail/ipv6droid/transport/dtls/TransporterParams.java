@@ -28,7 +28,6 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 import org.bouncycastle.tls.Certificate;
 import org.bouncycastle.tls.crypto.TlsCertificate;
 import org.bouncycastle.tls.crypto.TlsCrypto;
@@ -42,11 +41,14 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
+import de.flyingsnail.ipv6droid.android.dtlsrequest.AndroidBackedKeyPair;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
 public class TransporterParams implements TunnelSpec, Serializable {
@@ -58,19 +60,20 @@ public class TransporterParams implements TunnelSpec, Serializable {
     private int portPop;
     private int mtu;
     private int heartbeat;
-    private String privateKeyEncoded;
+    private String privateKeyAlias;
     private List<String> certChainEncoded;
     private String tunnelName;
     private String tunnelId;
     private Inet6Address ipv6Endpoint;
     private String popName;
     private Certificate certChain;
-    private AsymmetricKeyParameter privateKey;
+    private PrivateKey privateKey;
+    private PublicKey publicKey;
     private AsyncTask<Void, Void, Inet4Address> hostResolver;
     private Date expiryDate;
 
     // Serialization
-    private static final long serialVersionUID = 3L;
+    private static final long serialVersionUID = 4L;
 
     private void writeObject(java.io.ObjectOutputStream out)
             throws IOException {
@@ -78,7 +81,7 @@ public class TransporterParams implements TunnelSpec, Serializable {
         out.writeObject(ipv4Pop);
         out.writeInt(mtu);
         out.writeInt(heartbeat);
-        out.writeObject(privateKeyEncoded);
+        out.writeObject(privateKeyAlias);
         out.writeObject(certChainEncoded);
     }
 
@@ -90,10 +93,10 @@ public class TransporterParams implements TunnelSpec, Serializable {
         ipv4Pop = (Inet4Address)in.readObject();
         mtu = in.readInt();
         heartbeat = in.readInt();
-        setPrivateKeyEncoded ((String) in.readObject());
+        setPrivateKeyAlias ((String) in.readObject());
         try {
             setCertChainEncoded ((List<String>) in.readObject());
-        } catch (ClassCastException e) {
+        } catch (ClassCastException|IllegalArgumentException e) {
             throw new IOException(e);
         }
     }
@@ -191,8 +194,7 @@ public class TransporterParams implements TunnelSpec, Serializable {
 
     @Override
     public boolean isEnabled() {
-        // todo check valid until date of own certificate
-        return true;
+        return getExpiryDate().after(new Date());
     }
 
     @Override
@@ -229,26 +231,36 @@ public class TransporterParams implements TunnelSpec, Serializable {
         this.heartbeat = heartbeat;
     }
 
-    public String getPrivateKeyEncoded() {
-        return privateKeyEncoded;
+    public String getPrivateKeyAlias() {
+        return privateKeyAlias;
     }
 
-    public void setPrivateKeyEncoded(String privateKeyEncoded) {
-        this.privateKeyEncoded = privateKeyEncoded;
-
-        try {
-            this.privateKey = DTLSUtils.parseBcPrivateKeyString(privateKeyEncoded);
-        } catch (IOException e) {
-            throw new IllegalStateException("Incorrectly bundled, failure to read private key", e);
-        }
+    /**
+     * Set and verify the alias of the entry in the Android key store that holds the private
+     * key to be used with this tunnel.
+     *
+     * @param privateKeyAlias a String to identify the private key in Android key store
+     * @throws IOException in case no key with that alias can be retrieved
+     * @throws IllegalStateException in case the device does not provide the algorithms we use
+     * @throws IllegalArgumentException in case the alias refers to an entry of unsuitable type
+     */
+    public void setPrivateKeyAlias(String privateKeyAlias) throws IOException, IllegalStateException, IllegalArgumentException {
+        this.privateKeyAlias = privateKeyAlias;
+        final AndroidBackedKeyPair kp = new AndroidBackedKeyPair (privateKeyAlias);
+        this.privateKey = kp.getPrivateKey();
+        this.publicKey = kp.getPublicKey();
     }
 
     public List<String> getCertChainEncoded() {
         return certChainEncoded;
     }
 
-    public AsymmetricKeyParameter getPrivateKey() {
+    public PrivateKey getPrivateKey() {
         return privateKey;
+    }
+
+    public PublicKey getPublicKey() {
+        return publicKey;
     }
 
     public Certificate getCertChain() {
@@ -260,7 +272,7 @@ public class TransporterParams implements TunnelSpec, Serializable {
      * @param certChainEncoded a List&lt;String&gt; with the PEM encoded x509 certificate chain of this
      *                  client. The client's cert at position 0, the CA at the end.
      */
-    public void setCertChainEncoded(List<String> certChainEncoded) {
+    public void setCertChainEncoded(List<String> certChainEncoded) throws IllegalArgumentException {
         Log.i(TAG, "Setting encoded certificate and reading data from it");
         this.certChainEncoded = certChainEncoded;
         try {

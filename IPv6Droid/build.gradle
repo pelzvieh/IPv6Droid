@@ -28,7 +28,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.6.1'
+        classpath 'com.android.tools.build:gradle:3.6.2'
     }
 }
 apply plugin: 'com.android.application'
@@ -40,12 +40,27 @@ repositories {
     jcenter()
 }
 
+// Create a variable called keystorePropertiesFile, and initialize it to your
+// keystore.properties file, in the rootProject folder.
+def keystorePropertiesFile = rootProject.file("keystore.local.properties")
+
+// Initialize a new Properties() object called keystoreProperties.
+def keystoreProperties = new Properties()
+
+// Load your keystore.properties file into the keystoreProperties object.
+keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+
+
 android {
     signingConfigs {
         release {
-            storeFile file('/Users/pelzi/.android/flying-snail.jks')
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+            storeFile file(keystoreProperties['storeFile'])
+            storePassword keystoreProperties['storePassword']
         }
     }
+
     compileSdkVersion 29
 
     defaultConfig {
@@ -64,8 +79,6 @@ android {
         pickFirst 'META-INF/README'
         pickFirst 'META-INF/INDEX.LIST'
         pickFirst 'META-INF/DEPENDENCIES'
-
-        //exclude    'org.apache.http.*'
     }
 
     lintOptions {
@@ -77,6 +90,7 @@ android {
     buildTypes {
         release {
             buildConfigField("java.lang.String", "target_host", "\"\"")
+            signingConfig signingConfigs.release
         }
         debug {
             matchingFallbacks = []
@@ -99,7 +113,9 @@ dependencies {
     implementation 'androidx.core:core:1.2.0'
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
     implementation 'androidx.preference:preference:1.1.0'
-    implementation 'com.android.billingclient:billing:2.1.0'
-    implementation 'org.bouncycastle:bctls-jdk15on:1.64'
+    implementation 'com.android.billingclient:billing:2.2.0'
+    implementation 'org.bouncycastle:bctls-jdk15on:1.65'
+    implementation 'org.bouncycastle:bcpkix-jdk15on:1.65'
     implementation 'androidx.preference:preference:1.1.0'
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
 }

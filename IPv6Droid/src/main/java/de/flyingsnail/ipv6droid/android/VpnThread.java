@@ -116,7 +116,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
     /**
      * The service that created this thread.
      */
-    private AyiyaVpnService ayiyaVpnService;
+    private IPv6DroidVpnService IPv6DroidVpnService;
 
     /**
      * The configuration of the intended nativeRouting.
@@ -205,18 +205,18 @@ class VpnThread extends Thread implements NetworkChangeListener {
 
     /**
      * The constructor setting all required fields.
-     * @param ayiyaVpnService the Service that created this thread
+     * @param IPv6DroidVpnService the Service that created this thread
      * @param cachedTunnels the previously working tunnel spec, or null if none
      * @param routingConfiguration the nativeRouting configuration
      * @param sessionName the name of this thread
      */
-    VpnThread(@NonNull AyiyaVpnService ayiyaVpnService,
+    VpnThread(@NonNull IPv6DroidVpnService IPv6DroidVpnService,
               @Nullable Tunnels cachedTunnels,
               @NonNull RoutingConfiguration routingConfiguration,
               @NonNull String sessionName) {
         setName(sessionName);
-        this.ayiyaVpnService = ayiyaVpnService;
-        this.vpnStatus = new VpnStatusReport(ayiyaVpnService);
+        this.IPv6DroidVpnService = IPv6DroidVpnService;
+        this.vpnStatus = new VpnStatusReport(IPv6DroidVpnService);
         try {
             this.routingConfiguration = (RoutingConfiguration)routingConfiguration.clone();
         } catch (CloneNotSupportedException e) {
@@ -224,21 +224,21 @@ class VpnThread extends Thread implements NetworkChangeListener {
         }
         this.tunnels = cachedTunnels;
         // extract the application context
-        this.applicationContext = ayiyaVpnService.getApplicationContext();
+        this.applicationContext = IPv6DroidVpnService.getApplicationContext();
         // the statistics collector
         this.ingoingStatistics = new TransmissionStatistics();
         this.outgoingStatistics = new TransmissionStatistics();
         TunnelReader tr;
         try {
-            tr = new TicTunnelReader(ayiyaVpnService);
+            tr = new TicTunnelReader(IPv6DroidVpnService);
             Log.i(TAG, "Using Tic Tunnel config");
         } catch (ConnectionFailedException e) {
             try {
-                tr = new DTLSTunnelReader(ayiyaVpnService);
+                tr = new DTLSTunnelReader(IPv6DroidVpnService);
                 Log.i(TAG, "Using DTLS config");
             } catch (ConnectionFailedException e1) {
                 Log.i(TAG, "Falling back to subscription tunnels", e1);
-                tr = new SubscriptionTunnelReader(ayiyaVpnService);
+                tr = new SubscriptionTunnelReader(IPv6DroidVpnService);
             }
         }
         this.tunnelReader = tr;
@@ -251,7 +251,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
     public void run() {
         closeTunnel = false;
         try {
-            networkHelper = new NetworkHelper(this, ayiyaVpnService);
+            networkHelper = new NetworkHelper(this, IPv6DroidVpnService);
 
             TrafficStats.setThreadStatsTag(TAG_PARENT_THREAD);
             handler = new Handler(applicationContext.getMainLooper());
@@ -287,11 +287,11 @@ class VpnThread extends Thread implements NetworkChangeListener {
                 vpnStatus.setActivity(R.string.vpnservice_activity_selected_tunnel);
 
                 // build vpn device on local machine
-                builder = ayiyaVpnService.createBuilder();
+                builder = IPv6DroidVpnService.createBuilder();
                 TunnelSpec activeTunnel = tunnels.getActiveTunnel();
                 //noinspection ConstantConditions
                 configureBuilderFromTunnelSpecification(builder, activeTunnel, false);
-                builderNotRouted = ayiyaVpnService.createBuilder();
+                builderNotRouted = IPv6DroidVpnService.createBuilder();
                 configureBuilderFromTunnelSpecification(builderNotRouted, activeTunnel, true);
             }
             refreshTunnelLoop(builder, builderNotRouted);
@@ -303,20 +303,20 @@ class VpnThread extends Thread implements NetworkChangeListener {
             vpnStatus.setCause(null);
         } catch (AuthenticationFailedException e) {
             Log.e(TAG, "Authentication step failed", e);
-            ayiyaVpnService.notifyUserOfError(R.string.vpnservice_authentication_failed, e);
+            IPv6DroidVpnService.notifyUserOfError(R.string.vpnservice_authentication_failed, e);
             vpnStatus.setCause(e);
         } catch (ConnectionFailedException e) {
             Log.e(TAG, "This configuration will not work on this device", e);
-            ayiyaVpnService.notifyUserOfError(R.string.vpnservice_invalid_configuration, e);
+            IPv6DroidVpnService.notifyUserOfError(R.string.vpnservice_invalid_configuration, e);
             vpnStatus.setCause(e);
         } catch (IOException e) {
             Log.e(TAG, "IOException caught before reading in tunnel data", e);
-            ayiyaVpnService.notifyUserOfError(R.string.vpnservice_io_during_startup, e);
+            IPv6DroidVpnService.notifyUserOfError(R.string.vpnservice_io_during_startup, e);
             vpnStatus.setCause(e);
         } catch (Throwable t) {
             Log.e(TAG, "Failed to run tunnel", t);
             // something went wrong in an unexpected way
-            ayiyaVpnService.notifyUserOfError(R.string.vpnservice_unexpected_problem, t);
+            IPv6DroidVpnService.notifyUserOfError(R.string.vpnservice_unexpected_problem, t);
             vpnStatus.setCause(t);
         } finally {
             networkHelper.destroy();
@@ -335,15 +335,14 @@ class VpnThread extends Thread implements NetworkChangeListener {
             cleanAll();
             setName(getName() + " (shutting down)");
             interrupt();
-        }
-        if (networkHelper != null)
             networkHelper.destroy();
+        }
     }
 
     /**
      * Request copy threads to close, reset thread fields, and close transporter object
      */
-    private synchronized void cleanCopyThreads() {
+    private void cleanCopyThreads() {
         final Transporter myTransporter = transporter; // avoid race condition
         if (myTransporter != null) {
             try {
@@ -352,22 +351,24 @@ class VpnThread extends Thread implements NetworkChangeListener {
                 Log.e(TAG, "Cannot close transporter object", e);
             }
         }
-        // by closing the transporter, we were shooting the copy threads in their feet anyway
-        final CopyThread myInThread = inThread; // Race-Conditions vermeiden
-        if (myInThread != null) {
-            inThread = null;
-            myInThread.stopCopy();
-        }
-        final CopyThread myOutThread = outThread; // Race-Conditions vermeiden
-        if (myOutThread != null) {
-            outThread = null;
-            myOutThread.stopCopy();
+        synchronized (this) {
+            // by closing the transporter, we were shooting the copy threads in their feet anyway
+            final CopyThread myInThread = inThread; // Race-Conditions vermeiden
+            if (myInThread != null) {
+                inThread = null;
+                myInThread.stopCopy();
+            }
+            final CopyThread myOutThread = outThread; // Race-Conditions vermeiden
+            if (myOutThread != null) {
+                outThread = null;
+                myOutThread.stopCopy();
+            }
         }
     }
     /**
      * Request copy threads to close, close transporter object and VPN socket.
      */
-    private synchronized void cleanAll() {
+    private void cleanAll() {
         try {
             if (vpnFD != null) {
                 vpnFD.close();
@@ -378,8 +379,10 @@ class VpnThread extends Thread implements NetworkChangeListener {
         }
         // close internet facing socket and stop copy threads
         cleanCopyThreads();
-        vpnStatus.setStatus (VpnStatusReport.Status.Idle);
-        vpnFD = null;
+        synchronized (this) {
+            vpnStatus.setStatus(VpnStatusReport.Status.Idle);
+            vpnFD = null;
+        }
     }
 
     /**
@@ -434,7 +437,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
 
                 // Initialize the input and output streams from the transporter socket
                 DatagramSocket popSocket = transporter.getSocket();
-                ayiyaVpnService.protect(popSocket);
+                IPv6DroidVpnService.protect(popSocket);
                 InputStream popIn = transporter.getInputStream();
                 OutputStream popOut = transporter.getOutputStream();
 
@@ -449,8 +452,8 @@ class VpnThread extends Thread implements NetworkChangeListener {
                 // start the copying threads
                 Log.i (TAG, "Starting copy threads");
                 synchronized (this) {
-                    outThread = new CopyThread(localIn, popOut, ayiyaVpnService, this, "AYIYA from local to POP", TAG_OUTGOING_THREAD, 0, outgoingStatistics);
-                    inThread = new CopyThread(popIn, localOut, ayiyaVpnService, this, "AYIYA from POP to local", TAG_INCOMING_THREAD, 0, ingoingStatistics);
+                    outThread = new CopyThread(localIn, popOut, IPv6DroidVpnService, this, "AYIYA from local to POP", TAG_OUTGOING_THREAD, 0, outgoingStatistics);
+                    inThread = new CopyThread(popIn, localOut, IPv6DroidVpnService, this, "AYIYA from POP to local", TAG_INCOMING_THREAD, 0, ingoingStatistics);
                     outThread.start();
                     inThread.start();
                 }
@@ -567,14 +570,13 @@ class VpnThread extends Thread implements NetworkChangeListener {
                 Log.i(TAG, "Refreshing remote VPN end stopped");
 
             } catch (InterruptedException e) {
-                ayiyaVpnService.notifyUserOfError(R.string.vpnthread_interrupted, e);
-                throw new ConnectionFailedException(e.getMessage(), e);
+                IPv6DroidVpnService.notifyUserOfError(R.string.vpnthread_interrupted, e);
+                Log.i(TAG, "Tunnel terminated by interrupt", e);
             } catch (ConnectionFailedException e) {
                 throw e;
             } catch (Throwable t) {
-                ayiyaVpnService.notifyUserOfError(R.string.unexpected_runtime_exception, t);
+                IPv6DroidVpnService.notifyUserOfError(R.string.unexpected_runtime_exception, t);
                 Log.e(TAG, "Caught unexpected throwable", t);
-                throw new ConnectionFailedException(t.getMessage(), t);
             } finally {
                 cleanAll();
                 postToast(applicationContext, R.string.vpnservice_tunnel_down, Toast.LENGTH_SHORT);
@@ -729,7 +731,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
                 }
             } catch (UnknownHostException e) {
                 Log.e(TAG, "Could not add requested IPv6 route to builder", e);
-                ayiyaVpnService.notifyUserOfError(R.string.vpnservice_route_not_added, e);
+                IPv6DroidVpnService.notifyUserOfError(R.string.vpnservice_route_not_added, e);
                 postToast(applicationContext, R.string.vpnservice_route_not_added, Toast.LENGTH_SHORT);
             }
 

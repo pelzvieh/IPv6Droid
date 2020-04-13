@@ -61,9 +61,6 @@ public class NetworkHelper  {
      */
     private final NetworkDetails networkDetails = new NetworkDetails();
 
-    private final Context notificationContext;
-
-
     /**
      * The system service ConnectivityManager
      */
@@ -71,7 +68,6 @@ public class NetworkHelper  {
 
     NetworkHelper(NetworkChangeListener networkChangeListener, Context notificationContext) {
         this.networkChangeListener = networkChangeListener;
-        this.notificationContext = notificationContext;
         // resolve system service "ConnectivityManager"
         connectivityManager = (ConnectivityManager) notificationContext.getSystemService(Context.CONNECTIVITY_SERVICE);
         Network currentlyActiveNetwork = connectivityManager.getActiveNetwork();
@@ -91,9 +87,9 @@ public class NetworkHelper  {
     /**
      * Register to be called in event of internet available.
      */
-    private void registerConnectivityReceiver() {
+    private synchronized void registerConnectivityReceiver() {
         // register specific connectivity callback
-        if (connectivityManager != null) {
+        if (connectivityManager != null && networkCallback == null) {
             NetworkRequest.Builder builder = new NetworkRequest.Builder().
                     addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET).
                     addCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN).
@@ -115,9 +111,15 @@ public class NetworkHelper  {
         }
     }
 
-    private void unregisterConnectivityReceiver() {
-        if (connectivityManager != null) {
-            connectivityManager.unregisterNetworkCallback (networkCallback);
+    private synchronized void unregisterConnectivityReceiver() {
+        try {
+            if (connectivityManager != null && networkCallback != null) {
+                connectivityManager.unregisterNetworkCallback(networkCallback);
+            }
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Unable to unregister network callback", e);
+        } finally {
+            networkCallback = null;
         }
     }
 

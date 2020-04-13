@@ -74,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
     public static final String TIC_PASSWORD = "tic_password";
     public static final String TIC_HOST = "tic_host";
     public static final String DTLS_CERTS = "dtls_certs";
-    public static final String DTLS_KEY = "dtls_key";
+    public static final String DTLS_KEY_ALIAS = "dtls_key_alias";
 
     /** A TextView that presents in natural language, what is going on */
     private TextView activity;
@@ -102,7 +102,7 @@ public class MainActivity extends AppCompatActivity {
     public static final String BC_STATUS_UPDATE = MainActivity.class.getName() + ".STATUS_REQUEST";
 
     /**
-     * The receiver for status broadcasts from the AyiyaVpnService.
+     * The receiver for status broadcasts from the IPv6DroidVpnService.
      */
     private StatusReceiver statusReceiver;
 
@@ -270,7 +270,7 @@ public class MainActivity extends AppCompatActivity {
                 (       (myPreferences.getString(TIC_USERNAME, "").isEmpty() ||
                          myPreferences.getString(TIC_PASSWORD, "").isEmpty() ||
                          host.isEmpty()) &&
-                        (myPreferences.getString(DTLS_KEY, "").isEmpty() ||
+                        (myPreferences.getString(DTLS_KEY_ALIAS, "").isEmpty() ||
                          myPreferences.getString(DTLS_CERTS, "").isEmpty())
                 ) ||
                 (myPreferences.getString(TIC_USERNAME, "").equals(Subscription.GOOGLESUBSCRIPTION)
@@ -312,7 +312,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Broadcast a status update request. If there's a AyiyaVpnService out there, it will respond
+     * Broadcast a status update request. If there's a IPv6DroidVpnService out there, it will respond
      * with a standard status message.
      */
     private void requestStatus () {
@@ -335,10 +335,10 @@ public class MainActivity extends AppCompatActivity {
         switch (requestCode) {
             case REQUEST_START_VPN:
                 if (resultCode == RESULT_OK) {
-                    Intent intent = new Intent(this, AyiyaVpnService.class).setAction("android.net.VpnService");
+                    Intent intent = new Intent(this, IPv6DroidVpnService.class).setAction("android.net.VpnService");
                     if (tunnels.isTunnelActive()) {
                         // Android's Parcel system doesn't handle subclasses well, so...
-                        intent.putExtra(AyiyaVpnService.EXTRA_CACHED_TUNNELS, tunnels.getAndroidSerializable());
+                        intent.putExtra(IPv6DroidVpnService.EXTRA_CACHED_TUNNELS, tunnels.getAndroidSerializable());
                     }
                     if (Build.VERSION.SDK_INT >= 26) {
                         startForegroundService(intent);

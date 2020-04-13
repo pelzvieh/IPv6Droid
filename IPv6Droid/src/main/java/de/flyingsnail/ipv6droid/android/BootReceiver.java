@@ -1,21 +1,24 @@
 /*
- * Copyright (c) 2015 Dr. Andreas Feldner.
  *
- *     This program is free software; you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation; either version 2 of the License, or
- *     (at your option) any later version.
+ *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  *
+ *  *     This program is free software; you can redistribute it and/or modify
+ *  *     it under the terms of the GNU General Public License as published by
+ *  *     the Free Software Foundation; either version 2 of the License, or
+ *  *     (at your option) any later version.
+ *  *
+ *  *     This program is distributed in the hope that it will be useful,
+ *  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  *     GNU General Public License for more details.
+ *  *
+ *  *     You should have received a copy of the GNU General Public License along
+ *  *     with this program; if not, write to the Free Software Foundation, Inc.,
+ *  *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *  *
+ *  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License along
- *     with this program; if not, write to the Free Software Foundation, Inc.,
- *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  */
 package de.flyingsnail.ipv6droid.android;
 
@@ -31,7 +34,7 @@ import android.util.Log;
 import java.io.IOException;
 
 /**
- * This provides a callback function, asking AyiyaVpnService to start the VPN tunnel when it receives a boot completed
+ * This provides a callback function, asking IPv6DroidVpnService to start the VPN tunnel when it receives a boot completed
  * message.
  */
 public class BootReceiver extends BroadcastReceiver {
@@ -54,9 +57,9 @@ public class BootReceiver extends BroadcastReceiver {
                     Intent systemVpnIntent = VpnService.prepare(context);
                     if (systemVpnIntent == null) {
                         Log.d(TAG, "No explicit user consent required - going ahead!");
-                        Intent i = new Intent(context, AyiyaVpnService.class);
+                        Intent i = new Intent(context, IPv6DroidVpnService.class);
                         // Android's Parcel system doesn't handle subclasses well, so...
-                        i.putExtra(AyiyaVpnService.EXTRA_CACHED_TUNNELS, tunnels.getAndroidSerializable());
+                        i.putExtra(IPv6DroidVpnService.EXTRA_CACHED_TUNNELS, tunnels.getAndroidSerializable());
 
                         if (Build.VERSION.SDK_INT >= 26) {
                             context.startForegroundService(i);

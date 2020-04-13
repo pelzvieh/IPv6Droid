@@ -27,11 +27,11 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 import org.bouncycastle.tls.Certificate;
 import org.bouncycastle.tls.DTLSClientProtocol;
 import org.bouncycastle.tls.DTLSTransport;
 import org.bouncycastle.tls.DatagramTransport;
+import org.bouncycastle.tls.SignatureAlgorithm;
 import org.bouncycastle.tls.TlsClient;
 import org.bouncycastle.tls.UDPTransport;
 import org.bouncycastle.tls.crypto.TlsCrypto;
@@ -43,6 +43,7 @@ import java.io.OutputStream;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.nio.ByteBuffer;
+import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.util.Date;
 
@@ -78,13 +79,17 @@ public class DTLSTransporter implements Transporter {
 
   private final Certificate certChain;
 
-  private final AsymmetricKeyParameter privateKey;
+  private final PrivateKey privateKey;
 
   private final TlsCrypto crypto;
 
 
   public DTLSTransporter (TransporterParams params) {
-    crypto = new BcTlsCrypto(new SecureRandom());
+    crypto = new BcTlsCrypto(new SecureRandom()) {
+      public boolean hasSignatureAlgorithm (short signatureAlgorithm) {
+        return signatureAlgorithm == SignatureAlgorithm.rsa;
+      }
+    };
 
     this.params = params;
     ipv4Pop = params.getIPv4Pop();

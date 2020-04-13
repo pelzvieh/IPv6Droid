@@ -42,6 +42,8 @@ import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
 import org.bouncycastle.crypto.params.RSAPrivateCrtKeyParameters;
 import org.bouncycastle.crypto.util.PrivateKeyFactory;
 import org.bouncycastle.tls.Certificate;
+import org.bouncycastle.tls.DefaultTlsCredentialedSigner;
+import org.bouncycastle.tls.SignatureAlgorithm;
 import org.bouncycastle.tls.SignatureAndHashAlgorithm;
 import org.bouncycastle.tls.TlsContext;
 import org.bouncycastle.tls.TlsCredentialedDecryptor;
@@ -50,8 +52,9 @@ import org.bouncycastle.tls.TlsUtils;
 import org.bouncycastle.tls.crypto.TlsCertificate;
 import org.bouncycastle.tls.crypto.TlsCrypto;
 import org.bouncycastle.tls.crypto.TlsCryptoParameters;
+import org.bouncycastle.tls.crypto.TlsSigner;
+import org.bouncycastle.tls.crypto.TlsStreamSigner;
 import org.bouncycastle.tls.crypto.impl.bc.BcDefaultTlsCredentialedDecryptor;
-import org.bouncycastle.tls.crypto.impl.bc.BcDefaultTlsCredentialedSigner;
 import org.bouncycastle.tls.crypto.impl.bc.BcTlsCrypto;
 import org.bouncycastle.util.Arrays;
 import org.bouncycastle.util.io.pem.PemObject;
@@ -65,6 +68,11 @@ import java.math.BigInteger;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.URL;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.Signature;
+import java.security.SignatureException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -221,31 +229,43 @@ class DTLSUtils {
         return signatureAndHashAlgorithm;
     }
 
-    public static TlsCredentialedSigner loadSignerCredentials(TlsContext context,
-                                                              Vector<SignatureAndHashAlgorithm> supportedSignatureAlgorithms,
-                                                              short signatureAlgorithm,
-                                                              String[] certResources,
-                                                              String keyResource) throws IOException, NoSupportedAlgorithm {
-
-        Certificate certificate = loadCertificateChain(context, certResources);
-        AsymmetricKeyParameter privateKey = loadBcPrivateKeyResource(keyResource);
-
-        return loadSignerCredentials(context, supportedSignatureAlgorithms, signatureAlgorithm,
-                certificate, privateKey);
-    }
-
-
 
     static TlsCredentialedSigner loadSignerCredentials(TlsContext context,
                                                        Vector<SignatureAndHashAlgorithm> supportedSignatureAlgorithms,
                                                        short signatureAlgorithm,
                                                        Certificate certificate,
-                                                       AsymmetricKeyParameter privateKey) throws NoSupportedAlgorithm {
+                                                       PrivateKey privateKey) throws NoSupportedAlgorithm {
         TlsCrypto crypto = context.getCrypto();
         TlsCryptoParameters cryptoParams = new TlsCryptoParameters(context);
         SignatureAndHashAlgorithm signatureAndHashAlgorithm = algorithmForCode(supportedSignatureAlgorithms, signatureAlgorithm);
 
-        return new BcDefaultTlsCredentialedSigner(cryptoParams, (BcTlsCrypto)crypto, privateKey, certificate, signatureAndHashAlgorithm);
+        TlsSigner signer = new TlsSigner() {
+            @Override
+            public byte[] generateRawSignature(SignatureAndHashAlgorithm algorithm, byte[] hash) throws IOException {
+                Signature s = null;
+                if (algorithm.getSignature() != SignatureAlgorithm.rsa)
+                    throw new IOException("Signature algorithm of algorithm  not supported: " + algorithm.toString());
+                try {
+                    s = Signature.getInstance("SHA256withRSA"); // todo derive from algorithm, or at least check it to be the one supported algorithm
+                    s.initSign(privateKey);
+                    s.update(hash);
+                    byte[] signature = s.sign();
+                    return signature;
+                } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
+                    throw new IOException("Cannot create requested signature", e);
+                }
+            }
+
+            @Override
+            public TlsStreamSigner getStreamSigner(SignatureAndHashAlgorithm algorithm) throws IOException {
+                return null; // this is actually the same implementation as used with BcTlsRSASigner.... wtf?!
+            }
+        };
+        return new DefaultTlsCredentialedSigner(
+                cryptoParams,
+                signer,
+                certificate,
+                signatureAndHashAlgorithm);
     }
 
     static boolean areSameCertificate(TlsCertificate a, TlsCertificate b) throws IOException {

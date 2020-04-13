@@ -45,7 +45,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import de.flyingsnail.ipv6droid.R;
-import de.flyingsnail.ipv6droid.android.AyiyaVpnService;
+import de.flyingsnail.ipv6droid.android.IPv6DroidVpnService;
 import de.flyingsnail.ipv6droid.android.statistics.Statistics;
 
 /**
@@ -59,7 +59,7 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
     private static final String TAG = StatisticsFragment.class.getName();
 
 
-    private AyiyaVpnService.StatisticsBinder statisticsBinder;
+    private IPv6DroidVpnService.StatisticsBinder statisticsBinder;
 
 
     private TextView startedAt;
@@ -111,18 +111,18 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
         super.onCreate(savedInstanceState);
         // create scheduled executor
         executor = new ScheduledThreadPoolExecutor(1);
-        // bind to AyiyaVpnService for statistics
+        // bind to IPv6DroidVpnService for statistics
         bindToStatistics();
         timestampFormatter = android.text.format.DateFormat.getTimeFormat(getActivity());
         Log.i(TAG, "Creation successful");
     }
 
     /**
-     * request to bind to the statistics interface of the AyiyaVpnService.
+     * request to bind to the statistics interface of the IPv6DroidVpnService.
      */
     private void bindToStatistics() {
-        Intent intent = new Intent(getActivity(), AyiyaVpnService.class);
-        intent.setAction(AyiyaVpnService.STATISTICS_INTERFACE);
+        Intent intent = new Intent(getActivity(), IPv6DroidVpnService.class);
+        intent.setAction(IPv6DroidVpnService.STATISTICS_INTERFACE);
         if (!getActivity().bindService(intent, this, 0))
             Log.e(StatisticsFragment.TAG, "Bind request to statistics interface failed");
     }
@@ -218,13 +218,13 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
 
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
-        Log.d(TAG, "Bound to statistics service of AyiyaVpnService");
-        statisticsBinder = (AyiyaVpnService.StatisticsBinder)service;
+        Log.d(TAG, "Bound to statistics service of IPv6DroidVpnService");
+        statisticsBinder = (IPv6DroidVpnService.StatisticsBinder)service;
     }
 
     @Override
     public void onServiceDisconnected(ComponentName name) {
-        Log.i(TAG, "Connection to statistics service of AyiyaVpnService lost");
+        Log.i(TAG, "Connection to statistics service of IPv6DroidVpnService lost");
         statisticsBinder = null;
     }
 

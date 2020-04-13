@@ -109,4 +109,12 @@
     <string name="statistics_started_at">Started at</string>
     <string name="statistics_reconnects">Reconnects</string>
     <string name="vpnthread_interrupted">We\'re interrupted</string>
+    <string name="pref_header_dtls_key_create">Create DTLS key and certificates</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="key_name">Key name for creation</string>
+    <string name="button_create_key">Create key</string>
+    <string name="vpnservice_toast_cache_unreadable">Cannot read locally cached tunnels</string>
+    <string name="certificate_signing_request">Certificate Signing Request</string>
+    <string name="copy_to_clipboard">Copy to Clipboard</string>
 </resources>

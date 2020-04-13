@@ -107,5 +107,11 @@
     <string name="statistics_started_at">Start um</string>
     <string name="statistics_reconnects">Wiederverbindung</string>
     <string name="vpnthread_interrupted">Tunnel abgebrochen</string>
+    <string name="key_name">Schlüsselname für Erstellen</string>
+    <string name="button_create_key">Schlüssel erstellen</string>
+    <string name="pref_header_dtls_key_create">Schlüssel- und Zertifikatserzeugung</string>
+    <string name="vpnservice_toast_cache_unreadable">Zwischengespeicherte Schlüssel nicht lesbar</string>
+    <string name="certificate_signing_request">Zertifizierungsantrag</string>
+    <string name="copy_to_clipboard">Kopieren</string>
 
 </resources>

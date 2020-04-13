@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ /*
+  ~  * Copyright (c) 2020 Dr. Andreas Feldner.
+  ~  *
+  ~  *     This program is free software; you can redistribute it and/or modify
+  ~  *     it under the terms of the GNU General Public License as published by
+  ~  *     the Free Software Foundation; either version 2 of the License, or
+  ~  *     (at your option) any later version.
+  ~  *
+  ~  *     This program is distributed in the hope that it will be useful,
+  ~  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~  *     GNU General Public License for more details.
+  ~  *
+  ~  *     You should have received a copy of the GNU General Public License along
+  ~  *     with this program; if not, write to the Free Software Foundation, Inc.,
+  ~  *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  ~  *
+  ~  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
+  ~  */
+  ~
+  -->
+
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/frameLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".android.dtlsrequest.KeyRequestFragment">
+
+    <Spinner
+        android:id="@+id/selectedKeyAlias"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toTopOf="@+id/csrLabel"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.050000012"
+        app:layout_constraintVertical_chainStyle="packed" />
+
+    <TextView
+        android:id="@+id/csrLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:labelFor="@id/csrText"
+        android:text="@string/certificate_signing_request"
+        app:layout_constraintBottom_toTopOf="@+id/csrText"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/selectedKeyAlias" />
+
+    <TextView
+        android:id="@+id/csrText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:fontFamily="serif-monospace"
+        android:gravity="start|top"
+        android:scrollHorizontally="true"
+        android:textIsSelectable="true"
+        android:textSize="8sp"
+        app:layout_constrainedHeight="true"
+        app:layout_constraintBottom_toTopOf="@+id/copyToClipboard"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/csrLabel"
+        tools:text="-----BEGIN CERTIFICATE REQUEST-----\n
+MIIC6DCCAdACAQAwgaIxCzAJBgNVBAYTAkRFMQ8wDQYDVQQIDAZIZXNzaWExGDAW\n
+BgNVBAcMD05pZWRlcmRvcmZlbGRlbjEkMCIGA1UECgwbRmx5aW5nIEZ1cnJ5IFNu\n
+YWlsIENyZWF0dXJlMRQwEgYDVQQLDAtEZXZlbG9wbWVudDEsMCoGA1UEAwwjZHRs\n
+c2NsaWVudC5pbnRlcm5hbC5mbHlpbmctc25haWwuZGUwggEiMA0GCSqGSIb3DQEB\n
+AQUAA4IBDwAwggEKAoIBAQDS0ICluAZWpJpQKitZvjHE2aNmvSA7LXwHqA7RWjYv\n
+9H8eyJqdkPTbfGIeAQbpC7FXk5sxHBr70L6N+bEXXoz19lLzeZpTitQdBUfmyEeS\n
+PA/gEfpo4ggHGXlevEIiwzeKB32LaF1Dp5iMyQJ+aKsDG1RVMyjLGNP5UaoqolpB\n
+4nxe9QqRXY5a2n+/MNweBbp6+tqZ5TBXxoM6p2s+N5m8PzmCqXhBsBg9soRXkH5U\n
+iNg/feSmCGLJXD7ZorDjVGIka95rSV6mPWnxFU3/ibDQUDB5cIWBaaHTZ8aOqjip\n
+vJcL8kqQsBODdOJ8NBZiblEfNRcOTUf/U7E9RrwG+hilAgMBAAGgADANBgkqhkiG\n
+9w0BAQsFAAOCAQEALefBOfh7SwcWOh9JdPAO3QLGtV+bnmUMuRXWdxMwA6eA9iig\n
+EE7UxSOajKHxmQyDFh0rucNeYVonFt7TGFAWW1A4VWl6S/tEyBS3oRKq6MF5TleZ\n
+4ZP+fwgakRAnKb93EJ0yhBoHkrJTvSXyMagLgvTrt5oR2LPV3jt31wmDkvg0hFOo\n
+fcKv9NrdUFvUByVlHqA5Ht6pPJ//nRiNwKS7tAxOqoPhORdg1E4iGrHlNRfkbF9q\n
+wCowNc/kiy6+54EUv2WJK7SVfQe7cp2oGO8FdHRC+dwz6DNnBpVWqiaONeHD4/I4\n
+vxJ42DUufKzH9ODDnyt5RSCWwipOZoEiTuJrRQ==\n
+-----END CERTIFICATE REQUEST-----" />
+
+    <Button
+        android:id="@+id/copyToClipboard"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/copy_to_clipboard"
+        app:layout_constraintBottom_toTopOf="@+id/labelKeyAlias"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/csrText" />
+
+    <TextView
+        android:id="@+id/labelKeyAlias"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:labelFor="@id/keyAlias"
+        android:text="@string/key_name"
+        app:layout_constraintBottom_toTopOf="@+id/keyAlias"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/csrText"
+        app:layout_constraintVertical_bias="0.49"
+        app:layout_constraintVertical_chainStyle="packed" />
+
+    <EditText
+        android:id="@+id/keyAlias"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:importantForAutofill="no"
+        android:inputType="textPersonName"
+        android:text=""
+        app:layout_constraintBottom_toTopOf="@+id/keyCreate"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/labelKeyAlias"
+        tools:text="Android-0" />
+
+    <Button
+        android:id="@+id/keyCreate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/button_create_key"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/keyAlias" />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>

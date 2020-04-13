@@ -44,12 +44,12 @@ public class VpnStatusReport implements Serializable, Cloneable {
     /**
      * The Action name for a status broadcast intent.
      */
-    public static final String BC_STATUS = AyiyaVpnService.class.getName() + ".STATUS";
+    public static final String BC_STATUS = IPv6DroidVpnService.class.getName() + ".STATUS";
 
     /**
      * The extended data name for the status in a status broadcast intent.
      */
-    public static final String EDATA_STATUS_REPORT = AyiyaVpnService.class.getName() + ".STATUS_REPORT";
+    public static final String EDATA_STATUS_REPORT = IPv6DroidVpnService.class.getName() + ".STATUS_REPORT";
     private static final String TAG = VpnStatusReport.class.getName();
 
     /**
@@ -299,7 +299,7 @@ public class VpnStatusReport implements Serializable, Cloneable {
     public String toString() {
         // @todo internationalize
         return "changed to " + status.toString() + ", " +
-                (tunnels == null ? "no tunnel" : (String.valueOf(tunnels.size()) + " tunnels")) + ", " +
+                (tunnels == null ? "no tunnel" : (tunnels.size() + " tunnels")) + ", " +
                 (getActiveTunnel() == null ? "none active" : "active " + getActiveTunnel().getTunnelName()) +
                 (cause == null ? "" : ", cause class " + cause.getClass().getName());
     }

@@ -23,13 +23,12 @@
 
 package de.flyingsnail.ipv6droid.transport.dtls;
 
-import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
+import org.bouncycastle.tls.AbstractTlsClient;
 import org.bouncycastle.tls.AlertDescription;
 import org.bouncycastle.tls.AlertLevel;
 import org.bouncycastle.tls.Certificate;
 import org.bouncycastle.tls.CertificateRequest;
 import org.bouncycastle.tls.ClientCertificateType;
-import org.bouncycastle.tls.DefaultTlsClient;
 import org.bouncycastle.tls.DefaultTlsHeartbeat;
 import org.bouncycastle.tls.HeartbeatMode;
 import org.bouncycastle.tls.ProtocolVersion;
@@ -45,15 +44,18 @@ import org.bouncycastle.tls.crypto.TlsCrypto;
 import org.bouncycastle.util.Arrays;
 
 import java.io.IOException;
+import java.security.PrivateKey;
 import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static org.bouncycastle.tls.CipherSuite.TLS_DHE_RSA_WITH_AES_128_CBC_SHA256;
 
 /**
  * A TlsClient as defined by the Bouncy Castle low level TLS API, sub-class-configured to serve
  * for the IPv6Droid DTLS implementation.
  */
-class IPv6DTlsClient extends DefaultTlsClient {
+class IPv6DTlsClient extends AbstractTlsClient {
 
     private final int heartbeat;
 
@@ -63,7 +65,7 @@ class IPv6DTlsClient extends DefaultTlsClient {
 
     private Certificate certChain;
 
-    private AsymmetricKeyParameter privateKey;
+    private PrivateKey privateKey;
 
     /**
      * Constructor.
@@ -72,7 +74,7 @@ class IPv6DTlsClient extends DefaultTlsClient {
      * @param certChain a Certificate object carrying the complete certificate chain.
      * @param privateKey a AsymmetricKeyParameter giving the corresponding private key.
      */
-    public IPv6DTlsClient(TlsCrypto crypto, int heartbeat, Certificate certChain, AsymmetricKeyParameter privateKey) {
+    public IPv6DTlsClient(TlsCrypto crypto, int heartbeat, Certificate certChain, PrivateKey privateKey) {
         super(crypto);
         this.heartbeat = heartbeat;
         this.certChain = certChain;
@@ -153,5 +155,10 @@ class IPv6DTlsClient extends DefaultTlsClient {
     @Override
     protected ProtocolVersion[] getSupportedVersions() {
         return ProtocolVersion.DTLSv12.downTo(ProtocolVersion.DTLSv10);
+    }
+
+    @Override
+    protected int[] getSupportedCipherSuites() {
+        return new int[]{TLS_DHE_RSA_WITH_AES_128_CBC_SHA256};
     }
 }

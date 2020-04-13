@@ -27,15 +27,18 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.InputType;
-import android.widget.EditText;
+import android.util.Log;
 
-import androidx.annotation.NonNull;
 import androidx.preference.EditTextPreference;
+import androidx.preference.ListPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.TwoStatePreference;
 
+import java.io.IOException;
+
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.dtlsrequest.AndroidBackedKeyPair;
 
 /**
  * A {@link PreferenceFragmentCompat} that presents a set of application settings. On
@@ -45,6 +48,8 @@ import de.flyingsnail.ipv6droid.R;
  */
 public class SettingsFragment extends PreferenceFragmentCompat {
 
+    private final static String TAG = SettingsFragment.class.getName();
+
     @Override
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
         // Load the preferences from an XML resource
@@ -53,72 +58,56 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         // set special input types
         final EditTextPreference username = findPreference("tic_username");
         username.setOnBindEditTextListener(
-                new EditTextPreference.OnBindEditTextListener() {
-                    @Override
-                    public void onBindEditText(@NonNull EditText editText) {
-                        editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PERSON_NAME);
-                        editText.setSingleLine(true);
-                        editText.setSelectAllOnFocus(true);
-                    }
+                editText -> {
+                    editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PERSON_NAME);
+                    editText.setSingleLine(true);
+                    editText.setSelectAllOnFocus(true);
                 }
         );
 
         final EditTextPreference password = findPreference("tic_password");
         password.setOnBindEditTextListener(
-                new EditTextPreference.OnBindEditTextListener() {
-                    @Override
-                    public void onBindEditText(@NonNull EditText editText) {
-                        editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-                        editText.setSingleLine(true);
-                        editText.setSelectAllOnFocus(true);
-                    }
+                editText -> {
+                    editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+                    editText.setSingleLine(true);
+                    editText.setSelectAllOnFocus(true);
                 }
         );
 
         final EditTextPreference host = findPreference("tic_host");
         host.setOnBindEditTextListener(
-                new EditTextPreference.OnBindEditTextListener() {
-                    @Override
-                    public void onBindEditText(@NonNull EditText editText) {
-                        editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
-                        editText.setSingleLine(true);
-                        editText.setSelectAllOnFocus(true);
-                    }
+                editText -> {
+                    editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+                    editText.setSingleLine(true);
+                    editText.setSelectAllOnFocus(true);
                 }
         );
 
         final EditTextPreference routesSpecific = findPreference("routes_specific");
         routesSpecific.setOnBindEditTextListener(
-                new EditTextPreference.OnBindEditTextListener() {
-                    @Override
-                    public void onBindEditText(@NonNull EditText editText) {
-                        editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS | InputType.TYPE_TEXT_VARIATION_URI);
-                        editText.setSingleLine(true);
-                        editText.setSelectAllOnFocus(false);
-                    }
+                editText -> {
+                    editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS | InputType.TYPE_TEXT_VARIATION_URI);
+                    editText.setSingleLine(true);
+                    editText.setSelectAllOnFocus(false);
                 }
         );
 
-        final EditTextPreference dtlsKey = findPreference("dtls_key");
-        dtlsKey.setOnBindEditTextListener(
-                new EditTextPreference.OnBindEditTextListener() {
-                    @Override
-                    public void onBindEditText(@NonNull EditText editText) {
-                        editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_VARIATION_LONG_MESSAGE);
-                        editText.setSingleLine(false);
-                        editText.setSelectAllOnFocus(false);
-                    }
-                }
-        );
+        final ListPreference dtlsKeyAlias = findPreference("dtls_key_alias");
+        CharSequence[] keys = new CharSequence[0];
+        try {
+            keys = AndroidBackedKeyPair.listAliases().toArray(keys);
+        } catch (IOException e) {
+            Log.i(TAG, "No key pair in Android Key Store");
+        }
+        dtlsKeyAlias.setEntries(keys);
+        dtlsKeyAlias.setEntryValues(keys);
+
         final EditTextPreference dtlsCerts = findPreference("dtls_certs");
         dtlsCerts.setOnBindEditTextListener(
-                new EditTextPreference.OnBindEditTextListener() {
-                    @Override
-                    public void onBindEditText(@NonNull EditText editText) {
-                        editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_VARIATION_LONG_MESSAGE);
-                        editText.setSingleLine(false);
-                        editText.setSelectAllOnFocus(false);
-                    }
+                editText -> {
+                    editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_VARIATION_LONG_MESSAGE);
+                    editText.setSingleLine(false);
+                    editText.setSelectAllOnFocus(false);
                 }
         );
     }
@@ -128,23 +117,26 @@ public class SettingsFragment extends PreferenceFragmentCompat {
      * to reflect its new value.
      */
     private SharedPreferences.OnSharedPreferenceChangeListener preferenceSummaryToValueListener =
-            new SharedPreferences.OnSharedPreferenceChangeListener() {
-                @Override
-                public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-                    Preference preference = findPreference(key);
-                    if (preference == null)
-                        return;
-                    if (preference instanceof TwoStatePreference)
-                        return;
-                    if (preference instanceof EditTextPreference && key.contains("password")) {
-                        String value = sharedPreferences.getString(key, "");
-                        if (!value.isEmpty())
-                            preference.setSummary (R.string.password_set);
-                        else
-                            preference.setSummary (R.string.password_unset);
-                    } else if (preference instanceof EditTextPreference){
-                        preference.setSummary(sharedPreferences.getString(key, ""));
+            (sharedPreferences, key) -> {
+                Preference preference = findPreference(key);
+                if (preference == null)
+                    return;
+                if (preference instanceof TwoStatePreference)
+                    return;
+                if ("dtls_key_alias".equals(key)) {
+                    try {
+                        preference.setSummary(new AndroidBackedKeyPair(sharedPreferences.getString(key, "")).getCertificationRequest());
+                    } catch (IOException | RuntimeException e) {
+                        preference.setSummary("E: " + e.getMessage());
                     }
+                } else if (preference instanceof EditTextPreference && key.contains("password")) {
+                    String value = sharedPreferences.getString(key, "");
+                    if (!value.isEmpty())
+                        preference.setSummary (R.string.password_set);
+                    else
+                        preference.setSummary (R.string.password_unset);
+                } else if (preference instanceof EditTextPreference){
+                    preference.setSummary(sharedPreferences.getString(key, ""));
                 }
             };
 

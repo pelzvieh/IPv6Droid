@@ -1,26 +1,32 @@
 /*
- * Copyright (c) 2015 Dr. Andreas Feldner.
  *
- *     This program is free software; you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation; either version 2 of the License, or
- *     (at your option) any later version.
+ *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  *
+ *  *     This program is free software; you can redistribute it and/or modify
+ *  *     it under the terms of the GNU General Public License as published by
+ *  *     the Free Software Foundation; either version 2 of the License, or
+ *  *     (at your option) any later version.
+ *  *
+ *  *     This program is distributed in the hope that it will be useful,
+ *  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  *     GNU General Public License for more details.
+ *  *
+ *  *     You should have received a copy of the GNU General Public License along
+ *  *     with this program; if not, write to the Free Software Foundation, Inc.,
+ *  *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *  *
+ *  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License along
- *     with this program; if not, write to the Free Software Foundation, Inc.,
- *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  */
 package de.flyingsnail.ipv6droid.android;
 
 import android.net.TrafficStats;
 import android.util.Log;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,8 +36,6 @@ import java.util.Date;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.statistics.TransmissionStatistics;
 
@@ -49,7 +53,7 @@ class CopyThread extends Thread {
     private boolean stopCopy;
     private final int networkTag;
     // instance of the service controlling this thread
-    private AyiyaVpnService ayiyaVpnService;
+    private IPv6DroidVpnService IPv6DroidVpnService;
     // instance of the Thread controlling the copy threads.
     private VpnThread vpnThread;
     // time when last packet received
@@ -73,7 +77,7 @@ class CopyThread extends Thread {
      * Instantiate and run(!) a thread that copies from in to out until interrupted.
      * @param in The stream to copy from.
      * @param out The stream to copy to.
-     * @param ayiyaVpnService the service instance of the active AyiyaVpnService that controls this thread.
+     * @param IPv6DroidVpnService the service instance of the active IPv6DroidVpnService that controls this thread.
      * @param vpnThread the VpnThread controlling the copy threads.
      * @param threadName a String giving the name of the Thread (as shown in some logs and debuggers)
      * @param networkTag an int representing the tag for network statistics of this thread
@@ -82,7 +86,7 @@ class CopyThread extends Thread {
      */
     public CopyThread(final @NonNull InputStream in,
                       final @NonNull OutputStream out,
-                      @NonNull AyiyaVpnService ayiyaVpnService,
+                      @NonNull IPv6DroidVpnService IPv6DroidVpnService,
                       @NonNull VpnThread vpnThread,
                       @NonNull String threadName,
                       int networkTag,
@@ -94,7 +98,7 @@ class CopyThread extends Thread {
         this.out = out;
         this.networkTag = networkTag;
         this.setName(threadName);
-        this.ayiyaVpnService = ayiyaVpnService;
+        this.IPv6DroidVpnService = IPv6DroidVpnService;
         this.vpnThread = vpnThread;
         this.packetBundlingPeriod = packetBundlingPeriod;
         int packetBufferLength = (packetBundlingPeriod > 0) ? MAX_PACKET_BUFFER_LENGTH : 0;
@@ -181,7 +185,7 @@ class CopyThread extends Thread {
                 } else {
                     recvZero++;
                     if (recvZero == 10000) {
-                        ayiyaVpnService.notifyUserOfError(R.string.copythreadexception, new IllegalStateException(
+                        IPv6DroidVpnService.notifyUserOfError(R.string.copythreadexception, new IllegalStateException(
                                 Thread.currentThread().getName() + ": received 0 byte packages"
                         ));
                     }
@@ -196,7 +200,7 @@ class CopyThread extends Thread {
                 Log.i(TAG, "Copy thread " + getName() + " ran into expected Exception, will end gracefully");
             } else {
                 Log.e(TAG, "Copy thread " + getName() + " got exception", e);
-                ayiyaVpnService.notifyUserOfError(R.string.copythreadexception, e);
+                IPv6DroidVpnService.notifyUserOfError(R.string.copythreadexception, e);
             }
         } finally {
             cleanAll();
