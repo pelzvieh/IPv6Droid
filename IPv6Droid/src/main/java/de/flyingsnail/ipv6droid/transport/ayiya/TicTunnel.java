@@ -29,7 +29,6 @@ import androidx.annotation.NonNull;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
-import java.net.UnknownHostException;
 import java.util.Date;
 
 /**
@@ -321,57 +320,6 @@ public class TicTunnel implements de.flyingsnail.ipv6droid.transport.TunnelSpec 
 
     public void setExpiryMillis(long expiry) {
         this.expiryDate = new Date(expiry);
-    }
-
-
-
-    /**
-     * This is for Tic, really - it takes the keywords as given by the Tic protocol to describe
-     * a tunnel set the respective properties.
-     * @param key a String representing the key as of Tic tunnel query.
-     * @param value a String representing the value.
-     * @return true if we could identify the key and parse the value.
-     */
-    protected boolean parseKeyValue(String key, String value) {
-        // we cannot use Java 7 switch on String, so implementation is no fun at all :-(
-        try {
-            if ("TunnelId".equalsIgnoreCase(key))
-                setTunnelId(value);
-            else if ("Type".equalsIgnoreCase(key))
-                setType(value);
-            else if ("IPv6 Endpoint".equalsIgnoreCase(key))
-                setIpv6Endpoint((Inet6Address)Inet6Address.getByName(value));
-            else if ("IPv6 PoP".equalsIgnoreCase(key))
-                setIpv6Pop((Inet6Address)Inet6Address.getByName(value));
-            else if ("IPv6 PrefixLength".equalsIgnoreCase(key))
-                setPrefixLength(Integer.parseInt(value));
-            else if ("PoP Name".equalsIgnoreCase(key) || "PoP Id".equalsIgnoreCase(key))
-                setPopName(value);
-            else if ("IPv4 Endpoint".equalsIgnoreCase(key))
-                key = key; // we're not interested
-            else if ("IPv4 PoP".equalsIgnoreCase(key))
-                setIPv4Pop((Inet4Address)Inet4Address.getByName(value));
-            else if ("UserState".equalsIgnoreCase(key))
-                setUserState(value);
-            else if ("AdminState".equalsIgnoreCase(key))
-                setAdminState(value);
-            else if ("Password".equalsIgnoreCase(key))
-                setPassword(value);
-            else if ("Heartbeat_Interval".equalsIgnoreCase(key))
-                setHeartbeatInterval(Integer.parseInt(value));
-            else if ("Tunnel MTU".equalsIgnoreCase(key))
-                setMtu(Integer.parseInt(value));
-            else if ("Tunnel Name".equalsIgnoreCase(key))
-                setTunnelName(value);
-            else
-                return false;
-
-            return true; // if we're here, some method call succeeded.
-        } catch (UnknownHostException e) {
-            Log.e(TAG, "unable to resolve string intended to be an address: " + value);
-            return false;
-        }
-
     }
 
     /**

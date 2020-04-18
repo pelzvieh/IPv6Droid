@@ -54,7 +54,6 @@ import java.io.IOException;
 
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.googlesubscription.SubscribeTunnelActivity;
-import de.flyingsnail.ipv6droid.android.googlesubscription.Subscription;
 import de.flyingsnail.ipv6droid.android.statusdetail.StatisticsActivity;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
@@ -70,9 +69,6 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_START_VPN = 1;
     // private static final int REQUEST_SETTINGS = 2;
     private static final int REQUEST_STATISTICS = 3;
-    public static final String TIC_USERNAME = "tic_username";
-    public static final String TIC_PASSWORD = "tic_password";
-    public static final String TIC_HOST = "tic_host";
     public static final String DTLS_CERTS = "dtls_certs";
     public static final String DTLS_KEY_ALIAS = "dtls_key_alias";
 
@@ -264,17 +260,11 @@ public class MainActivity extends AppCompatActivity {
         // check login configuration and start first time setup activity if not yet set.
         SharedPreferences myPreferences = PreferenceManager.getDefaultSharedPreferences(context);
 
-        final String host = myPreferences.getString(TIC_HOST, "");
-
         return (
-                (       (myPreferences.getString(TIC_USERNAME, "").isEmpty() ||
-                         myPreferences.getString(TIC_PASSWORD, "").isEmpty() ||
-                         host.isEmpty()) &&
-                        (myPreferences.getString(DTLS_KEY_ALIAS, "").isEmpty() ||
+                (       (myPreferences.getString(DTLS_KEY_ALIAS, "").isEmpty() ||
                          myPreferences.getString(DTLS_CERTS, "").isEmpty())
-                ) ||
-                (myPreferences.getString(TIC_USERNAME, "").equals(Subscription.GOOGLESUBSCRIPTION)
-                        && !cachedTunnelsAvailable) ) ;
+                ) &&
+                (!cachedTunnelsAvailable) ) ;
     }
 
     /**

@@ -69,6 +69,10 @@ public class Ayiya implements Transporter {
      * Per draft-massar-v6ops-ayiya-02 (July 2004)
      */
     public static final String VERSION = "draft-02";
+    /**
+     * The maximum allowed deviation of TIC and local clocks.
+     */
+    public static final long MAX_TIME_OFFSET = 120;
 
     /** Tag for Logger */
     private static final String TAG = Ayiya.class.getName();
@@ -559,7 +563,7 @@ public class Ayiya implements Transporter {
         ByteBuffer bb = ByteBuffer.wrap(packet, 4+offset, 4);
         int epochTimeRemote = bb.getInt();
         int epochTimeLocal = (int) (new Date().getTime() / 1000);
-        if (Math.abs(epochTimeLocal - epochTimeRemote) > Tic.MAX_TIME_OFFSET) {
+        if (Math.abs(epochTimeLocal - epochTimeRemote) > MAX_TIME_OFFSET) {
             Log.e(TAG, "Received packet from " + (epochTimeLocal-epochTimeRemote) + " in the past");
             return false;
         }

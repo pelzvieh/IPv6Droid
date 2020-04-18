@@ -25,25 +25,6 @@
 <PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:android="http://schemas.android.com/apk/res/android">
     <PreferenceCategory
-        app:title="@string/pref_header_login"
-        app:key="pref_key_login_settings">
-        <EditTextPreference
-            app:key="tic_username"
-            app:title="@string/pref_title_username" />
-
-        <!-- NOTE: EditTextPreference accepts EditText attributes. -->
-        <!-- NOTE: EditTextPreference's summary should be set to its value by the activity code. -->
-        <EditTextPreference
-            app:key="tic_password"
-            app:title="@string/pref_title_password" />
-
-        <!-- NOTE: EditTextPreference accepts EditText attributes. -->
-        <!-- NOTE: EditTextPreference's summary should be set to its value by the activity code. -->
-        <EditTextPreference
-            app:key="tic_host"
-            app:title="@string/pref_title_host" />
-    </PreferenceCategory>
-    <PreferenceCategory
         app:title="@string/pref_header_autostart"
         app:key="pref_key_start_settings">
         <SwitchPreference

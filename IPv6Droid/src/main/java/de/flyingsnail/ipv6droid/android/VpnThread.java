@@ -230,16 +230,11 @@ class VpnThread extends Thread implements NetworkChangeListener {
         this.outgoingStatistics = new TransmissionStatistics();
         TunnelReader tr;
         try {
-            tr = new TicTunnelReader(IPv6DroidVpnService);
-            Log.i(TAG, "Using Tic Tunnel config");
-        } catch (ConnectionFailedException e) {
-            try {
-                tr = new DTLSTunnelReader(IPv6DroidVpnService);
-                Log.i(TAG, "Using DTLS config");
-            } catch (ConnectionFailedException e1) {
-                Log.i(TAG, "Falling back to subscription tunnels", e1);
-                tr = new SubscriptionTunnelReader(IPv6DroidVpnService);
-            }
+            tr = new DTLSTunnelReader(IPv6DroidVpnService);
+            Log.i(TAG, "Using DTLS config");
+        } catch (ConnectionFailedException e1) {
+            Log.i(TAG, "Falling back to subscription tunnels", e1);
+            tr = new SubscriptionTunnelReader(IPv6DroidVpnService);
         }
         this.tunnelReader = tr;
         this.startedAt = new Date(0L);

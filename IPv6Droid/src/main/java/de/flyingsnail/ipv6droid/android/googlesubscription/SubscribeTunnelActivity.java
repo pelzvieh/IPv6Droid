@@ -54,8 +54,6 @@ import de.flyingsnail.ipv6droid.android.TunnelPersisting;
 import de.flyingsnail.ipv6droid.android.TunnelPersistingFile;
 import de.flyingsnail.ipv6droid.android.Tunnels;
 
-import static de.flyingsnail.ipv6droid.android.googlesubscription.Subscription.GOOGLESUBSCRIPTION;
-
 /**
  * Guides the user through managing her subscriptions.
  */
@@ -312,7 +310,6 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
             case HAS_TUNNELS:
             case NO_SUBSCRIPTIONS:
                 // update caches
-                updatePreferences();
                 updateCachedTunnelList();
                 break;
 
@@ -392,21 +389,6 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
         } catch (IOException e) {
             Log.e(TAG, "Could not write cached tunnel list", e);
         }
-    }
-
-    /**
-     * Update configuration of old-style TIC authentication to reflect that they are irrelevant.
-     * Calls for a better solution.
-     */
-    private void updatePreferences() {
-        // write username, server name and password preferences derived from the subscription
-        PreferenceManager.setDefaultValues(getApplicationContext(), R.xml.preferences, false);
-        SharedPreferences.Editor editor = myPreferences.edit();
-        //TODO chunk and cheapness!
-        editor.putString(MainActivity.TIC_USERNAME, GOOGLESUBSCRIPTION);
-        editor.putString(MainActivity.TIC_PASSWORD, GOOGLESUBSCRIPTION);
-        editor.putString(MainActivity.TIC_HOST, GOOGLESUBSCRIPTION);
-        editor.apply();
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
