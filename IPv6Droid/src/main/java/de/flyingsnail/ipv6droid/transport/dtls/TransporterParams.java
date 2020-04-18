@@ -34,6 +34,8 @@ import org.bouncycastle.tls.crypto.TlsCrypto;
 import org.bouncycastle.tls.crypto.impl.bc.BcTlsCrypto;
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.ObjectStreamException;
 import java.io.Serializable;
 import java.net.Inet4Address;
@@ -71,8 +73,9 @@ public class TransporterParams implements TunnelSpec, Serializable {
 
     // Serialization
     private static final long serialVersionUID = 4L;
+    private String dnsPop;
 
-    private void writeObject(java.io.ObjectOutputStream out)
+    private void writeObject(ObjectOutputStream out)
             throws IOException {
         Log.i (TAG, "Serializing");
         out.writeObject(ipv4Pop);
@@ -83,7 +86,7 @@ public class TransporterParams implements TunnelSpec, Serializable {
     }
 
     // Deserialization
-    private void readObject(java.io.ObjectInputStream in)
+    private void readObject(ObjectInputStream in)
             throws IOException, ClassNotFoundException {
         Log.i(TAG, "Deserializing");
         crypto = new BcTlsCrypto(new SecureRandom());
@@ -285,6 +288,7 @@ public class TransporterParams implements TunnelSpec, Serializable {
             setPortPop(port);
             setExpiryDate(DTLSUtils.getExpiryDate(myCert));
             setTunnelId(myCert.getSerialNumber().toString(16));
+            dnsPop = popUrl.getHost();
             if (hostResolver != null && hostResolver.getStatus() == AsyncTask.Status.RUNNING)
                 hostResolver.cancel(true);
             hostResolver = new UrlResolver(popUrl).execute();
@@ -299,6 +303,10 @@ public class TransporterParams implements TunnelSpec, Serializable {
 
     public AndroidBackedKeyPair getKeyPair() {
         return keyPair;
+    }
+
+    public String getDnsPop() {
+        return dnsPop;
     }
 
     /**

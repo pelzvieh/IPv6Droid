@@ -47,7 +47,6 @@ import java.security.SecureRandom;
 import java.util.Date;
 
 import de.flyingsnail.ipv6droid.android.dtlsrequest.AndroidBackedKeyPair;
-import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
 import de.flyingsnail.ipv6droid.transport.Transporter;
 import de.flyingsnail.ipv6droid.transport.TransporterInputStream;
 import de.flyingsnail.ipv6droid.transport.TransporterOutputStream;
@@ -59,6 +58,7 @@ public class DTLSTransporter implements Transporter {
   private final static String TAG = DTLSTransporter.class.getName();
   private final TransporterParams params;
   private final AndroidBackedKeyPair keyPair;
+  private final String dnsName;
   private Date lastPacketReceivedTime;
   private Date lastPacketSentTime;
   private DatagramSocket socket;
@@ -97,6 +97,7 @@ public class DTLSTransporter implements Transporter {
     heartbeat = params.getHeartbeatInterval();
     certChain = params.getCertChain();
     keyPair = params.getKeyPair();
+    dnsName = params.getDnsPop();
 
     Log.i(TAG, "DTLS transporter constructed");
   }
@@ -167,7 +168,7 @@ public class DTLSTransporter implements Transporter {
             return MAX_MTU - OVERHEAD;
         }
     };
-    TlsClient client = new IPv6DTlsClient(crypto, heartbeat, certChain, keyPair);
+    TlsClient client = new IPv6DTlsClient(crypto, heartbeat, certChain, keyPair, dnsName);
     DTLSClientProtocol protocol = new DTLSClientProtocol();
     dtls = protocol.connect(client, transport);
 
@@ -181,7 +182,7 @@ public class DTLSTransporter implements Transporter {
    * Re-Connect the tunnel, closing the existing socket
    */
   @Override
-  public void reconnect() throws IOException, ConnectionFailedException {
+  public void reconnect() throws IOException {
     if (socket == null)
       throw new IllegalStateException("Ayiya object is closed or not initialized");
     close();

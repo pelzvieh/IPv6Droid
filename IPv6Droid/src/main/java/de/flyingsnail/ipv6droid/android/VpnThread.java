@@ -242,7 +242,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
             }
         }
         this.tunnelReader = tr;
-        this.startedAt = new Date(0l);
+        this.startedAt = new Date(0L);
         this.reconnectCount = 0;
     }
 
@@ -274,10 +274,15 @@ class VpnThread extends Thread implements NetworkChangeListener {
                     vpnStatus.setTunnels(tunnels);
                     // check for active tunnel
                     if (!tunnels.isTunnelActive()) {
-                        if (tunnels.isEmpty())
-                            throw new ConnectionFailedException("No suitable tunnels found", null);
-                        else
-                            throw new ConnectionFailedException("You must select a tunnel from list", null);
+                        switch (tunnels.size()) {
+                            case 0:
+                                throw new ConnectionFailedException("No suitable tunnels found", null);
+                            case 1:
+                                tunnels.setActiveTunnel(tunnels.get(0));
+                                break;
+                            default:
+                                throw new ConnectionFailedException("You must select a tunnel from list", null);
+                        }
                     }
                 } else {
                     Log.i(TAG, "Using cached TicTunnel instead of contacting TIC");

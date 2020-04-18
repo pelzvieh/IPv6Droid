@@ -27,24 +27,15 @@ import org.bouncycastle.tls.AbstractTlsClient;
 import org.bouncycastle.tls.AlertDescription;
 import org.bouncycastle.tls.AlertLevel;
 import org.bouncycastle.tls.Certificate;
-import org.bouncycastle.tls.CertificateRequest;
-import org.bouncycastle.tls.ClientCertificateType;
 import org.bouncycastle.tls.DefaultTlsHeartbeat;
 import org.bouncycastle.tls.HeartbeatMode;
 import org.bouncycastle.tls.ProtocolVersion;
 import org.bouncycastle.tls.SignatureAndHashAlgorithm;
 import org.bouncycastle.tls.TlsAuthentication;
-import org.bouncycastle.tls.TlsCredentialedSigner;
-import org.bouncycastle.tls.TlsCredentials;
-import org.bouncycastle.tls.TlsFatalAlert;
 import org.bouncycastle.tls.TlsHeartbeat;
-import org.bouncycastle.tls.TlsServerCertificate;
 import org.bouncycastle.tls.crypto.TlsCertificate;
 import org.bouncycastle.tls.crypto.TlsCrypto;
-import org.bouncycastle.util.Arrays;
 
-import java.io.IOException;
-import java.security.PrivateKey;
 import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -62,28 +53,32 @@ class IPv6DTlsClient extends AbstractTlsClient {
     private final int heartbeat;
 
     private final TlsCertificate trustedCA;
+
     private final AndroidBackedKeyPair androidBackedKeyPair;
+    private final Certificate myCertChain;
 
-    private Logger logger = Logger.getLogger(DTLSUtils.class.getName());
-
-    private Certificate certChain;
-
-    private PrivateKey privateKey;
+    private final Logger logger = Logger.getLogger(DTLSUtils.class.getName());
+    private final String dnsName;
 
     /**
      * Constructor.
      * @param crypto the TlsCrypto object to use with this TLS client.
      * @param heartbeat the heartbeat interval in milliseconds.
-     * @param certChain a Certificate object carrying the complete certificate chain.
+     * @param certChain a Certificate object carrying the complete client certificate chain.
      * @param androidBackedKeyPair an AndroidBackedKeyPair object referring to the RSA keypair to use
+     * @param dnsName a String giving the host name of the server, used for cert verification
      */
-    public IPv6DTlsClient(TlsCrypto crypto, int heartbeat, Certificate certChain, AndroidBackedKeyPair androidBackedKeyPair) {
+    public IPv6DTlsClient(final TlsCrypto crypto,
+                          final int heartbeat,
+                          final Certificate certChain,
+                          final AndroidBackedKeyPair androidBackedKeyPair,
+                          final String dnsName) {
         super(crypto);
         this.heartbeat = heartbeat;
-        this.certChain = certChain;
         this.androidBackedKeyPair = androidBackedKeyPair;
-
-        trustedCA = certChain.getCertificateAt(certChain.getLength()-1);
+        this.trustedCA = certChain.getCertificateAt(certChain.getLength()-1);
+        this.myCertChain = certChain;
+        this.dnsName = dnsName;
     }
 
     /**
@@ -95,6 +90,10 @@ class IPv6DTlsClient extends AbstractTlsClient {
         return HeartbeatMode.peer_allowed_to_send;
     }
 
+    /**
+     * Query for a Heartbeat object configured to the heartbeat interval of this client.
+     * @return a TlsHeartbeat object configured for this client.
+     */
     @Override
     public TlsHeartbeat getHeartbeat() {
         return new DefaultTlsHeartbeat(heartbeat, 10000);
@@ -107,40 +106,10 @@ class IPv6DTlsClient extends AbstractTlsClient {
      */
     @Override
     public TlsAuthentication getAuthentication() {
-        return new TlsAuthentication() {
-            @Override
-            public void notifyServerCertificate(TlsServerCertificate serverCertificate) throws IOException {
-                TlsCertificate[] chain = serverCertificate.getCertificate().getCertificateList();
-                logger.info("Cert chain received of "+chain.length);
-                if (chain.length == 0)
-                    throw new TlsFatalAlert(AlertDescription.certificate_required);
-                for (int i = 0; i < chain.length; i++) {
-                    org.bouncycastle.asn1.x509.Certificate entry = org.bouncycastle.asn1.x509.Certificate.getInstance(chain[i].getEncoded());
-                    logger.info(" Cert["+i+"] subject: " + entry.getSubject());
-                }
-
-                if (!DTLSUtils.areSameCertificate(chain[chain.length-1], trustedCA)) {
-                    throw new TlsFatalAlert(AlertDescription.certificate_unknown);
-                }
-            }
-
-            @Override
-            public TlsCredentials getClientCredentials(CertificateRequest certificateRequest) {
-                logger.info("Client credentials requested");
-                short[] certificateTypes = certificateRequest.getCertificateTypes();
-                if (certificateTypes == null || !Arrays.contains(certificateTypes, ClientCertificateType.rsa_sign)) {
-                    logger.warning("Client certificate type rsa_sign not supported");
-                    return null;
-                }
-                Vector<SignatureAndHashAlgorithm> clientSigAlgs = (Vector<SignatureAndHashAlgorithm>)context.getSecurityParametersHandshake().getClientSigAlgs();
-                TlsCredentialedSigner tlsCredentialedSigner = androidBackedKeyPair.getTlsCredentialedSigner(certChain);
-                if (!clientSigAlgs.contains(tlsCredentialedSigner.getSignatureAndHashAlgorithm())) {
-                    logger.warning("Signature algorithm SHA256withRSA not supported");
-                    return null;
-                }
-                return tlsCredentialedSigner;
-            }
-        };
+        return new IPv6TlsAuthentication(trustedCA,
+                (Vector<SignatureAndHashAlgorithm>)context.getSecurityParametersHandshake().getClientSigAlgs(),
+                androidBackedKeyPair.getTlsCredentialedSigner(myCertChain),
+                dnsName);
     }
 
     @Override
@@ -150,12 +119,17 @@ class IPv6DTlsClient extends AbstractTlsClient {
         return supportedAlgorithm;
     }
 
-
-
+    /**
+     * Extension point of Bouncycastle: log a received TLS alert message
+     * @param alertLevel a short from AlertLevel.... definitions indication the level of TLS alert
+     * @param alertDescription a short from AlertDescription... definitions indicating what the alert is about
+     * @param message a String giving a textual message
+     * @param cause a Throwable giving the Exception that caused the alert
+     */
     @Override
     public void notifyAlertRaised(short alertLevel, short alertDescription, String message, Throwable cause) {
         logger.log((alertLevel == AlertLevel.fatal) ? Level.WARNING : Level.INFO, "DTLS client raised alert: " + AlertLevel.getText(alertLevel)
-                + ", " + AlertDescription.getText(alertDescription), cause);
+                + ", " + AlertDescription.getText(alertDescription) + ": " + message, cause);
     }
 
     @Override
@@ -173,4 +147,5 @@ class IPv6DTlsClient extends AbstractTlsClient {
     protected int[] getSupportedCipherSuites() {
         return new int[]{TLS_DHE_RSA_WITH_AES_128_CBC_SHA256};
     }
+
 }
