@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2019 Dr. Andreas Feldner.
+ *  * Copyright (c) 2020 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -69,6 +69,15 @@ public class NetworkHelper  {
 
     private final Context notificationContext;
 
+    /**
+     * Are we registered as connectivity receiver?
+     */
+    private boolean receiverRegistered = false;
+
+    /**
+     * Are we registered as a global connectivity receiver?
+     */
+    private boolean globalReceiverRegistered = false;
 
     /**
      * The system service ConnectivityManager
@@ -116,7 +125,9 @@ public class NetworkHelper  {
     /**
      * Register to be called in event of internet available.
      */
-    private void registerConnectivityReceiver() {
+    private synchronized void registerConnectivityReceiver() {
+        if (receiverRegistered)
+            return; // already done
         if (Build.VERSION.SDK_INT >= 23) {
             ConnectivityManager cm = notificationContext.getSystemService(ConnectivityManager.class);
             NetworkRequest.Builder builder = new NetworkRequest.Builder().
@@ -142,6 +153,7 @@ public class NetworkHelper  {
                 }
             };
             cm.registerNetworkCallback(request, networkCallback);
+            receiverRegistered = true;
         }
         // anyway, register for callback on connectivity change
         registerGlobalConnectivityReceiver();
@@ -149,9 +161,12 @@ public class NetworkHelper  {
 
     private void unregisterConnectivityReceiver() {
         if (Build.VERSION.SDK_INT >= 23) {
-            connectivityManager.unregisterNetworkCallback(
-                    networkCallback
-            );
+            if (receiverRegistered) {
+                connectivityManager.unregisterNetworkCallback(
+                        networkCallback
+                );
+                receiverRegistered = false;
+            }
         }
         unregisterGlobalConnectivityReceiver();
     }
@@ -161,10 +176,13 @@ public class NetworkHelper  {
      * This was once documented to be obsolete, but in 2019 again to be usable.
      */
     private void registerGlobalConnectivityReceiver() {
+        if (globalReceiverRegistered)
+            return; // already done
         connectivityReceiver = new ConnectivityReceiver();
         final IntentFilter intentFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
 
         notificationContext.registerReceiver(connectivityReceiver, intentFilter);
+        globalReceiverRegistered = true;
         Log.d(TAG, "registered CommandReceiver for global broadcasts");
     }
 
@@ -172,7 +190,10 @@ public class NetworkHelper  {
      * Revert registerGlobalConnectivityReceiver().
      */
     private void unregisterGlobalConnectivityReceiver() {
-        notificationContext.unregisterReceiver(connectivityReceiver);
+        if (globalReceiverRegistered) {
+            notificationContext.unregisterReceiver(connectivityReceiver);
+            globalReceiverRegistered = false;
+        }
         Log.d(TAG, "un-registered CommandReceiver for global broadcasts");
     }
 
@@ -207,10 +228,13 @@ public class NetworkHelper  {
         if (!foundNative && Build.VERSION.SDK_INT >= 23) {
             Network activeNetwork = cm.getActiveNetwork();
             if (activeNetwork != null) {
-                if (cm.getNetworkInfo(activeNetwork).getType() != ConnectivityManager.TYPE_VPN) {
+                NetworkInfo networkInfo = cm.getNetworkInfo(activeNetwork);
+                if (networkInfo != null && networkInfo.getType() != ConnectivityManager.TYPE_VPN) {
                     LinkProperties linkProperties = cm.getLinkProperties(activeNetwork);
-                    networkDetails.setNativeProperties(linkProperties);
-                    foundNative = true;
+                    if (linkProperties != null) {
+                        networkDetails.setNativeProperties(linkProperties);
+                        foundNative = true;
+                    }
                 } else {
                     Log.w(TAG, "ConnectivityManager.getActiveNetwork returned our VPN");
                 }

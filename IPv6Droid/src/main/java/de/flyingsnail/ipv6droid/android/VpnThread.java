@@ -1,21 +1,24 @@
 /*
- * Copyright (c) 2015 Dr. Andreas Feldner.
  *
- *     This program is free software; you can redistribute it and/or modify
- *     it under the terms of the GNU General Public License as published by
- *     the Free Software Foundation; either version 2 of the License, or
- *     (at your option) any later version.
+ *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  *
+ *  *     This program is free software; you can redistribute it and/or modify
+ *  *     it under the terms of the GNU General Public License as published by
+ *  *     the Free Software Foundation; either version 2 of the License, or
+ *  *     (at your option) any later version.
+ *  *
+ *  *     This program is distributed in the hope that it will be useful,
+ *  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  *     GNU General Public License for more details.
+ *  *
+ *  *     You should have received a copy of the GNU General Public License along
+ *  *     with this program; if not, write to the Free Software Foundation, Inc.,
+ *  *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *  *
+ *  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  *
- *     This program is distributed in the hope that it will be useful,
- *     but WITHOUT ANY WARRANTY; without even the implied warranty of
- *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *     GNU General Public License for more details.
  *
- *     You should have received a copy of the GNU General Public License along
- *     with this program; if not, write to the Free Software Foundation, Inc.,
- *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- * Contact information and current version at http://www.flying-snail.de/IPv6Droid
  */
 
 package de.flyingsnail.ipv6droid.android;
@@ -432,7 +435,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
                     inThread = new CopyThread(popIn, localOut, ayiyaVpnService, this, "AYIYA from POP to local", TAG_INCOMING_THREAD, 0, ingoingStatistics);
                     outThread.start();
                     inThread.start();
-                };
+                }
                 vpnStatus.setStatus(VpnStatusReport.Status.Connected);
                 vpnStatus.setCause(null);
 
@@ -563,7 +566,6 @@ class VpnThread extends Thread implements NetworkChangeListener {
      */
     private boolean ipv6DefaultExists() {
         Log.d(TAG, "Checking if we have an IPv6 default route on current network");
-
         for (RouteInfo routeInfo : networkHelper.getNativeRouteInfos()) {
             // isLoggable would be useful here, but checks for an (outdated?) convention of TAG shorter than 23 chars
             Log.d(TAG, "Checking if route is an IPv6 default route: " + routeInfo);
@@ -957,6 +959,8 @@ class VpnThread extends Thread implements NetworkChangeListener {
      */
     @Override
     public void onNewConnection() {
+        if (networkHelper == null)
+            return; // we're not ready yet
         // check if our routing is still valid, otherwise invalidate vpnFD
         if (isTunnelRoutingRequired() ^ tunnelRouted) {
             Log.i(TAG, "tunnel routing requirement changed, forcing re-build of local vpn socket");
