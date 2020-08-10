@@ -87,13 +87,13 @@
     <string name="channel_errors_description">Error messages from IPv6 tunnel</string>
     <string name="channel_status_description">Current status of IPv6 tunnel</string>
     <string name="subscription">Abonnement</string>
-    <string name="subscription_status">Der hier angezeigte Status wird aus Ihrem Google-Konto abgefragt. Dies kann ein paar Sekunden dauern. Am \"gültig bis\"-Datum wird das Abonnement um einen Monat verlängert, wenn Sie es nicht beendet haben.</string>
+    <string name="subscription_status">Der hier angezeigte Status wird aus Ihrem Google-Konto abgefragt. Dies kann ein paar Sekunden dauern. Am \"gültig bis\"-Datum wird das Abonnement kostenpflichtig um einen Monat verlängert, wenn Sie es nicht beendet haben.</string>
     <string name="subscriptions_manage_subscriptions">Abonnement verwalten</string>
     <string name="user_subscription_management_not_launched">Aufruf des Google Play Abo-Manager fehlgeschlagen</string>
     <string name="manage_subscriptions">Hier können Sie Google Play aufrufen, um Details Ihres Tunnel-Abos einzusehen und zu verwalten (ggf. zu kündigen).</string>
     <string name="intro_app_title">Einführung in IPv6Droid</string>
     <string name="intro_app_description">IPv6Droid dient dazu, IPv6-Unterstützung auf Android-Mobilgeräten bereit zu stellen, auch wenn diese sich in reinen IPv4-Netzen befinden.</string>
-    <string name="user_subscription_subscribe_hint">Hier können Sie einen 4er-Satz Tunnel mit wenigen Klicks abonnieren. Der Abo-Vorgang wird vollständig von Google abgewickelt, einschließlich Zahlungsinformationen. Das erste Abo umfasst einen 60-tägigen kostenlosen Probezeitraum, der Ihnen auch bei Kündigung im Probezeitraum vollständig zur Verfügung steht.</string>
+    <string name="user_subscription_subscribe_hint">Hier können Sie einen 4er-Satz Tunnel mit wenigen Klicks abonnieren. Der Abo-Vorgang wird vollständig von Google abgewickelt, einschließlich Zahlungsinformationen. Das erste Abo auf Ihr Konto beginnt mit einem 60-tägigen kostenlosen Probezeitraum, der Ihnen auch bei Kündigung im Probezeitraum vollständig zur Verfügung steht. Ohne ausdrückliche Kündigung geht der Probezeitraum automatisch in ein kostenpflichtiges monatliches Abonnement über.</string>
     <string name="user_subscription_terms_link">Ich akzeptiere die Leistungsbeschreibung <![CDATA[https://flyingsnail.de/lstbeschr.html]]></string>
     <string name="user_subscription_valid_until">Gültig bis</string>
     <string name="user_subscription_error_not_accepted">Sie müssen der Leistungsbeschreibung zustimmen, um ein Abo abzuschließen.</string>

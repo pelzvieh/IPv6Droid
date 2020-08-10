@@ -320,6 +320,13 @@ public class SubscriptionManager {
                 if (SubscriptionBuilder.getSupportedSku().contains(sku)) {
                     // this one is relevant!
                     isSubscriptionRelevant = true;
+                    /* todo implement fundamentally different logic for DLTS:
+                       - query those tunnels associated with this purchase that are yet available
+                       - let user select an available tunnel to be used on this device
+                       - create (or re-use) a private key on this device
+                       - send allocation request (CSR, proof of purchase again)
+                       - receive and store certificate, persist configuration (used key + certificate)
+                     */
                     Call<List<TicTunnel>> subsCall = subscriptionsClient.checkSubscriptionAndReturnTunnels(
                             skuData,
                             skuSignature
