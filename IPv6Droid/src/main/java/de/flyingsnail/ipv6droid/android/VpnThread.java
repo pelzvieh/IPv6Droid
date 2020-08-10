@@ -595,7 +595,6 @@ class VpnThread extends Thread implements NetworkChangeListener {
      */
     private boolean ipv6DefaultExists() {
         Log.d(TAG, "Checking if we have an IPv6 default route on current network");
-
         for (RouteInfo routeInfo : networkHelper.getNativeRouteInfos()) {
             // isLoggable would be useful here, but checks for an (outdated?) convention of TAG shorter than 23 chars
             Log.d(TAG, "Checking if route is an IPv6 default route: " + routeInfo);

@@ -61,6 +61,18 @@ public class NetworkHelper  {
      */
     private final NetworkDetails networkDetails = new NetworkDetails();
 
+    private final Context notificationContext;
+
+    /**
+     * Are we registered as connectivity receiver?
+     */
+    private boolean receiverRegistered = false;
+
+    /**
+     * Are we registered as a global connectivity receiver?
+     */
+    private boolean globalReceiverRegistered = false;
+
     /**
      * The system service ConnectivityManager
      */
@@ -88,6 +100,8 @@ public class NetworkHelper  {
      * Register to be called in event of internet available.
      */
     private synchronized void registerConnectivityReceiver() {
+        if (receiverRegistered)
+            return; // already done
         // register specific connectivity callback
         if (connectivityManager != null && networkCallback == null) {
             NetworkRequest.Builder builder = new NetworkRequest.Builder().
@@ -108,9 +122,35 @@ public class NetworkHelper  {
                 }
             };
             connectivityManager.registerNetworkCallback(request, networkCallback);
+            receiverRegistered = true;
         }
     }
 
+    private void unregisterConnectivityReceiver() {
+        if (Build.VERSION.SDK_INT >= 23) {
+            if (receiverRegistered) {
+                connectivityManager.unregisterNetworkCallback(
+                        networkCallback
+                );
+                receiverRegistered = false;
+            }
+        }
+        unregisterGlobalConnectivityReceiver();
+    }
+
+    /**
+     * Register an instance of connectivityReceiver for global CONNECTIVITY_ACTIONs.
+     * This was once documented to be obsolete, but in 2019 again to be usable.
+     */
+    private void registerGlobalConnectivityReceiver() {
+        if (globalReceiverRegistered)
+            return; // already done
+        connectivityReceiver = new ConnectivityReceiver();
+        final IntentFilter intentFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
+
+        notificationContext.registerReceiver(connectivityReceiver, intentFilter);
+        globalReceiverRegistered = true;
+        Log.d(TAG, "registered CommandReceiver for global broadcasts");
     private synchronized void unregisterConnectivityReceiver() {
         try {
             if (connectivityManager != null && networkCallback != null) {
@@ -124,7 +164,20 @@ public class NetworkHelper  {
     }
 
     /**
-     * Network changes
+     * Revert registerGlobalConnectivityReceiver().
+     */
+    private void unregisterGlobalConnectivityReceiver() {
+        if (globalReceiverRegistered) {
+            notificationContext.unregisterReceiver(connectivityReceiver);
+            globalReceiverRegistered = false;
+        }
+        Log.d(TAG, "un-registered CommandReceiver for global broadcasts");
+    }
+
+
+    /**
+     * Read route and DNS info of the currently active and the VPN network. Weird code, but the best
+     * I could imagine out of the ConnectivityManager API. In API versions 28, network changes
      * are no longer handled by CONNECTIVITY_ACTION broadcast, but by requestNetwork callback methods.
      * These provide the required details as parameters.
      *
@@ -141,13 +194,42 @@ public class NetworkHelper  {
         if (newLinkProperties != null) {
             networkDetails.setNativeProperties(network, newLinkProperties);
         }
+        boolean foundNative = false; // we need to try different approaches to get native network depending on API version
         ConnectivityManager cm = getConnectivityManager();
-        for (Network n : cm.getAllNetworks()) {
-            NetworkInfo ni = cm.getNetworkInfo(n);
-            LinkProperties linkProperties = cm.getLinkProperties(n);
-            if (ni != null) {
-                if (ni.getType() == ConnectivityManager.TYPE_VPN) {
-                    networkDetails.setVpnProperties(linkProperties);
+
+        // direct way to read network available from API 23
+        if (!foundNative && Build.VERSION.SDK_INT >= 23) {
+            Network activeNetwork = cm.getActiveNetwork();
+            if (activeNetwork != null) {
+                NetworkInfo networkInfo = cm.getNetworkInfo(activeNetwork);
+                if (networkInfo != null && networkInfo.getType() != ConnectivityManager.TYPE_VPN) {
+                    LinkProperties linkProperties = cm.getLinkProperties(activeNetwork);
+                    if (linkProperties != null) {
+                        networkDetails.setNativeProperties(linkProperties);
+                        foundNative = true;
+                    }
+                } else {
+                    Log.w(TAG, "ConnectivityManager.getActiveNetwork returned our VPN");
+                }
+            }
+        }
+
+        // reconstruct link properties for VPN network, and, prior to API 23, attempt to
+        // find the native network's link properties.
+        NetworkInfo activeNetworkInfo = cm.getActiveNetworkInfo();
+        if (activeNetworkInfo != null) {
+            for (Network n : cm.getAllNetworks()) {
+                NetworkInfo ni = cm.getNetworkInfo(n);
+                if (ni != null) {
+                    LinkProperties linkProperties = cm.getLinkProperties(n);
+                    if (!foundNative
+                            && ni.getType() == activeNetworkInfo.getType()
+                            && ni.getSubtype() == activeNetworkInfo.getSubtype()) {
+                        networkDetails.setNativeProperties(linkProperties);
+                        foundNative = true;
+                    } else if (ni.getType() == ConnectivityManager.TYPE_VPN) {
+                        networkDetails.setVpnProperties(linkProperties);
+                    }
                 }
             }
         }

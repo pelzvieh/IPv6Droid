@@ -45,6 +45,7 @@ import androidx.appcompat.widget.Toolbar;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.Objects;
 
 import de.flyingsnail.ipv6droid.R;
@@ -53,6 +54,7 @@ import de.flyingsnail.ipv6droid.android.SettingsActivity;
 import de.flyingsnail.ipv6droid.android.TunnelPersisting;
 import de.flyingsnail.ipv6droid.android.TunnelPersistingFile;
 import de.flyingsnail.ipv6droid.android.Tunnels;
+import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
 
 /**
  * Guides the user through managing her subscriptions.
@@ -373,8 +375,14 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
      * received from SubscriptionManager, plus will write the new list back to cache.
      */
     private void updateCachedTunnelList() {
-        if (subscriptionManager == null || this.isDestroyed())
-            return; // this Activity is already destroyed
+        List<TicTunnel> subscribedTunnels;
+        synchronized (subscriptionManager) {
+            if (subscriptionManager == null || this.isDestroyed()) {
+                return; // this Activity is already destroyed
+            } else {
+                subscribedTunnels = subscriptionManager.getTunnels();
+            }
+        }
         // write tunnel list to cache
         TunnelPersisting tp = new TunnelPersistingFile(this.getApplicationContext());
         Tunnels cachedTunnels = new Tunnels();
@@ -383,7 +391,7 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
         } catch (IOException e) {
             Log.i(TAG, "No tunnel list yet cached");
         }
-        cachedTunnels.replaceTunnelList(subscriptionManager.getTunnels());
+        cachedTunnels.replaceTunnelList(subscribedTunnels);
         try {
             tp.writeTunnels(cachedTunnels);
         } catch (IOException e) {
