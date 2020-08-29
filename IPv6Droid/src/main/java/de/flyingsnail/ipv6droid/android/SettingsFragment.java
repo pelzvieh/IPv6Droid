@@ -55,34 +55,6 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         // Load the preferences from an XML resource
         setPreferencesFromResource(R.xml.preferences, rootKey);
 
-        // set special input types
-        final EditTextPreference username = findPreference("tic_username");
-        username.setOnBindEditTextListener(
-                editText -> {
-                    editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PERSON_NAME);
-                    editText.setSingleLine(true);
-                    editText.setSelectAllOnFocus(true);
-                }
-        );
-
-        final EditTextPreference password = findPreference("tic_password");
-        password.setOnBindEditTextListener(
-                editText -> {
-                    editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-                    editText.setSingleLine(true);
-                    editText.setSelectAllOnFocus(true);
-                }
-        );
-
-        final EditTextPreference host = findPreference("tic_host");
-        host.setOnBindEditTextListener(
-                editText -> {
-                    editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
-                    editText.setSingleLine(true);
-                    editText.setSelectAllOnFocus(true);
-                }
-        );
-
         final EditTextPreference routesSpecific = findPreference("routes_specific");
         routesSpecific.setOnBindEditTextListener(
                 editText -> {

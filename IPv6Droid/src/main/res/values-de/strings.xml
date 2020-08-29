@@ -113,5 +113,6 @@
     <string name="vpnservice_toast_cache_unreadable">Zwischengespeicherte Schlüssel nicht lesbar</string>
     <string name="certificate_signing_request">Zertifizierungsantrag</string>
     <string name="copy_to_clipboard">Kopieren</string>
+    <string name="vpnservice_activity_connecting">Baue Sitzung auf</string>
 
 </resources>

@@ -89,7 +89,7 @@ class HeartbeatMonitor implements Monitor {
             if (!vpnThread.isIntendedToRun())
                 break;
             // re-check cached network information
-            if (!vpnThread.isCurrentSocketAdressStillValid()) {
+            if (!vpnThread.isCurrentSocketStillValid()) {
                 throw new IOException("IP address changed");
             }
             // determine last package transmission time

@@ -31,20 +31,18 @@ import androidx.annotation.NonNull;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * A container for the relevant network information in the context of a running VPN tunnel.
  */
 class NetworkDetails {
-    private Map<Network,LinkProperties> nativeProperties = new HashMap<>();
+    private LinkProperties currentNativeProperties = null;
     private Network currentNativeNetwork;
     private LinkProperties vpnProperties;
 
     public LinkProperties getNativeProperties() {
-        return currentNativeNetwork == null ? null : nativeProperties.get(currentNativeNetwork);
+        return currentNativeNetwork == null ? null : currentNativeProperties;
     }
 
     /**
@@ -53,26 +51,21 @@ class NetworkDetails {
      * @param network the Network to remove from properties store.
      */
     public void unsetNetwork (@NonNull Network network) {
-        nativeProperties.remove(network);
         if (network.equals(currentNativeNetwork)) {
-            if (nativeProperties.isEmpty())
-                currentNativeNetwork = null;
-            else
-                currentNativeNetwork = nativeProperties.keySet().iterator().next();
+            currentNativeNetwork = null;
+            currentNativeProperties = null;
         }
     }
 
     /**
-     * Add the given link properties to the map of active native properties for the given Network.
+     * Remembers the given link properties to the map of active native properties.
      * Also sets the currentNativeNetwork to network if currently not set.
      * @param network the Network that is now available
      * @param nativeProperties the LinkProperties of the Link associated with the given Network.
      */
     public void setNativeProperties(@NonNull Network network, @NonNull LinkProperties nativeProperties) {
-        if (currentNativeNetwork == null) {
-            currentNativeNetwork = network;
-        }
-        this.nativeProperties.put(network, nativeProperties);
+        currentNativeNetwork = network;
+        currentNativeProperties = nativeProperties;
     }
 
     public LinkProperties getVpnProperties() {
@@ -89,14 +82,14 @@ class NetworkDetails {
     }
 
     /**
-     * Query the routing table of all the native network(s) underlying the VPN.
+     * Query the routing table of the currently recommended native network(s) underlying the VPN.
      * @return List&lt;RouteInfo&gt; containing route definitions. May be empty, if no network
      * is connected or no information is available.
      */
     public List<RouteInfo> getNativeRouteInfos() {
         List<RouteInfo> routeInfos = new ArrayList<>();
-        for (LinkProperties linkProperties: nativeProperties.values()) {
-            routeInfos.addAll(linkProperties.getRoutes());
+        if (currentNativeProperties != null) {
+            routeInfos.addAll(currentNativeProperties.getRoutes());
         }
         return routeInfos;
     }
@@ -124,8 +117,8 @@ class NetworkDetails {
      */
     public List<InetAddress> getNativeDnsServers() {
         List<InetAddress> dnsServers = new ArrayList<>(0);
-        for (LinkProperties linkProperties: nativeProperties.values()) {
-            dnsServers.addAll(linkProperties.getDnsServers());
+        if (currentNativeProperties != null) {
+            dnsServers.addAll(currentNativeProperties.getDnsServers());
         }
 
         return dnsServers;
@@ -147,4 +140,7 @@ class NetworkDetails {
         return dnsServers;
     }
 
+    public Network getNativeNetwork() {
+        return currentNativeNetwork;
+    }
 }

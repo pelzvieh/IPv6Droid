@@ -54,7 +54,7 @@ import de.flyingsnail.ipv6droid.android.SettingsActivity;
 import de.flyingsnail.ipv6droid.android.TunnelPersisting;
 import de.flyingsnail.ipv6droid.android.TunnelPersistingFile;
 import de.flyingsnail.ipv6droid.android.Tunnels;
-import de.flyingsnail.ipv6droid.ayiya.TicTunnel;
+import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
 /**
  * Guides the user through managing her subscriptions.
@@ -369,13 +369,12 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
         }.execute(instance, null, null);
     }
 
-
     /**
      * This will replace the tunnel list read from persistent cache by the tunnel list
      * received from SubscriptionManager, plus will write the new list back to cache.
      */
     private void updateCachedTunnelList() {
-        List<TicTunnel> subscribedTunnels;
+        List<TunnelSpec> subscribedTunnels;
         synchronized (subscriptionManager) {
             if (subscriptionManager == null || this.isDestroyed()) {
                 return; // this Activity is already destroyed

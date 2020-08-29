@@ -72,8 +72,8 @@ class SimpleMonitor implements Monitor {
             if (!vpnThread.isIntendedToRun())
                 break;
             // re-check cached network information
-            if (!vpnThread.isCurrentSocketAdressStillValid()) {
-                throw new IOException("IP address changed");
+            if (!vpnThread.isCurrentSocketStillValid()) {
+                throw new IOException("Network changed");
             }
         }
         Log.i(TAG, "Terminated loop of current transporter object (interrupt or end of a copy thread)");

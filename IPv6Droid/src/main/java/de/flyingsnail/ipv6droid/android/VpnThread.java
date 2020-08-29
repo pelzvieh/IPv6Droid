@@ -28,6 +28,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
+import android.net.Network;
 import android.net.NetworkInfo;
 import android.net.RouteInfo;
 import android.net.TrafficStats;
@@ -202,6 +203,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
      * (i.e. since "startedAt").
      */
     private int reconnectCount;
+    private Network currentNetwork = null;
 
     /**
      * The constructor setting all required fields.
@@ -247,13 +249,14 @@ class VpnThread extends Thread implements NetworkChangeListener {
         closeTunnel = false;
         try {
             networkHelper = new NetworkHelper(this, IPv6DroidVpnService);
+            networkHelper.start();
 
             TrafficStats.setThreadStatsTag(TAG_PARENT_THREAD);
             handler = new Handler(applicationContext.getMainLooper());
 
             vpnStatus.setProgressPerCent(5);
             vpnStatus.setStatus(VpnStatusReport.Status.Connecting);
-            vpnStatus.setActivity(R.string.vpnservice_activity_wait);
+            vpnStatus.setActivity(R.string.vpnservice_activity_reconnect);
 
             waitOnConnectivity();
             vpnStatus.setCause(null);
@@ -319,7 +322,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
             IPv6DroidVpnService.notifyUserOfError(R.string.vpnservice_unexpected_problem, t);
             vpnStatus.setCause(t);
         } finally {
-            networkHelper.destroy();
+            networkHelper.stop();
         }
         vpnStatus.clear(); // back at zero
     }
@@ -335,7 +338,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
             cleanAll();
             setName(getName() + " (shutting down)");
             interrupt();
-            networkHelper.destroy();
+            networkHelper.stop();
         }
     }
 
@@ -415,6 +418,8 @@ class VpnThread extends Thread implements NetworkChangeListener {
                     throw new InterruptedException("Tunnel loop has interrupted status set");
 
                 // ensure we're online
+                vpnStatus.setStatus(VpnStatusReport.Status.Connecting);
+                vpnStatus.setActivity(R.string.vpnservice_activity_reconnect);
                 waitOnConnectivity();
 
                 // Re-Check if we should close down, as this can easily happen when waiting on connectivity
@@ -431,13 +436,20 @@ class VpnThread extends Thread implements NetworkChangeListener {
 
                 // setup tunnel to PoP
                 Log.i(TAG, "Connecting transporter object");
+                vpnStatus.setStatus(VpnStatusReport.Status.Connecting);
+                vpnStatus.setActivity(R.string.vpnservice_activity_connecting);
+
+                DatagramSocket popSocket = transporter.prepare();
+                currentNetwork.bindSocket(popSocket);  // use the given Network explicitly
+                // the certification revocation check will open its own socket, needs to be bound to native
+                networkHelper.getConnectivityManager().bindProcessToNetwork(currentNetwork);
+                IPv6DroidVpnService.protect(popSocket); // do not redirect to VPN
+
                 transporter.connect();
                 vpnStatus.setProgressPerCent(75);
                 vpnStatus.setStatus(VpnStatusReport.Status.Connected);
 
                 // Initialize the input and output streams from the transporter socket
-                DatagramSocket popSocket = transporter.getSocket();
-                IPv6DroidVpnService.protect(popSocket);
                 InputStream popIn = transporter.getInputStream();
                 OutputStream popOut = transporter.getOutputStream();
 
@@ -464,6 +476,9 @@ class VpnThread extends Thread implements NetworkChangeListener {
                         transporter instanceof Ayiya ?
                                 new HeartbeatMonitor(this, inThread, outThread) :
                                 new SimpleMonitor(this, inThread, outThread);
+
+                // now the tunnel is expected to work so future sockets are no longer bound to native
+                networkHelper.getConnectivityManager().bindProcessToNetwork(null);
 
                 // now do a ping on IPv6 level. This should involve receiving one packet
                 if (Inet6Address.getByName(applicationContext.getString(R.string.ipv6_test_host)).isReachable(10000)) {
@@ -625,8 +640,8 @@ class VpnThread extends Thread implements NetworkChangeListener {
      * @return true if we're online
      */
     boolean isDeviceConnected() {
-        NetworkInfo ni = networkHelper.getConnectivityManager().getActiveNetworkInfo();
-        return ni != null && ni.isConnected();
+        Network n = networkHelper.getNativeNetwork();
+        return n != null;
     }
 
     /**
@@ -710,7 +725,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
                                                          boolean suppressRouting) {
         builder.setMtu(tunnelSpecification.getMtu());
         builder.setSession(tunnelSpecification.getPopName());
-        builder.addAddress(tunnelSpecification.getIpv6Endpoint(), /*tunnelSpecification.getPrefixLength()*/ 128);
+        builder.addAddress(tunnelSpecification.getIpv6Endpoint(), 128);
         if (Build.VERSION.SDK_INT >= 29)
             builder.setMetered (false);
         if (!suppressRouting) {
@@ -770,6 +785,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
                 vpnStatus.wait();
             }
         }
+        currentNetwork = networkHelper.getNativeNetwork();
     }
 
     /**
@@ -820,16 +836,13 @@ class VpnThread extends Thread implements NetworkChangeListener {
     }
 
     /**
-     * Check if the local address of current Ayiya is still valid considering the cached network
-     * details. A useful call to this method therefore should be precedet by a validation or update
-     * of the networkDetails cache.
-     * <p>This method constantly returns false when run on Android versions prior to 21.</p>
+     * Check if we're still on the same network.
      *
      * @return true if the current local address still matches one of the link addresses
      */
-    boolean isCurrentSocketAdressStillValid() {
+    boolean isCurrentSocketStillValid() {
         Transporter myAyiya = transporter; // prevents race condition on null check below
-        return networkHelper.isCurrentSocketAdressStillValid(myAyiya != null ? myAyiya.getSocket() : null);
+        return networkHelper.getNativeNetwork().equals(currentNetwork);
     }
 
     /**
@@ -868,11 +881,11 @@ class VpnThread extends Thread implements NetworkChangeListener {
      */
     @Override
     public void onNewConnection() {
-        // there is a race condition in the constructor so that networkhelper is not yet assigned.
+        // if someone would call this, but not NetworkHelper. This would be really strange.
         if (networkHelper == null)
             return;
         // check if our routing is still valid, otherwise invalidate vpnFD
-        if (isTunnelRoutingRequired() ^ tunnelRouted) {
+        if (isTunnelUp() && (isTunnelRoutingRequired() ^ tunnelRouted)) {
             Log.i(TAG, "tunnel routing requirement changed, forcing re-build of local vpn socket");
             new AsyncTask<Void, Void, Void>() {
                 @Override
@@ -894,12 +907,12 @@ class VpnThread extends Thread implements NetworkChangeListener {
             final Transporter myAyiya = transporter; // avoid race conditions
             final CopyThread myInThread = inThread;
             if (myAyiya != null && myInThread != null && myInThread.isAlive()) {
-                    /*
-                       myAyiya.isAlive is not sufficient to detect impact of connectivity change!
-                       Reason is probably that the formerly used network can still be used for a limited
-                       time period.
-                     */
-                if (!(myAyiya.isAlive() && isCurrentSocketAdressStillValid())) {
+                /*
+                   myAyiya.isAlive is not sufficient to detect impact of connectivity change!
+                   Reason is probably that the formerly used network can still be used for a limited
+                   time period.
+                 */
+                if (!(myAyiya.isAlive() && isCurrentSocketStillValid())) {
                     Log.i(TAG, "transporter object no longer functional after connectivity change - reconnecting");
                     new AsyncTask<Void, Void, Void>() {
                         @Override

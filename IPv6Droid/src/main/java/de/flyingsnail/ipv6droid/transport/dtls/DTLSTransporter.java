@@ -145,18 +145,37 @@ public class DTLSTransporter implements Transporter {
   }
 
   /**
-   * Connect the tunnel.
+   * Prepare for connection, esp. create an unconnected DatagramSocket. This enables the parent
+   * object to bind the socket to a network.
+   *
+   * @return the DatagramSocket that is going to be used for native traffic
+   * @throws IOException in case of trouble preparing the socket
    */
   @Override
-  public void connect() throws IOException {
+  public DatagramSocket prepare() throws IOException {
     if (socket != null) {
-      throw new IllegalStateException("This AYIYA is already connected.");
+      throw new IllegalStateException("This DTLSTransporter is already prepared.");
     }
 
     validPacketReceived = false;
 
     // UDP connection
     socket = new DatagramSocket();
+    return socket;
+  }
+
+  /**
+   * Connect the tunnel.
+   */
+  @Override
+  public void connect() throws IOException {
+    if (socket == null) {
+      throw new IllegalStateException("This DTLSTransporter is not prepared.");
+    }
+
+    if (socket.isConnected()){
+      throw new IllegalStateException("This DTLSTransporter is already connected.");
+    }
     socket.connect(ipv4Pop, port);
     // we need a timeout for the connect phase, otherwise we're facing infinite hangs
     socket.setSoTimeout(10000);
@@ -184,7 +203,7 @@ public class DTLSTransporter implements Transporter {
   @Override
   public void reconnect() throws IOException {
     if (socket == null)
-      throw new IllegalStateException("Ayiya object is closed or not initialized");
+      throw new IllegalStateException("DTLSTransporter is closed or not initialized");
     close();
     connect();
   }

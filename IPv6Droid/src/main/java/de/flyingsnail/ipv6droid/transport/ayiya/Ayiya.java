@@ -176,7 +176,6 @@ public class Ayiya implements Transporter {
         }
     }
 
-
     /**
      * The representation of our identity. This code supports INTEGER only.
      */
@@ -274,16 +273,32 @@ public class Ayiya implements Transporter {
     }
 
     /**
+     * Prepare for connection, esp. create an unconnected DatagramSocket. This enables the parent
+     * object to bind the socket to a network.
+     *
+     * @return the DatagramSocket that is going to be used for native traffic
+     * @throws IOException in case of trouble preparing the socket
+     */
+    @Override
+    public DatagramSocket prepare() throws IOException {
+        if (socket != null) {
+            throw new IllegalStateException("This AYIYA is already connected.");
+        }
+        // UDP connection
+        socket = new DatagramSocket();
+        return socket;
+    }
+
+
+    /**
      * Connect the tunnel.
      */
     @Override
     public synchronized void connect() throws IOException, ConnectionFailedException {
-        if (socket != null) {
-            throw new IllegalStateException("This AYIYA is already connected.");
+        if (socket == null) {
+            throw new IllegalStateException("This AYIYA is not prepared for connect.");
         }
 
-        // UDP connection
-        socket = new DatagramSocket();
         socket.connect(ipv4Pop, port);
         socket.setSoTimeout(0); // no read timeout
         //socket.setSoTimeout(10000); // 10 secs. read timeout

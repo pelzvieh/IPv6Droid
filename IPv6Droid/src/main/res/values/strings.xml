@@ -117,4 +117,5 @@
     <string name="vpnservice_toast_cache_unreadable">Cannot read locally cached tunnels</string>
     <string name="certificate_signing_request">Certificate Signing Request</string>
     <string name="copy_to_clipboard">Copy to Clipboard</string>
+    <string name="vpnservice_activity_connecting">Establish session</string>
 </resources>

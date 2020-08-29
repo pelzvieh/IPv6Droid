@@ -30,6 +30,7 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="com.android.vending.BILLING" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -91,7 +92,7 @@
             android:launchMode="singleTop"
             android:resizeableActivity="true"
             android:parentActivityName=".android.MainActivity"
-            tools:targetApi="n">
+            tools:targetApi="Q">
 
             <!-- Parent activity meta-data to support 4.0 and lower -->
             <meta-data
@@ -116,7 +117,7 @@
             android:label="@string/title_activity_subscribe_tunnel"
             android:parentActivityName=".android.MainActivity"
             android:resizeableActivity="true"
-            tools:targetApi="n">
+            tools:targetApi="Q">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="de.flyingsnail.ipv6droid.android.MainActivity" />

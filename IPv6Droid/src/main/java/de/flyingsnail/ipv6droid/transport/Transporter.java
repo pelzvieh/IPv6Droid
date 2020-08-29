@@ -58,6 +58,14 @@ public interface Transporter {
   boolean isAlive();
 
   /**
+   * Prepare for connection, esp. create an unconnected DatagramSocket. This enables the parent
+   * object to bind the socket to a network.
+   * @return the DatagramSocket that is going to be used for native traffic
+   * @throws IOException in case of trouble preparing the socket
+   */
+  DatagramSocket prepare() throws IOException;
+
+  /**
    * Connect the tunnel.
    */
   void connect() throws IOException, ConnectionFailedException;

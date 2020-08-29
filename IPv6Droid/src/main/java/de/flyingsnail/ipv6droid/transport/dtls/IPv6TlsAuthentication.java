@@ -123,7 +123,9 @@ class IPv6TlsAuthentication implements TlsAuthentication {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             revocationChecker = (PKIXRevocationChecker)certPathBuilder.getRevocationChecker();
-            revocationChecker.setOptions(EnumSet.of(PKIXRevocationChecker.Option.PREFER_CRLS));
+            revocationChecker.setOptions(EnumSet.of(
+                    PKIXRevocationChecker.Option.PREFER_CRLS,
+                    PKIXRevocationChecker.Option.SOFT_FAIL));
         } else {
             revocationChecker = null;
         }
@@ -154,9 +156,9 @@ class IPv6TlsAuthentication implements TlsAuthentication {
         PKIXBuilderParameters params;
         try {
             params = new PKIXBuilderParameters(trustAnchors, target);
-
             CertStoreParameters intermediates = new CollectionCertStoreParameters(java.util.Arrays.asList(stdChain));
             params.addCertStore(CertStore.getInstance("Collection", intermediates));
+            params.setRevocationEnabled(false);
 
             if (revocationChecker != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 params.addCertPathChecker(revocationChecker);
