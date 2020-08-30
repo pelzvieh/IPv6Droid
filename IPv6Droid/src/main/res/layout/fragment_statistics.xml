@@ -34,25 +34,26 @@
         android:layout_height="match_parent">
 
         <TextView
+            android:id="@+id/head1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/headline_transmitted"
-            android:id="@+id/head1"
-            android:textStyle="bold"
             android:layout_column="1"
             android:layout_gravity="right"
             android:paddingLeft="10dp"
-            />
+            android:paddingRight="10dp"
+            android:text="@string/headline_transmitted"
+            android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/head2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/headline_received"
-            android:id="@+id/head2"
-            android:textStyle="bold"
             android:layout_column="2"
             android:layout_gravity="right"
-            android:paddingLeft="10dp" />
+            android:paddingLeft="10dp"
+            android:paddingRight="10dp"
+            android:text="@string/headline_received"
+            android:textStyle="bold" />
     </TableRow>
 
     <TableRow>

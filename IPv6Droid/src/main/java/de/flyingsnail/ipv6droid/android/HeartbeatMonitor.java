@@ -110,7 +110,7 @@ class HeartbeatMonitor implements Monitor {
                no new packets for more than heartbeat interval? Might be device sleep!
                but if not pingable, probably broken.
                In the latter case we give it another heartbeat interval time to recover. */
-                if (vpnThread.isDeviceConnected() &&
+                if (vpnThread.isCurrentSocketStillValid() &&
                         !transporter.isValidPacketReceived() && // if the tunnel worked in a session, don't worry if it pauses - it's 100% network problems
                         VpnThread.checkExpiry(transporter.getLastPacketReceivedTime(),
                                 activeTunnel.getHeartbeatInterval()) &&

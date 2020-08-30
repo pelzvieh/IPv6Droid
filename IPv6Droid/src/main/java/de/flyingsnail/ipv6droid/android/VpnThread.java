@@ -408,6 +408,9 @@ class VpnThread extends Thread implements NetworkChangeListener {
         }
         while (!closeTunnel && localFD != null && localFD.valid()) {
             try {
+                // make sure we can connect to any network
+                networkHelper.getConnectivityManager().bindProcessToNetwork(null);
+
                 // Packets to be sent are queued in this input stream.
                 FileInputStream localIn = new FileInputStream(localFD);
 
@@ -418,14 +421,15 @@ class VpnThread extends Thread implements NetworkChangeListener {
                     throw new InterruptedException("Tunnel loop has interrupted status set");
 
                 // ensure we're online
-                vpnStatus.setStatus(VpnStatusReport.Status.Connecting);
-                vpnStatus.setActivity(R.string.vpnservice_activity_reconnect);
                 waitOnConnectivity();
 
                 // Re-Check if we should close down, as this can easily happen when waiting on connectivity
                 if (closeTunnel) {
                     break;
                 }
+
+                vpnStatus.setStatus(VpnStatusReport.Status.Connecting);
+                vpnStatus.setActivity(R.string.vpnservice_activity_reconnect);
 
                 // timestamp base mechanism to prevent busy looping through e.g. IOException
                 Date now = new Date();
@@ -445,7 +449,9 @@ class VpnThread extends Thread implements NetworkChangeListener {
                 networkHelper.getConnectivityManager().bindProcessToNetwork(currentNetwork);
                 IPv6DroidVpnService.protect(popSocket); // do not redirect to VPN
 
+                Log.i(TAG, "Connecting transporter");
                 transporter.connect();
+                Log.i(TAG, "Transporter connected");
                 vpnStatus.setProgressPerCent(75);
                 vpnStatus.setStatus(VpnStatusReport.Status.Connected);
 
@@ -636,8 +642,8 @@ class VpnThread extends Thread implements NetworkChangeListener {
     }
 
     /**
-     * Check if we're on network
-     * @return true if we're online
+     * Check if we're on the network we think we are
+     * @return true if we're online on the right network
      */
     boolean isDeviceConnected() {
         Network n = networkHelper.getNativeNetwork();
@@ -778,14 +784,16 @@ class VpnThread extends Thread implements NetworkChangeListener {
      */
     private void waitOnConnectivity() throws InterruptedException {
         while (!isDeviceConnected()) {
+            Log.i(TAG, "Waiting for device to connect to a network");
             vpnStatus.setProgressPerCent(45);
-            vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
-            vpnStatus.setActivity(R.string.vpnservice_activity_reconnect);
+            vpnStatus.setStatus(VpnStatusReport.Status.NoNetwork);
+            vpnStatus.setActivity(R.string.vpnservice_activity_connectivity);
             synchronized (vpnStatus) {
                 vpnStatus.wait();
             }
         }
         currentNetwork = networkHelper.getNativeNetwork();
+        Log.i(TAG, "We're connected to network " + currentNetwork.toString());
     }
 
     /**
@@ -841,8 +849,8 @@ class VpnThread extends Thread implements NetworkChangeListener {
      * @return true if the current local address still matches one of the link addresses
      */
     boolean isCurrentSocketStillValid() {
-        Transporter myAyiya = transporter; // prevents race condition on null check below
-        return networkHelper.getNativeNetwork().equals(currentNetwork);
+        Network nn = networkHelper == null ? null : networkHelper.getNativeNetwork();
+        return nn != null && nn.equals(currentNetwork);
     }
 
     /**
@@ -867,6 +875,9 @@ class VpnThread extends Thread implements NetworkChangeListener {
      * @param diedThread the CopyThread that died.
      */
     protected void copyThreadDied(CopyThread diedThread) {
+        // if one copy thread died, the transporter is useless anyway.
+        Log.i(TAG, "A copy thread died, closing transporter out-of-sync");
+        transporter.close();
         // no special treatment for inThread required, a dying inThread is immediately noticed
         // by VpnThread.
         if (diedThread != inThread && diedThread == outThread && inThread != null) {
@@ -942,7 +953,16 @@ class VpnThread extends Thread implements NetworkChangeListener {
      */
     @Override
     public void onDisconnected() {
-        Log.i(TAG, "We're not connected anyway.");
+        // if someone would call this, but not NetworkHelper. This would be really strange.
+        if (networkHelper == null)
+            return;
+
+        currentNetwork = networkHelper.getNativeNetwork(); // usually null at this point...
+
+        Log.i(TAG, "We're no longer connected.");
+        vpnStatus.setProgressPerCent(45);
+        vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
+        vpnStatus.setActivity(R.string.vpnservice_activity_connectivity);
     }
 
     Context getApplicationContext() {

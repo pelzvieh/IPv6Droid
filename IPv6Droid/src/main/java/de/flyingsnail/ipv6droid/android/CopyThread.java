@@ -128,6 +128,7 @@ class CopyThread extends Thread {
      * Close all sockets, null all fields
      */
     synchronized private void cleanAll() {
+        Log.i(TAG, "Cleanup of " + getName());
         if (in != null) {
             try {
                 in.close();
@@ -152,6 +153,7 @@ class CopyThread extends Thread {
         bufferPool.clear();
         packetQueue.clear();
         deathCause = null;
+        Log.i(TAG, "Cleanup of " + getName() + " finished");
     }
 
     @Override
@@ -169,7 +171,7 @@ class CopyThread extends Thread {
             while (!stopCopy) {
                 byte[]packet = bufferPool.remove();
                 int len = in.read (packet); // actually, the thread might hang here for a loooong time
-                if (stopCopy || isInterrupted())
+                if (len < 0 || stopCopy || isInterrupted())
                     break;
                 if (len > 0) {
                     out.write(packet, 0, len);

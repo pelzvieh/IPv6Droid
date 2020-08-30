@@ -83,7 +83,7 @@ public class DTLSTransporter implements Transporter {
   private final TlsCrypto crypto;
 
 
-  public DTLSTransporter (TransporterParams params) {
+  public DTLSTransporter (@NonNull TransporterParams params) {
     crypto = new BcTlsCrypto(new SecureRandom()) {
       public boolean hasSignatureAlgorithm (short signatureAlgorithm) {
         return signatureAlgorithm == SignatureAlgorithm.rsa;
@@ -91,7 +91,7 @@ public class DTLSTransporter implements Transporter {
     };
 
     this.params = params;
-    ipv4Pop = params.getIPv4Pop();
+    // IPv4Pop needs network to be resolvable, so we postpone reading it until connect()
     port = params.getPortPop();
     mtu = params.getMtu();
     heartbeat = params.getHeartbeatInterval();
@@ -176,6 +176,13 @@ public class DTLSTransporter implements Transporter {
     if (socket.isConnected()){
       throw new IllegalStateException("This DTLSTransporter is already connected.");
     }
+    if (ipv4Pop == null) {
+      ipv4Pop = params.getIPv4Pop();
+    }
+    if (ipv4Pop == null) {
+      throw new IOException("No PoP address resolvable");
+    }
+
     socket.connect(ipv4Pop, port);
     // we need a timeout for the connect phase, otherwise we're facing infinite hangs
     socket.setSoTimeout(10000);
@@ -265,7 +272,6 @@ public class DTLSTransporter implements Transporter {
    */
   @Override
   public ByteBuffer read(ByteBuffer bb) throws IOException, TunnelBrokenException {
-    Log.d(TAG, "DTLS Transport reading");
     if (socket == null || dtls == null)
       throw new IllegalStateException("read() called on unconnected DTLSTransporter");
     if (!socket.isConnected())
@@ -320,7 +326,6 @@ public class DTLSTransporter implements Transporter {
     if (payload.remaining() > mtu)
       throw new IOException("Too big packet received: " + payload.remaining() + " (MTU: " + mtu + ")");
 
-    Log.d(TAG, "Sending packet of size " + payload.remaining());
     dtls.send(payload.array(), payload.arrayOffset()+payload.position(), payload.remaining());
 
     lastPacketSentTime = new Date();

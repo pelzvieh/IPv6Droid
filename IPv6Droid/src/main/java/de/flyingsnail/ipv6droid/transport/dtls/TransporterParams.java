@@ -115,6 +115,9 @@ public class TransporterParams implements TunnelSpec, Serializable {
 
     @Override
     public Inet4Address getIPv4Pop() {
+        if (ipv4Pop == null && hostResolver == null) {
+            hostResolver = new HostResolver(dnsPop).execute();
+        }
         // at first call we need to get the resolver's result
         if (hostResolver != null) {
             Log.i (TAG, "Reading IPv4 address from async resolver");
@@ -291,7 +294,7 @@ public class TransporterParams implements TunnelSpec, Serializable {
             dnsPop = popUrl.getHost();
             if (hostResolver != null && hostResolver.getStatus() == AsyncTask.Status.RUNNING)
                 hostResolver.cancel(true);
-            hostResolver = new UrlResolver(popUrl).execute();
+            hostResolver = new HostResolver(dnsPop).execute();
         } catch (IOException e) {
             throw new IllegalArgumentException("Incorrectly configured, failure to parse certificates", e);
         }
@@ -313,22 +316,22 @@ public class TransporterParams implements TunnelSpec, Serializable {
      * Helper class for resolving URLs asynchronously. Call execute to start resolving, call
      * get()
      */
-    private static class UrlResolver extends AsyncTask<Void, Void, Inet4Address> implements Serializable {
-        private final URL popUrl;
+    private static class HostResolver extends AsyncTask<Void, Void, Inet4Address> implements Serializable {
+        private final String popHost;
 
         /**
          * Constructor.
-         * @param popUrl the URL whose host name should be resolved to Inet4Adress.
+         * @param popHost a String representing the host name that should be resolved to Inet4Adress.
          */
-        public UrlResolver (URL popUrl) {
-            this.popUrl = popUrl;
+        public HostResolver(String popHost) {
+            this.popHost = popHost;
         }
 
         @Override
         protected Inet4Address doInBackground(Void ... voids) {
-            Log.i(getClass().getName(), "Resolving hostname from URL " + popUrl);
+            Log.i(getClass().getName(), "Resolving hostname from URL " + popHost);
             try {
-                for (InetAddress address : InetAddress.getAllByName(popUrl.getHost())) {
+                for (InetAddress address : InetAddress.getAllByName(popHost)) {
                     if (address instanceof Inet4Address) {
                         Log.d(getClass().getName(), "Resolved to " + address);
                         return (Inet4Address)address;

@@ -21,6 +21,7 @@
   ~
   -->
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -38,19 +39,21 @@
         android:theme="@style/ThemeOverlay.AppCompat.ActionBar"
         android:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
 
-    <HorizontalScrollView
+    <androidx.core.widget.NestedScrollView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/statisticsToolbar">
+        android:layout_below="@id/statisticsToolbar"
+        android:fadeScrollbars="true">
 
-        <fragment
+        <androidx.fragment.app.FragmentContainerView
             android:id="@+id/fragment"
             android:name="de.flyingsnail.ipv6droid.android.statusdetail.StatisticsFragment"
-            tools:layout="@layout/fragment_statistics"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:layout_margin="16dp"
-            android:layout_gravity="center_horizontal"
-            />
-    </HorizontalScrollView>
+            android:layout_height="wrap_content"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:layout="@layout/fragment_statistics" />
+    </androidx.core.widget.NestedScrollView>
 </RelativeLayout>

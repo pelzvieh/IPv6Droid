@@ -59,12 +59,12 @@
     <string name="statistics_isrouted">Routes set to tunnel</string>
     <string name="statistics_isrouted_yes">yes</string>
     <string name="statistics_isrouted_no">no</string>
-    <string name="statistics_native_dns">DNS Servers (native)</string>
+    <string name="statistics_native_dns">DNS Servers</string>
     <string name="statistics_vpn_dns">DNS Servers (VPN)</string>
-    <string name="statistics_pause_between_bursts">Time between bursts</string>
-    <string name="statistics_time_of_burst">Duration of burst</string>
-    <string name="statistics_packets_per_burst">Packets per burst</string>
-    <string name="statistics_bytes_per_burst">Bytes per burst</string>
+    <string name="statistics_pause_between_bursts">Bursts pause</string>
+    <string name="statistics_time_of_burst">Burst Dur.</string>
+    <string name="statistics_packets_per_burst">Pckt./burst</string>
+    <string name="statistics_bytes_per_burst">B./burst</string>
     <string name="title_activity_subscribe_tunnel">SubscribeTunnel</string>
     <string name="title_activity_initial_setup">Initial Setup</string>
     <string name="subscription_label">Subscribe to IPv6 tunnel service</string>

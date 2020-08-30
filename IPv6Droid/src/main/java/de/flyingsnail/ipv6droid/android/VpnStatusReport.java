@@ -274,7 +274,7 @@ public class VpnStatusReport implements Serializable, Cloneable {
      * Possible status as broadcasted by reportStatus.
      */
     public enum Status {
-        Idle, Connecting, Connected, Disturbed
+        Idle, Connecting, Connected, Disturbed, NoNetwork
     }
 
     /**
