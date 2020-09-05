@@ -23,7 +23,6 @@
 
 package de.flyingsnail.ipv6droid.transport.dtls;
 
-import android.os.AsyncTask;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -46,13 +45,19 @@ import java.net.UnknownHostException;
 import java.security.SecureRandom;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import de.flyingsnail.ipv6droid.android.dtlsrequest.AndroidBackedKeyPair;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
 public class TransporterParams implements TunnelSpec, Serializable {
     private static final String TAG = TransporterParams.class.getName();
+    private static ExecutorService resolverPool = Executors.newCachedThreadPool();
     static final String TUNNEL_TYPE = "DTLSTunnel";
     private TlsCrypto crypto;
 
@@ -68,12 +73,12 @@ public class TransporterParams implements TunnelSpec, Serializable {
     private String popName;
     private Certificate certChain;
     private AndroidBackedKeyPair keyPair;
-    private AsyncTask<Void, Void, Inet4Address> hostResolver;
     private Date expiryDate;
 
     // Serialization
     private static final long serialVersionUID = 4L;
     private String dnsPop;
+    private Future<Inet4Address> resolvedIp;
 
     private void writeObject(ObjectOutputStream out)
             throws IOException {
@@ -115,29 +120,22 @@ public class TransporterParams implements TunnelSpec, Serializable {
 
     @Override
     public Inet4Address getIPv4Pop() {
-        if (ipv4Pop == null && hostResolver == null) {
-            hostResolver = new HostResolver(dnsPop).execute();
+        if (ipv4Pop == null && resolvedIp == null && dnsPop != null) {
+            resolvedIp = resolverPool.submit(new HostResolver(dnsPop));
         }
-        // at first call we need to get the resolver's result
-        if (hostResolver != null) {
+        // at first call we need to get the resolver's result if available. If there's a ipv4Pop
+        // address set and the resolver did not finish, we can use the old one (de-serialization).
+        if (resolvedIp != null &&
+                (ipv4Pop == null || resolvedIp.isDone())) {
             Log.i (TAG, "Reading IPv4 address from async resolver");
             synchronized (this) {
-                if (hostResolver.getStatus() == AsyncTask.Status.PENDING)
-                    // this can happen after de-serialization
-                    hostResolver.execute();
-                int attempt = 0;
-                while (hostResolver != null && attempt++ < 2) {
-                    try {
-                        ipv4Pop = hostResolver.get();
-                        hostResolver = null;
-                    } catch (ExecutionException e) {
-                        Log.i (TAG, "Async resolver didn't resolve, try again", e);
-                        hostResolver.execute(); // try resolving again
-                    } catch (InterruptedException e) {
-                        Log.w(TAG, "Interrupted while reading resolved address");
-                        Thread.currentThread().interrupt();
-                        break;
-                    }
+                try {
+                    ipv4Pop = resolvedIp.get();
+                    resolvedIp = null;
+                } catch (ExecutionException| CancellationException e) {
+                    Log.i (TAG, "Async resolver didn't resolve", e);
+                } catch (InterruptedException e) {
+                    Log.w(TAG, "Interrupted while reading resolved address");
                 }
             }
         }
@@ -203,7 +201,9 @@ public class TransporterParams implements TunnelSpec, Serializable {
     @Override
     public void setIPv4Pop(Inet4Address ipv4Pop) {
         this.ipv4Pop = ipv4Pop;
-        hostResolver = null;
+        if (resolvedIp != null && !resolvedIp.isDone())
+            resolvedIp.cancel(true);
+        resolvedIp = null;
     }
 
     public int getPortPop() {
@@ -292,9 +292,9 @@ public class TransporterParams implements TunnelSpec, Serializable {
             setExpiryDate(DTLSUtils.getExpiryDate(myCert));
             setTunnelId(myCert.getSerialNumber().toString(16));
             dnsPop = popUrl.getHost();
-            if (hostResolver != null && hostResolver.getStatus() == AsyncTask.Status.RUNNING)
-                hostResolver.cancel(true);
-            hostResolver = new HostResolver(dnsPop).execute();
+            if (resolvedIp != null && !resolvedIp.isDone())
+                resolvedIp.cancel(true);
+            resolvedIp = resolverPool.submit(new HostResolver(dnsPop));
         } catch (IOException e) {
             throw new IllegalArgumentException("Incorrectly configured, failure to parse certificates", e);
         }
@@ -316,9 +316,8 @@ public class TransporterParams implements TunnelSpec, Serializable {
      * Helper class for resolving URLs asynchronously. Call execute to start resolving, call
      * get()
      */
-    private static class HostResolver extends AsyncTask<Void, Void, Inet4Address> implements Serializable {
+    private static class HostResolver implements Callable<Inet4Address>, Serializable {
         private final String popHost;
-
         /**
          * Constructor.
          * @param popHost a String representing the host name that should be resolved to Inet4Adress.
@@ -328,19 +327,15 @@ public class TransporterParams implements TunnelSpec, Serializable {
         }
 
         @Override
-        protected Inet4Address doInBackground(Void ... voids) {
+        public Inet4Address call() throws UnknownHostException {
             Log.i(getClass().getName(), "Resolving hostname from URL " + popHost);
-            try {
-                for (InetAddress address : InetAddress.getAllByName(popHost)) {
+            for (InetAddress address : InetAddress.getAllByName(popHost)) {
                     if (address instanceof Inet4Address) {
                         Log.d(getClass().getName(), "Resolved to " + address);
                         return (Inet4Address)address;
                     }
-                }
-            } catch (UnknownHostException e) {
-                Log.e(TAG, "Cannot resolve configured issuer URL", e);
             }
-            return null;
+            throw new UnknownHostException("No IPv4 address for " + popHost);
         }
     }
 

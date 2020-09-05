@@ -31,7 +31,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.VpnService;
-import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.Build;
 import android.os.IBinder;
@@ -51,6 +50,8 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.statistics.Statistics;
@@ -106,6 +107,7 @@ public class IPv6DroidVpnService extends VpnService {
     private TunnelPersisting tunnelPersisting;
     private Tunnels cachedTunnels;
     private boolean errorNotification;
+    private static ExecutorService executor = Executors.newCachedThreadPool();
 
     public IPv6DroidVpnService() {
         cachedTunnels = null;
@@ -191,7 +193,7 @@ public class IPv6DroidVpnService extends VpnService {
      */
     private synchronized void startVpn() {
         vpnShouldRun = true;
-        thread.start();
+        executor.submit(thread);
         Log.i(TAG, "VpnThread started");
     }
 
@@ -201,7 +203,7 @@ public class IPv6DroidVpnService extends VpnService {
     private synchronized void stopVpn() {
         vpnShouldRun = false;
         if (thread != null && thread.isIntendedToRun()) {
-            Log.d(TAG, "stopVpn - requestTunnelClose");
+            Log.i(TAG, "stopVpn - requestTunnelClose on VpnThread");
             thread.requestTunnelClose();
         }
         thread = null;
@@ -226,14 +228,10 @@ public class IPv6DroidVpnService extends VpnService {
     @Override
     public void onRevoke() {
         Log.i(TAG, "VPN usage rights are being revoked - closing tunnel thread");
-        new AsyncTask<Void, Void, Void>() {
-            @Override
-            protected Void doInBackground(Void... params) {
-                Log.d (TAG, "Start async closing of VPN");
-                stopVpn();
-                return null;
-            }
-        }.execute();
+        executor.submit(() -> {
+            Log.d (TAG, "Start async closing of VPN");
+            stopVpn();
+        });
         notifyUserOfError(R.string.ayiyavpnservice_revoked, new Exception(""));
         super.onRevoke();
     }
@@ -390,14 +388,10 @@ public class IPv6DroidVpnService extends VpnService {
             if (thread != null && thread.isAlive()) {
                 if (action != null && action.equals(MainActivity.BC_STOP)) {
                     Log.i(TAG, "Received explicit stop broadcast, will stop VPN Tread");
-                    new AsyncTask<Void, Void, Void>(){
-                        @Override
-                        protected Void doInBackground(Void... params) {
-                            Log.d(TAG, "async close thread starting");
-                            stopVpn();
-                            return null;
-                        }
-                    }.execute();
+                    executor.submit(() -> {
+                        Log.d(TAG, "async close thread starting");
+                        stopVpn();
+                    });
                     stopSelf(); // user command is the only event that corresponds to "the work is done"
                 } else if (action != null && action.equals(MainActivity.BC_STATUS_UPDATE)) {
                     Log.i(TAG, "Someone requested a status report, will have one send");
