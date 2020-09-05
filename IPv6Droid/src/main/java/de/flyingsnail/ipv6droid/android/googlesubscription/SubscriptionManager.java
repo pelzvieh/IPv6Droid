@@ -53,9 +53,12 @@ import java.util.Map;
 
 import de.flyingsnail.ipv6droid.BuildConfig;
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.DTLSTunnelReader;
+import de.flyingsnail.ipv6droid.android.dtlsrequest.AndroidBackedKeyPair;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
-import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
-import de.flyingsnail.ipv6server.restapi.SubscriptionsApi;
+import de.flyingsnail.ipv6server.restapi.CertificationApi;
+import de.flyingsnail.ipv6server.svc.CertificationRejectedException;
+import de.flyingsnail.ipv6server.svc.SubscriptionRejectedException;
 import retrofit2.Call;
 import retrofit2.Response;
 
@@ -64,6 +67,8 @@ import retrofit2.Response;
  */
 public class SubscriptionManager {
     private static final String TAG = SubscriptionManager.class.getSimpleName();
+
+    private String alias;
 
     private static final int RESPONSE_CODE_OK = 0;
     private static final int RC_BUY = 3;
@@ -118,7 +123,7 @@ public class SubscriptionManager {
     /**
      * The client representing the SubscrptionsApi of the IPv6Server.
      */
-    private SubscriptionsApi subscriptionsClient;
+    private CertificationApi certificationClient;
 
     /**
      * An instance of the Google BillingClient.
@@ -165,7 +170,7 @@ public class SubscriptionManager {
 
         URI baseUrl;
         try {
-            baseUrl = new URI(context.getString(R.string.subscription_default_url_base));
+            baseUrl = new URI(context.getString(R.string.certification_default_url_base));
             String overrideHost = BuildConfig.target_host;
             if (!overrideHost.trim().isEmpty()) {
                 baseUrl = new URI ("http", baseUrl.getUserInfo(), overrideHost,
@@ -174,7 +179,7 @@ public class SubscriptionManager {
         } catch (URISyntaxException e) {
             throw new IllegalStateException("App packaging faulty, illegal URL: " + e);
         }
-        subscriptionsClient = RestProxyFactory.createSubscriptionsClient(baseUrl.toString());
+        certificationClient = RestProxyFactory.createCertificationClient(baseUrl.toString());
         googleBillingClient = BillingClient.newBuilder(context).
                 setListener(googlePurchasesUpdatesListener).
                 enablePendingPurchases().
@@ -320,37 +325,26 @@ public class SubscriptionManager {
                 if (SubscriptionBuilder.getSupportedSku().contains(sku)) {
                     // this one is relevant!
                     isSubscriptionRelevant = true;
-                    /* todo implement fundamentally different logic for DLTS:
-                       - query those tunnels associated with this purchase that are yet available
-                       - let user select an available tunnel to be used on this device
-                       - create (or re-use) a private key on this device
-                       - send allocation request (CSR, proof of purchase again)
-                       - receive and store certificate, persist configuration (used key + certificate)
-                     */
-                    Call<List<TicTunnel>> subsCall = subscriptionsClient.checkSubscriptionAndReturnTunnels(
+                    Call<List<String>> subsCall = certificationClient.checkSubscriptionAndSignCSR(
                             skuData,
-                            skuSignature
+                            skuSignature,
+                            getCsr()
                     );
                     new AsyncTask<Void, Void, Exception>() {
                         @Override
                         protected Exception doInBackground(Void... params) {
-                            List<TicTunnel> subscribedTunnels;
+                            List<String> caChain;
                             try {
-                                Response<List<TicTunnel>> subscribedTunnelsResponse = subsCall.execute();
+                                Response<List<String>> subscribedTunnelsResponse = subsCall.execute();
                                 if (!subscribedTunnelsResponse.isSuccessful()) {
                                     throw new IllegalStateException("subscribedTunnels returns exception " +
                                             (subscribedTunnelsResponse.errorBody() != null ? subscribedTunnelsResponse.errorBody().string() : "<none>"));
                                 }
-                                subscribedTunnels = subscribedTunnelsResponse.body();
-                                Log.d(TAG, String.format("Successfully retrieved %d tunnels from server", subscribedTunnels != null ? subscribedTunnels.size() : 0));
-                                // add only valid tunnels to save case distinction all through
-                                // the app
-                                for (TunnelSpec tunnel : subscribedTunnels) {
-                                    if (tunnel.isEnabled()) {
-                                        tunnels.add(tunnel);
-                                        Log.d(TAG, String.format("Added valid tunnel %s", tunnel.getTunnelId()));
-                                    }
-                                }
+                                caChain = subscribedTunnelsResponse.body();
+                                Log.d(TAG, String.format("Successfully retrieved %d certs from server", caChain != null ? caChain.size() : 0));
+                                TunnelSpec tunnel = DTLSTunnelReader.createTunnelspec(alias, caChain);
+                                tunnels.add(tunnel);
+                                Log.d(TAG, String.format("Added valid tunnel %s", tunnel.getTunnelId()));
                             } catch (Exception e) {
                                 Log.e(TAG, "Cannot verify subscription", e);
                                 return e;
@@ -397,10 +391,28 @@ public class SubscriptionManager {
                         }
                     }.execute();
                 }
-            } catch (RuntimeException re) {
+            } catch (RuntimeException | IOException | SubscriptionRejectedException | CertificationRejectedException re) {
                 Log.e(TAG, "unable to handle active subscription " + sku, re);
             }
         return isSubscriptionRelevant;
+    }
+
+    private String getCsr() throws IOException {
+        final List<String> aliases = AndroidBackedKeyPair.listAliases();
+        // iterate over existing aliases and try to build CSR from each and return on success
+        for (final String alias: aliases) {
+            try {
+                this.alias = alias;
+                return new AndroidBackedKeyPair(alias).getCertificationRequest();
+            } catch (IOException e) {
+                Log.i(TAG, "Key pair alias " + alias + " did not convert to CSR: " + e);
+            }
+        }
+        // no alias exists or none was convertible to a CSR
+        final String newAlias = "IPv6Droid-"+aliases.size();
+        AndroidBackedKeyPair.create(newAlias);
+        this.alias = newAlias;
+        return new AndroidBackedKeyPair(newAlias).getCertificationRequest();
     }
 
 

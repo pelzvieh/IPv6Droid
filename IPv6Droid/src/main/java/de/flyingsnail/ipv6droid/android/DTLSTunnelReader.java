@@ -68,7 +68,13 @@ public class DTLSTunnelReader implements TunnelReader {
                 certConfig.add("-----BEGIN CERTIFICATE-----\n" + certString);
             }
         }
-        params = new TransporterParams();
+        params = createTunnelspec(keyAlias, certConfig);
+
+        Log.i(TAG, "DTLSTunnelReader initialized");
+    }
+
+    public static TransporterParams createTunnelspec(String keyAlias, List<String> certConfig) throws ConnectionFailedException {
+        final TransporterParams params = new TransporterParams();
         // build params and perform parsing
         try {
             params.setCertChainEncoded(certConfig);
@@ -78,8 +84,7 @@ public class DTLSTunnelReader implements TunnelReader {
         }
         params.setHeartbeatInterval(10*60*1000); // 10 Minutes
         params.setMtu(1300);
-
-        Log.i(TAG, "DTLSTunnelReader initialized");
+        return params;
     }
 
     @Override

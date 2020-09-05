@@ -44,7 +44,6 @@ import androidx.fragment.app.Fragment;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import de.flyingsnail.ipv6droid.R;
 
@@ -107,7 +106,7 @@ public class KeyRequestFragment extends Fragment {
         String newAlias = "IPv6Droid-" + aliases.size();
         createKeyAlias.setText(newAlias);
 
-        spinnerAdapter = new ArrayAdapter<>(Objects.requireNonNull(getContext()), R.layout.support_simple_spinner_dropdown_item, aliases);
+        spinnerAdapter = new ArrayAdapter<>(requireContext(), R.layout.support_simple_spinner_dropdown_item, aliases);
         existingKeysSpinner.setAdapter(spinnerAdapter);
         existingKeysSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -127,7 +126,7 @@ public class KeyRequestFragment extends Fragment {
         }
 
         createButton.setOnClickListener(v -> {
-            createNewKey();
+            createNewKey(createKeyAlias.getText().toString().trim());
         });
 
         copyButton.setOnClickListener(v -> {
@@ -172,26 +171,20 @@ public class KeyRequestFragment extends Fragment {
         copyButton.setEnabled(true);
     }
 
-    private void createNewKey() {
-        List<String> aliases = new ArrayList<>(0);
+    private void createNewKey(final String newAlias) {
+        List<String> aliases = null;
         try {
             aliases = AndroidBackedKeyPair.listAliases();
-        } catch (IOException e) {
-            Log.e(TAG, "Cannot evaluate keys", e);
+            if (aliases.contains(newAlias)) {
+                throw new IllegalArgumentException("Alias already existing");
+            }
+            AndroidBackedKeyPair.create(newAlias);
+        } catch (Exception e) {
+            Toast.makeText(getContext(), e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "failed to create new key", e);
         }
-        String newAlias = createKeyAlias.getText().toString().trim();
-        if (newAlias.isEmpty() || aliases.contains(newAlias)) {
-            //todo show rejection
-            return;
-        }
-        AndroidBackedKeyPair.create(newAlias);
-        try {
-            AndroidBackedKeyPair newKeyPair = new AndroidBackedKeyPair(newAlias);
-            Log.i(TAG, "Convert to key: " + newKeyPair.getPrivateKey());
-            spinnerAdapter.insert(newAlias, aliases.size());
-            spinnerAdapter.notifyDataSetChanged();
-        } catch (IOException e) {
-            Log.e(TAG, "Could not read created key", e);
-        }
+        spinnerAdapter.insert(newAlias, aliases.size());
+        spinnerAdapter.notifyDataSetChanged();
     }
+
 }

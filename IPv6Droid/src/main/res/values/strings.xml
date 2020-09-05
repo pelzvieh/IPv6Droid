@@ -106,6 +106,7 @@
     <string name="pref_header_experimental">Experimental settings</string>
     <string name="ipv6_test_host" translatable="false">2a06:1c40::309</string>
     <string name="subscription_default_url_base" translatable="false">https://flyingsnail.de/services/services/</string>
+    <string name="certification_default_url_base" translatable="false">https://flyingsnail.de/services/certification/</string>
     <string name="statistics_started_at">Started at</string>
     <string name="statistics_reconnects">Reconnects</string>
     <string name="vpnthread_interrupted">We\'re interrupted</string>

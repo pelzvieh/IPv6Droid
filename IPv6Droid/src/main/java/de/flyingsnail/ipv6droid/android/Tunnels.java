@@ -221,7 +221,6 @@ public class Tunnels extends ArrayList<TunnelSpec> implements Cloneable {
         setActiveTunnel(newVal.getActiveTunnel());
     }
 
-
     public Serializable getAndroidSerializable () {
         return new AndroidParcelShield(this);
     }

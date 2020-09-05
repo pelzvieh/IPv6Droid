@@ -375,12 +375,11 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
      */
     private void updateCachedTunnelList() {
         List<TunnelSpec> subscribedTunnels;
-        synchronized (subscriptionManager) {
-            if (subscriptionManager == null || this.isDestroyed()) {
-                return; // this Activity is already destroyed
-            } else {
-                subscribedTunnels = subscriptionManager.getTunnels();
-            }
+        SubscriptionManager mySubscriptionManager = subscriptionManager;
+        if (mySubscriptionManager == null || this.isDestroyed()) {
+            return; // this Activity is already destroyed
+        } else {
+            subscribedTunnels = mySubscriptionManager.getTunnels();
         }
         // write tunnel list to cache
         TunnelPersisting tp = new TunnelPersistingFile(this.getApplicationContext());

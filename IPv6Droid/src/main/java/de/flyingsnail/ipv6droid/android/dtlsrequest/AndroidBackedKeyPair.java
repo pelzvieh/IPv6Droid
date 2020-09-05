@@ -27,6 +27,8 @@ import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
@@ -152,6 +154,27 @@ public class AndroidBackedKeyPair {
         }
         keyPair = new KeyPair(((KeyStore.PrivateKeyEntry) entry).getCertificate().getPublicKey(),
                 ((KeyStore.PrivateKeyEntry) entry).getPrivateKey());
+    }
+
+    /**
+     * Create a private key with the given alias.
+     * @param newAlias a String given the requested Alias
+     * @return a List&lt;String&gt; with all aliases present after creation, or null if the key
+     *    alread existed
+     * @throws IOException in case of communication problems with the backing store
+     */
+    public static List<String> createKey(@NonNull final String newAlias) throws IOException {
+        final List<String> aliases = listAliases();
+
+        if (newAlias.isEmpty() || aliases.contains(newAlias)) {
+            Log.e(TAG, "Requested alias already existing: " + newAlias);
+            return null;
+        }
+
+        create(newAlias);
+        AndroidBackedKeyPair newKeyPair = new AndroidBackedKeyPair(newAlias);
+        Log.i(TAG, "Convert to key: " + newKeyPair.getPrivateKey());
+        return aliases;
     }
 
     public SignatureAndHashAlgorithm getSignatureAndHashAlgorithm() {

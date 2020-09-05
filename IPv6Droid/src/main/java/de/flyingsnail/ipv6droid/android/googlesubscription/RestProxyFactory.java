@@ -29,6 +29,7 @@ import com.google.gson.GsonBuilder;
 import java.net.Inet4Address;
 import java.util.Date;
 
+import de.flyingsnail.ipv6server.restapi.CertificationApi;
 import de.flyingsnail.ipv6server.restapi.SubscriptionsApi;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
@@ -49,5 +50,16 @@ class RestProxyFactory {
                 .addConverterFactory(GsonConverterFactory.create(gson))
                 .build();
         return retrofit.create(SubscriptionsApi.class);
+    }
+    static CertificationApi createCertificationClient(String baseUrl) {
+        Gson gson = new GsonBuilder()
+                .registerTypeAdapter(Inet4Address.class, new SimpleInetDeserializer())
+                .registerTypeAdapter(Date.class, new SimpleDateSerializer())
+                .create();
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(baseUrl)
+                .addConverterFactory(GsonConverterFactory.create(gson))
+                .build();
+        return retrofit.create(CertificationApi.class);
     }
 }
