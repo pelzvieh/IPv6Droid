@@ -24,12 +24,9 @@ package de.flyingsnail.ipv6droid.android.googlesubscription;
 
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
-import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -47,6 +44,9 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.MainActivity;
@@ -64,6 +64,8 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
 
     private static final int RESPONSE_CODE_OK = 0;
     private static final int RC_BUY = 3;
+
+    private ScheduledExecutorService executor;
 
     /** A private instance of SubscriptionManager */
     private SubscriptionManager subscriptionManager;
@@ -85,9 +87,6 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
 
     /** A layout containing the views to show valid until information, incl. label */
     private View validUntilLine;
-
-    /** The app preferences */
-    private SharedPreferences myPreferences;
 
     /** The result of the last action, i.e. current state of purchasing process */
     private @NonNull ResultType purchasingResult = ResultType.NO_SERVICE_AUTO_RECOVERY;
@@ -139,8 +138,9 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
         purchasingInfoView.setText(R.string.user_subscription_checking);
         setUiStateManagerInitializing();
 
+        executor = Executors.newScheduledThreadPool(1);
+
         // initialise SubscriptionManager and Perferences
-        myPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         startNewSubscriptionManager();
 
         // set standard UI state according current state (might have changed already...)
@@ -160,6 +160,7 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
     @Override
     public void onDestroy() {
         Log.i(TAG, "SubscribeTunnelActivity gets destroyed.");
+        executor.shutdownNow();
         super.onDestroy();
         subscriptionManager.destroy();
         subscriptionManager = null;
@@ -320,7 +321,7 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
             case NO_SERVICE_TRY_AGAIN:
             case CHECK_FAILED:
                 // these are conditions that call for retrying
-                scheduleRetry(this);
+                scheduleRetry();
                 break;
 
             case NO_SERVICE_AUTO_RECOVERY:
@@ -340,33 +341,22 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
     /**
      * Called on certain failure states, this method schedules retrying of subscription check.
      */
-    static private void scheduleRetry(SubscribeTunnelActivity instance) {
-        SubscriptionManager failedSubscriptionManager = instance.subscriptionManager;
+    private void scheduleRetry() {
+        SubscriptionManager failedSubscriptionManager = subscriptionManager;
         if (failedSubscriptionManager != null) { // not already destroyed...
             failedSubscriptionManager.destroy();
         }
-        new AsyncTask<SubscribeTunnelActivity, Void, Void>() {
-            @Override
-            protected Void doInBackground(SubscribeTunnelActivity... subscribeTunnelActivities) {
-                try {
-                    Thread.sleep(30000L);
-                    for (SubscribeTunnelActivity subscribeTunnelActivity: subscribeTunnelActivities) {
-                        if (subscribeTunnelActivity == null ||
-                                subscribeTunnelActivity.isDestroyed() ||
-                                subscribeTunnelActivity.purchasingResult.equals(ResultType.HAS_TUNNELS) ||
-                                subscribeTunnelActivity.purchasingResult.equals(ResultType.NO_SUBSCRIPTIONS)) {
-                            Log.i(TAG, "Scheduled retry is obsolete");
-                        } else {
-                            Log.i(TAG, "Scheduled retry is launching a new instance of SubscriptionManager");
-                            subscribeTunnelActivity.startNewSubscriptionManager();
-                        }
-                    }
-                } catch (InterruptedException e) {
-                    Log.e(TAG, "Interrupted while waiting for retry", e);
-                }
-                return null;
+        executor.schedule(()-> {
+            if (isDestroyed() ||
+                purchasingResult.equals(ResultType.HAS_TUNNELS) ||
+                purchasingResult.equals(ResultType.NO_SUBSCRIPTIONS)
+            ) {
+                Log.i(TAG, "Scheduled retry is obsolete");
+            } else {
+                Log.i(TAG, "Scheduled retry is launching a new instance of SubscriptionManager");
+                startNewSubscriptionManager();
             }
-        }.execute(instance, null, null);
+        }, 30, TimeUnit.SECONDS);
     }
 
     /**

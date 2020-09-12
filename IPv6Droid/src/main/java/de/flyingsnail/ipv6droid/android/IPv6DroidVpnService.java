@@ -153,7 +153,7 @@ public class IPv6DroidVpnService extends VpnService {
     }
 
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
+    public synchronized int onStartCommand(Intent intent, int flags, int startId) {
         Log.i(TAG, "received start command");
         if (thread == null || !thread.isIntendedToRun()) {
             // become user visible
@@ -193,7 +193,7 @@ public class IPv6DroidVpnService extends VpnService {
      */
     private synchronized void startVpn() {
         vpnShouldRun = true;
-        executor.submit(thread);
+        thread.start();
         Log.i(TAG, "VpnThread started");
     }
 
@@ -228,10 +228,7 @@ public class IPv6DroidVpnService extends VpnService {
     @Override
     public void onRevoke() {
         Log.i(TAG, "VPN usage rights are being revoked - closing tunnel thread");
-        executor.submit(() -> {
-            Log.d (TAG, "Start async closing of VPN");
-            stopVpn();
-        });
+        stopVpn();
         notifyUserOfError(R.string.ayiyavpnservice_revoked, new Exception(""));
         super.onRevoke();
     }

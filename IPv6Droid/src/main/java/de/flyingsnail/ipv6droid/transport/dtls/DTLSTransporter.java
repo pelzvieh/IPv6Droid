@@ -285,7 +285,10 @@ public class DTLSTransporter implements Transporter {
       if (bytecount > maxPacketSize)
         maxPacketSize = bytecount;
 
-      if (bytecount <= 0) {
+      if (bytecount < 0) {
+        throw new TunnelBrokenException("Received end-of-stream indicator from dtls", null);
+      }
+      if (bytecount == 0) {
         Log.d(TAG, "Received 0 bytes within timeout");
         try {
           Thread.sleep(100L);

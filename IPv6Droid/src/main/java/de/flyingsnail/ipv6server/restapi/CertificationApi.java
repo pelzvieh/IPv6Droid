@@ -66,7 +66,7 @@ public interface CertificationApi {
    * @throws 
    */
   @FormUrlEncoded
-  @POST("/associate")
+  @POST("certification/associate")
   Call<List<String>> associateTunnelAndSignCSR(
           @Field("ipv6address") String ipv6address,
           @Field("tunnelpassword") String tunnelPassword,
@@ -74,7 +74,7 @@ public interface CertificationApi {
   ) throws CertificationRejectedException, IOException;
 
   @FormUrlEncoded
-  @POST("/checkandsign")
+  @POST("certification/checkandsign")
   Call<List<String>> checkSubscriptionAndSignCSR(
           @Field("data") String subscriptionData,
           @Field("signature") String signature,

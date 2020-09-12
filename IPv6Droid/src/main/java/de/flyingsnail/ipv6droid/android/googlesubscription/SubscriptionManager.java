@@ -25,7 +25,6 @@ package de.flyingsnail.ipv6droid.android.googlesubscription;
 
 import android.app.Activity;
 import android.content.Context;
-import android.os.AsyncTask;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -50,6 +49,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import de.flyingsnail.ipv6droid.BuildConfig;
 import de.flyingsnail.ipv6droid.R;
@@ -87,6 +88,7 @@ public class SubscriptionManager {
         put (BillingResponseCode.USER_CANCELED, SubscriptionCheckResultListener.ResultType.PURCHASE_FAILED);
     }};
 
+    private ExecutorService executor = Executors.newSingleThreadExecutor();
 
     /**
      * Helper implementation of the PurchasesUpdatedListener interface. Receives updates on purchases from Google.
@@ -320,81 +322,74 @@ public class SubscriptionManager {
         Log.d(TAG, "Examining SKU " + sku
                 + ",\n Data '" + skuData + "',\n signature '" + skuSignature);
 
-        boolean isSubscriptionRelevant = false;
+        if (!SubscriptionBuilder.getSupportedSku().contains(sku)) {
+            return false;
+        }
         try {
-                if (SubscriptionBuilder.getSupportedSku().contains(sku)) {
-                    // this one is relevant!
-                    isSubscriptionRelevant = true;
-                    Call<List<String>> subsCall = certificationClient.checkSubscriptionAndSignCSR(
-                            skuData,
-                            skuSignature,
-                            getCsr()
-                    );
-                    new AsyncTask<Void, Void, Exception>() {
-                        @Override
-                        protected Exception doInBackground(Void... params) {
-                            List<String> caChain;
-                            try {
-                                Response<List<String>> subscribedTunnelsResponse = subsCall.execute();
-                                if (!subscribedTunnelsResponse.isSuccessful()) {
-                                    throw new IllegalStateException("subscribedTunnels returns exception " +
-                                            (subscribedTunnelsResponse.errorBody() != null ? subscribedTunnelsResponse.errorBody().string() : "<none>"));
-                                }
-                                caChain = subscribedTunnelsResponse.body();
-                                Log.d(TAG, String.format("Successfully retrieved %d certs from server", caChain != null ? caChain.size() : 0));
-                                TunnelSpec tunnel = DTLSTunnelReader.createTunnelspec(alias, caChain);
-                                tunnels.add(tunnel);
-                                Log.d(TAG, String.format("Added valid tunnel %s", tunnel.getTunnelId()));
-                            } catch (Exception e) {
-                                Log.e(TAG, "Cannot verify subscription", e);
-                                return e;
-                            }
-                            return null;
-                        }
-
-                        @Override
-                        protected void onPostExecute(Exception e) {
-                            if (e != null) {
-                                if (e instanceof IOException || e instanceof RuntimeException) {
-                                    listener.onSubscriptionCheckResult(
-                                            SubscriptionCheckResultListener.ResultType.TEMPORARY_PROBLEM,
-                                            e.toString());
-                                    // nasty inconsistencies of the internal cache of BillingClient were seen
-                                    // when purchases were cancelled
-                                    googleBillingClient.queryPurchaseHistoryAsync(BillingClient.SkuType.SUBS,
-                                            (billingResult, purchasesList) -> {
-                                                Log.i(TAG, "Received online update of purchases");
-                                                if (purchasesList == null || purchasesList.isEmpty()) {
-                                                    listener.onSubscriptionCheckResult(
-                                                            SubscriptionCheckResultListener.ResultType.NO_SUBSCRIPTIONS,
-                                                            "Status corrected online"
-                                                    );
-                                                } else {
-                                                    for (PurchaseHistoryRecord record: purchasesList) {
-                                                        Log.i(TAG, "Purchase " + record.getSku() + ": " + record.getPurchaseToken());
-                                                    }
-                                                }
-                                            });
-
-                                } else {
-                                    listener.onSubscriptionCheckResult(
-                                            SubscriptionCheckResultListener.ResultType.CHECK_FAILED,
-                                            e.toString());
-                                }
-                            } else {
-                                synchronized (listener) { // is in race with "PURCHASE_COMPLETED"
-                                    listener.onSubscriptionCheckResult(
-                                            SubscriptionCheckResultListener.ResultType.HAS_TUNNELS,
-                                            null);
-                                }
-                            }
-                        }
-                    }.execute();
+            final Call<List<String>> subsCall = certificationClient.checkSubscriptionAndSignCSR(
+                    skuData,
+                    skuSignature,
+                    getCsr()
+            );
+            executor.submit(() -> {
+                try {
+                    List<String> caChain;
+                    Response<List<String>> subscribedTunnelsResponse = subsCall.execute();
+                    if (!subscribedTunnelsResponse.isSuccessful()) {
+                        throw new IllegalStateException("subscribedTunnels returns exception " +
+                                (subscribedTunnelsResponse.errorBody() != null ? subscribedTunnelsResponse.errorBody().string() : "<none>"));
+                    }
+                    caChain = subscribedTunnelsResponse.body();
+                    Log.d(TAG, String.format("Successfully retrieved %d certs from server", caChain != null ? caChain.size() : 0));
+                    TunnelSpec tunnel = DTLSTunnelReader.createTunnelspec(alias, caChain);
+                    tunnels.add(tunnel);
+                    Log.d(TAG, String.format("Added valid tunnel %s", tunnel.getTunnelId()));
+                    onPostRetrieveCertificate(null);
+                } catch (Exception e) {
+                    onPostRetrieveCertificate(e);
                 }
-            } catch (RuntimeException | IOException | SubscriptionRejectedException | CertificationRejectedException re) {
-                Log.e(TAG, "unable to handle active subscription " + sku, re);
+            });
+        } catch (RuntimeException | IOException | SubscriptionRejectedException | CertificationRejectedException re) {
+            Log.e(TAG, "unable to handle active subscription " + sku, re);
+        }
+        return true;
+    }
+
+    private void onPostRetrieveCertificate(Exception e) {
+        if (e != null) {
+            if (e instanceof IOException || e instanceof RuntimeException) {
+                listener.onSubscriptionCheckResult(
+                        SubscriptionCheckResultListener.ResultType.TEMPORARY_PROBLEM,
+                        e.toString());
+                // nasty inconsistencies of the internal cache of BillingClient were seen
+                // when purchases were cancelled
+                googleBillingClient.queryPurchaseHistoryAsync(BillingClient.SkuType.SUBS,
+                        (billingResult, purchasesList) -> {
+                            Log.i(TAG, "Received online update of purchases");
+                            if (purchasesList == null || purchasesList.isEmpty()) {
+                                listener.onSubscriptionCheckResult(
+                                        SubscriptionCheckResultListener.ResultType.NO_SUBSCRIPTIONS,
+                                        "Status corrected online"
+                                );
+                            } else {
+                                for (PurchaseHistoryRecord record: purchasesList) {
+                                    Log.i(TAG, "Purchase " + record.getSku() + ": " + record.getPurchaseToken());
+                                }
+                            }
+                        });
+
+            } else {
+                listener.onSubscriptionCheckResult(
+                        SubscriptionCheckResultListener.ResultType.CHECK_FAILED,
+                        e.toString());
             }
-        return isSubscriptionRelevant;
+        } else {
+            synchronized (listener) { // is in race with "PURCHASE_COMPLETED"
+                listener.onSubscriptionCheckResult(
+                        SubscriptionCheckResultListener.ResultType.HAS_TUNNELS,
+                        null);
+            }
+        }
     }
 
     private String getCsr() throws IOException {
@@ -473,5 +468,6 @@ public class SubscriptionManager {
     public void destroy() {
         Log.i(TAG, "Destroying Subscription Manager.");
         googleBillingClient.endConnection();
+        executor.shutdownNow();
     }
 }

@@ -31,7 +31,6 @@ import androidx.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.SocketException;
 import java.util.Date;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -196,14 +195,12 @@ class CopyThread extends Thread {
                 bufferPool.add(packet);
             }
             Log.i(TAG, "Copy thread " + getName() + " ordinarily stopped");
+        } catch (InterruptedException | IOException e) {
+            Log.i(TAG, "Copy thread " + getName() + " ran into expected Exception, will end gracefully", e);
         } catch (Exception e) {
             deathCause = e;
-            if (e instanceof InterruptedException || e instanceof SocketException || e instanceof IOException) {
-                Log.i(TAG, "Copy thread " + getName() + " ran into expected Exception, will end gracefully");
-            } else {
-                Log.e(TAG, "Copy thread " + getName() + " got exception", e);
-                IPv6DroidVpnService.notifyUserOfError(R.string.copythreadexception, e);
-            }
+            Log.e(TAG, "Copy thread " + getName() + " got exception", e);
+            IPv6DroidVpnService.notifyUserOfError(R.string.copythreadexception, e);
         } finally {
             cleanAll();
             vpnThread.copyThreadDied(this);

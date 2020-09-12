@@ -33,7 +33,6 @@ import android.net.NetworkInfo;
 import android.net.RouteInfo;
 import android.net.TrafficStats;
 import android.net.VpnService;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Handler;
 import android.os.ParcelFileDescriptor;
@@ -59,6 +58,8 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.StringTokenizer;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.statistics.Statistics;
@@ -113,6 +114,8 @@ class VpnThread extends Thread implements NetworkChangeListener {
             Log.e(TAG, "Static initializer for Google DNS failed", e);
         }
     }
+
+    private static ExecutorService executor = Executors.newCachedThreadPool();
 
     /**
      * The service that created this thread.
@@ -241,12 +244,14 @@ class VpnThread extends Thread implements NetworkChangeListener {
         this.tunnelReader = tr;
         this.startedAt = new Date(0L);
         this.reconnectCount = 0;
+        this.closeTunnel = false;
     }
 
 
     @Override
     public void run() {
-        closeTunnel = false;
+        if (closeTunnel)
+            throw new IllegalStateException("Starting a VpnThread that should close");
         try {
             networkHelper = new NetworkHelper(this, IPv6DroidVpnService);
             networkHelper.start();
@@ -298,6 +303,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
                 configureBuilderFromTunnelSpecification(builderNotRouted, activeTunnel, true);
             }
             refreshTunnelLoop(builder, builderNotRouted);
+            closeTunnel = true;
 
             // important status change
             vpnStatus.setProgressPerCent(0);
@@ -322,6 +328,7 @@ class VpnThread extends Thread implements NetworkChangeListener {
             IPv6DroidVpnService.notifyUserOfError(R.string.vpnservice_unexpected_problem, t);
             vpnStatus.setCause(t);
         } finally {
+            closeTunnel = true;
             networkHelper.stop();
         }
         vpnStatus.clear(); // back at zero
@@ -331,14 +338,16 @@ class VpnThread extends Thread implements NetworkChangeListener {
     /**
      * Request the tunnel control loop (running in a different thread) to stop.
      */
-    void requestTunnelClose() {
+    public void requestTunnelClose() {
         if (isIntendedToRun()) {
             Log.i(TAG, "Shutting down");
             closeTunnel = true;
-            cleanAll();
-            setName(getName() + " (shutting down)");
-            interrupt();
-            networkHelper.stop();
+            executor.submit(() -> {
+                cleanAll();
+                setName(getName() + " (shutting down)");
+                networkHelper.stop();
+            });
+            this.interrupt();
         }
     }
 
@@ -898,21 +907,17 @@ class VpnThread extends Thread implements NetworkChangeListener {
         // check if our routing is still valid, otherwise invalidate vpnFD
         if (isTunnelUp() && (isTunnelRoutingRequired() ^ tunnelRouted)) {
             Log.i(TAG, "tunnel routing requirement changed, forcing re-build of local vpn socket");
-            new AsyncTask<Void, Void, Void>() {
-                @Override
-                protected Void doInBackground(Void... params) {
-                    try {
-                        if (vpnFD != null) {
-                            vpnFD.close();
-                        }
-                        Log.i(TAG, "VPN closed");
-                        cleanCopyThreads();
-                    } catch (Throwable t) {
-                        Log.e(TAG, "stopping copy threads failed", t);
+            executor.submit(() -> {
+                try {
+                    if (vpnFD != null) {
+                        vpnFD.close();
                     }
-                    return null;
+                    Log.i(TAG, "VPN closed");
+                    cleanCopyThreads();
+                } catch (Throwable t) {
+                    Log.e(TAG, "stopping copy threads failed", t);
                 }
-            }.execute();
+            });
         } else {
             // check if our sockets are still valid
             final Transporter myAyiya = transporter; // avoid race conditions
@@ -925,18 +930,14 @@ class VpnThread extends Thread implements NetworkChangeListener {
                  */
                 if (!(myAyiya.isAlive() && isCurrentSocketStillValid())) {
                     Log.i(TAG, "transporter object no longer functional after connectivity change - reconnecting");
-                    new AsyncTask<Void, Void, Void>() {
-                        @Override
-                        protected Void doInBackground(Void... params) {
-                            try {
-                                cleanCopyThreads();
-                            } catch (Throwable t) {
-                                Log.e(TAG, "stopping copy threads failed", t);
-                            }
-                            return null;
+                    executor.submit(() -> {
+                        try {
+                            cleanCopyThreads();
+                        } catch (Throwable t) {
+                            Log.e(TAG, "stopping copy threads failed", t);
                         }
-
-                    }.execute();
+                        return null;
+                    });
                 }
             } // vpn copy threads are still running
         }
