@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -25,6 +25,9 @@ package de.flyingsnail.ipv6droid.android.statistics;
 
 import android.net.RouteInfo;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -37,55 +40,44 @@ import java.util.List;
  * GUI classes.
  */
 public class Statistics {
-    final private Date startedAt;
-    final private long bytesTransmitted;
-    private final int reconnectCount;
-    final private long bytesReceived;
-    final private long packetsTransmitted;
-    final private long packetsReceived;
-    final private double bytesPerBurstTransmitted;
-    final private double bytesPerBurstReceived;
-    final private double packetsPerBurstTransmitted;
-    final private double packetsPerBurstReceived;
-    final private double timeSpanPerBurstTransmitted;
-    final private double timeSpanPerBurstReceived;
-    final private double timeLapseBetweenBurstsTransmitted;
-    final private double timeLapseBetweenBurstsReceived;
-    final private Inet4Address brokerIPv4;
-    final private Inet4Address myIPv4;
-    final private Inet6Address brokerIPv6;
-    final private Inet6Address myIPv6;
-    final private int mtu;
-    final private List<RouteInfo> nativeRouting;
-    final private List<RouteInfo> vpnRouting;
-    final private List<InetAddress> nativeDnsSetting;
-    final private List<InetAddress> vpnDnsSetting;
-    final private Date timestamp;
-    final private boolean tunnelRouted;
+    private Date startedAt;
+    private long bytesTransmitted;
+    private int reconnectCount;
+    private long bytesReceived;
+    private long packetsTransmitted;
+    private long packetsReceived;
+    private double bytesPerBurstTransmitted;
+    private double bytesPerBurstReceived;
+    private double packetsPerBurstTransmitted;
+    private double packetsPerBurstReceived;
+    private double timeSpanPerBurstTransmitted;
+    private double timeSpanPerBurstReceived;
+    private double timeLapseBetweenBurstsTransmitted;
+    private double timeLapseBetweenBurstsReceived;
+    private Inet4Address brokerIPv4;
+    private Inet4Address myIPv4;
+    private Inet6Address brokerIPv6;
+    private Inet6Address myIPv6;
+    private int mtu;
+    private List<RouteInfo> nativeRouting;
+    private List<RouteInfo> vpnRouting;
+    private List<InetAddress> nativeDnsSetting;
+    private List<InetAddress> vpnDnsSetting;
+    private Date timestamp;
+    private boolean tunnelRouted;
 
-    public Statistics(TransmissionStatistics outgoingStatistics,
-                         TransmissionStatistics ingoingStatistics,
-                         Date startedAt,
-                         int reconnectCount,
-                         Inet4Address brokerIPv4, Inet4Address myIPv4,
-                         Inet6Address brokerIPv6, Inet6Address myIPv6,
-                         int mtu,
-                         List<RouteInfo> nativeRouting, List<RouteInfo> vpnRouting,
-                         List<InetAddress> nativeDnsSetting,List<InetAddress> vpnDnsSetting,
-                         boolean tunnelRouted)
+    /** Constructor setting all fields at once. */
+    public Statistics(@NonNull TransmissionStatistics outgoingStatistics,
+                      @NonNull TransmissionStatistics ingoingStatistics,
+                      Date startedAt,
+                      int reconnectCount,
+                      Inet4Address brokerIPv4, Inet4Address myIPv4,
+                      Inet6Address brokerIPv6, Inet6Address myIPv6,
+                      int mtu,
+                      List<RouteInfo> nativeRouting, List<RouteInfo> vpnRouting,
+                      List<InetAddress> nativeDnsSetting,List<InetAddress> vpnDnsSetting,
+                      boolean tunnelRouted)
     {
-        this.bytesTransmitted = outgoingStatistics.getByteCount();
-        this.bytesReceived = ingoingStatistics.getByteCount();
-        this.packetsTransmitted = outgoingStatistics.getPacketCount();
-        this.packetsReceived = ingoingStatistics.getPacketCount();
-        this.bytesPerBurstTransmitted = outgoingStatistics.getAverageBurstBytes();
-        this.bytesPerBurstReceived = ingoingStatistics.getAverageBurstBytes();
-        this.packetsPerBurstTransmitted = outgoingStatistics.getAverageBurstPackets();
-        this.packetsPerBurstReceived = ingoingStatistics.getAverageBurstPackets();
-        this.timeSpanPerBurstTransmitted = outgoingStatistics.getAverageBurstLength();
-        this.timeSpanPerBurstReceived = ingoingStatistics.getAverageBurstLength();
-        this.timeLapseBetweenBurstsTransmitted = outgoingStatistics.getAverageBurstPause();
-        this.timeLapseBetweenBurstsReceived = ingoingStatistics.getAverageBurstPause();
         this.brokerIPv4 = brokerIPv4;
         this.myIPv4 = myIPv4;
         this.brokerIPv6 = brokerIPv6;
@@ -97,11 +89,188 @@ public class Statistics {
         this.vpnDnsSetting = vpnDnsSetting;
 
         this.tunnelRouted = tunnelRouted;
-        timestamp = new Date();
+        this.timestamp = new Date();
         this.startedAt = startedAt;
         this.reconnectCount = reconnectCount;
+
+        addOutgoingStatistics(outgoingStatistics);
+        addIngoingStatistics(ingoingStatistics);
     }
 
+    /**
+     * Constructor setting fields that are known right at the point of tunnel startup.
+     * @param startedAt
+     * @param brokerIPv4
+     * @param brokerIPv6
+     * @param myIPv6
+     * @param mtu
+     */
+    public Statistics(Date startedAt, Inet4Address brokerIPv4, Inet6Address brokerIPv6, Inet6Address myIPv6, int mtu) {
+        this.startedAt = startedAt;
+        this.brokerIPv4 = brokerIPv4;
+        this.brokerIPv6 = brokerIPv6;
+        this.myIPv6 = myIPv6;
+        this.mtu = mtu;
+    }
+
+    /**
+     * Set transmission information from a TransmissionStatistics object.
+     * @param outgoingStatistics the TransmissionStatistics object representing transmitted data
+     * @return this
+     */
+    public Statistics addOutgoingStatistics (@Nullable final TransmissionStatistics outgoingStatistics) {
+        if (outgoingStatistics != null) {
+            this.bytesTransmitted = outgoingStatistics.getByteCount();
+            this.packetsTransmitted = outgoingStatistics.getPacketCount();
+            this.bytesPerBurstTransmitted = outgoingStatistics.getAverageBurstBytes();
+            this.packetsPerBurstTransmitted = outgoingStatistics.getAverageBurstPackets();
+            this.timeSpanPerBurstTransmitted = outgoingStatistics.getAverageBurstLength();
+            this.timeLapseBetweenBurstsTransmitted = outgoingStatistics.getAverageBurstPause();
+        }
+        return this;
+    }
+
+    /**
+     * Set receiption informaiton from a TransmissionStatistics object
+     * @param ingoingStatistics the TransmissionStatistics object representing received data
+     * @return this
+     */
+    public Statistics addIngoingStatistics (@Nullable final TransmissionStatistics ingoingStatistics) {
+        if (ingoingStatistics != null) {
+            this.bytesReceived = ingoingStatistics.getByteCount();
+            this.packetsReceived = ingoingStatistics.getPacketCount();
+            this.bytesPerBurstReceived = ingoingStatistics.getAverageBurstBytes();
+            this.packetsPerBurstReceived = ingoingStatistics.getAverageBurstPackets();
+            this.timeSpanPerBurstReceived = ingoingStatistics.getAverageBurstLength();
+            this.timeLapseBetweenBurstsReceived = ingoingStatistics.getAverageBurstPause();
+        }
+        return this;
+    }
+
+    public Statistics setStartedAt(Date startedAt) {
+        this.startedAt = startedAt;
+        return this;
+    }
+
+    public Statistics setBytesTransmitted(long bytesTransmitted) {
+        this.bytesTransmitted = bytesTransmitted;
+        return this;
+    }
+
+    public Statistics setReconnectCount(int reconnectCount) {
+        this.reconnectCount = reconnectCount;
+        return this;
+    }
+
+    public Statistics setBytesReceived(long bytesReceived) {
+        this.bytesReceived = bytesReceived;
+        return this;
+    }
+
+    public Statistics setPacketsTransmitted(long packetsTransmitted) {
+        this.packetsTransmitted = packetsTransmitted;
+        return this;
+    }
+
+    public Statistics setPacketsReceived(long packetsReceived) {
+        this.packetsReceived = packetsReceived;
+        return this;
+    }
+
+    public Statistics setBytesPerBurstTransmitted(double bytesPerBurstTransmitted) {
+        this.bytesPerBurstTransmitted = bytesPerBurstTransmitted;
+        return this;
+    }
+
+    public Statistics setBytesPerBurstReceived(double bytesPerBurstReceived) {
+        this.bytesPerBurstReceived = bytesPerBurstReceived;
+        return this;
+    }
+
+    public Statistics setPacketsPerBurstTransmitted(double packetsPerBurstTransmitted) {
+        this.packetsPerBurstTransmitted = packetsPerBurstTransmitted;
+        return this;
+    }
+
+    public Statistics setPacketsPerBurstReceived(double packetsPerBurstReceived) {
+        this.packetsPerBurstReceived = packetsPerBurstReceived;
+        return this;
+    }
+
+    public Statistics setTimeSpanPerBurstTransmitted(double timeSpanPerBurstTransmitted) {
+        this.timeSpanPerBurstTransmitted = timeSpanPerBurstTransmitted;
+        return this;
+    }
+
+    public Statistics setTimeSpanPerBurstReceived(double timeSpanPerBurstReceived) {
+        this.timeSpanPerBurstReceived = timeSpanPerBurstReceived;
+        return this;
+    }
+
+    public Statistics setTimeLapseBetweenBurstsTransmitted(double timeLapseBetweenBurstsTransmitted) {
+        this.timeLapseBetweenBurstsTransmitted = timeLapseBetweenBurstsTransmitted;
+        return this;
+    }
+
+    public Statistics setTimeLapseBetweenBurstsReceived(double timeLapseBetweenBurstsReceived) {
+        this.timeLapseBetweenBurstsReceived = timeLapseBetweenBurstsReceived;
+        return this;
+    }
+
+    public Statistics setBrokerIPv4(Inet4Address brokerIPv4) {
+        this.brokerIPv4 = brokerIPv4;
+        return this;
+    }
+
+    public Statistics setMyIPv4(Inet4Address myIPv4) {
+        this.myIPv4 = myIPv4;
+        return this;
+    }
+
+    public Statistics setBrokerIPv6(Inet6Address brokerIPv6) {
+        this.brokerIPv6 = brokerIPv6;
+        return this;
+    }
+
+    public Statistics setMyIPv6(Inet6Address myIPv6) {
+        this.myIPv6 = myIPv6;
+        return this;
+    }
+
+    public Statistics setMtu(int mtu) {
+        this.mtu = mtu;
+        return this;
+    }
+
+    public Statistics setNativeRouting(List<RouteInfo> nativeRouting) {
+        this.nativeRouting = nativeRouting;
+        return this;
+    }
+
+    public Statistics setVpnRouting(List<RouteInfo> vpnRouting) {
+        this.vpnRouting = vpnRouting;
+        return this;
+    }
+
+    public Statistics setNativeDnsSetting(List<InetAddress> nativeDnsSetting) {
+        this.nativeDnsSetting = nativeDnsSetting;
+        return this;
+    }
+
+    public Statistics setVpnDnsSetting(List<InetAddress> vpnDnsSetting) {
+        this.vpnDnsSetting = vpnDnsSetting;
+        return this;
+    }
+
+    public Statistics setTimestamp(Date timestamp) {
+        this.timestamp = timestamp;
+        return this;
+    }
+
+    public Statistics setTunnelRouted(boolean tunnelRouted) {
+        this.tunnelRouted = tunnelRouted;
+        return this;
+    }
 
     public Date getStartedAt() {
         return startedAt;

@@ -21,18 +21,19 @@
  *
  */
 
-package de.flyingsnail.ipv6droid.android;
-
-import java.io.IOException;
-import java.util.List;
-
-import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
-import de.flyingsnail.ipv6droid.transport.TunnelSpec;
+package de.flyingsnail.ipv6droid.android.vpnrun;
 
 /**
- * Created by pelzi on 18.10.17.
+ * An object interested in high level connectivity changes as provided by NetworkHelper.
  */
+interface NetworkChangeListener {
+    /**
+     * The device has a new connection. Details can be queried from NetworkHelper.
+     */
+    void onNewConnection();
 
-public interface TunnelReader {
-    List<? extends TunnelSpec> queryTunnels() throws ConnectionFailedException, IOException;
+    /**
+     * The device just went offline.
+     */
+    void onDisconnected();
 }

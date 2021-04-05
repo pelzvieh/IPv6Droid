@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -21,15 +21,13 @@
  *
  */
 
-package de.flyingsnail.ipv6droid.android;
+package de.flyingsnail.ipv6droid.android.vpnrun;
 
 import android.util.Log;
 
 import java.io.IOException;
-import java.net.Inet6Address;
 import java.util.Date;
 
-import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
 import de.flyingsnail.ipv6droid.transport.Transporter;
 import de.flyingsnail.ipv6droid.transport.TunnelBrokenException;
@@ -52,14 +50,14 @@ class HeartbeatMonitor implements Monitor {
 
     private final CopyThread inThread;
     private final CopyThread outThread;
-    private final VpnThread vpnThread;
+    private final RemoteEnd remoteEnd;
     private final Transporter transporter;
 
-    HeartbeatMonitor(VpnThread vpnThread, CopyThread inThread, CopyThread outThread) {
+    HeartbeatMonitor(final RemoteEnd remoteEnd, CopyThread inThread, CopyThread outThread) {
         this.inThread = inThread;
         this.outThread = outThread;
-        this.vpnThread = vpnThread;
-        this.transporter = vpnThread.getTransporter();
+        this.remoteEnd = remoteEnd;
+        this.transporter = remoteEnd.getTransporter();
     }
 
     /**
@@ -75,21 +73,21 @@ class HeartbeatMonitor implements Monitor {
         long lastPacketDelta = 0L;
         TunnelSpec activeTunnel = transporter.getTunnelSpec();
         long heartbeatInterval = activeTunnel.getHeartbeatInterval() * 1000L;
-        if (heartbeatInterval < 300000L && vpnThread.isNetworkMobile()) {
+        if (heartbeatInterval < 300000L && remoteEnd.isNetworkMobile()) {
             Log.i(TAG, "Lifting heartbeat interval to 300 secs");
             heartbeatInterval = 300000L;
         }
-        while (vpnThread.isIntendedToRun() && (inThread != null && inThread.isAlive()) && (outThread != null && outThread.isAlive())) {
+        while (remoteEnd.isIntendedToRun() && (inThread != null && inThread.isAlive()) && (outThread != null && outThread.isAlive())) {
             // wait for the heartbeat interval to finish or until inThread dies.
             // Note: the inThread is reading from the network socket to the POP
             // in case of network changes, this socket breaks immediately, so
             // inThread crashes on external network changes even if no transfer
             // is active.
             inThread.join(heartbeatInterval - lastPacketDelta);
-            if (!vpnThread.isIntendedToRun())
+            if (!remoteEnd.isIntendedToRun())
                 break;
             // re-check cached network information
-            if (!vpnThread.isCurrentSocketStillValid()) {
+            if (!remoteEnd.isCurrentSocketStillValid()) {
                 throw new IOException("IP address changed");
             }
             // determine last package transmission time
@@ -105,26 +103,24 @@ class HeartbeatMonitor implements Monitor {
                     throw new IOException ("Transporter object claims it is broken", e);
                 }
 
-            /* See if we're receiving packets:
+               /* See if we're receiving packets:
                no valid packet after one heartbeat - definitely not working
                no new packets for more than heartbeat interval? Might be device sleep!
                but if not pingable, probably broken.
                In the latter case we give it another heartbeat interval time to recover. */
-                if (vpnThread.isCurrentSocketStillValid() &&
+                if (remoteEnd.isCurrentSocketStillValid() &&
                         !transporter.isValidPacketReceived() && // if the tunnel worked in a session, don't worry if it pauses - it's 100% network problems
                         VpnThread.checkExpiry(transporter.getLastPacketReceivedTime(),
-                                activeTunnel.getHeartbeatInterval()) &&
-                        !Inet6Address.getByName(vpnThread.getApplicationContext().getString(R.string.ipv6_test_host)).isReachable(10000)
-                ) {
+                                activeTunnel.getHeartbeatInterval()) ) {
                     if (!timeoutSuspected)
                         timeoutSuspected = true;
                     else if (activeTunnel instanceof TicTunnel && new Date().getTime() - ((TicTunnel)activeTunnel).getCreationDate().getTime()
                             > TIC_RECHECK_BLOCKED_MILLISECONDS) {
-                        ayiyaTunnelRefresh();
-                        continue;
+                        throw new ConnectionFailedException("TIC information may have changed", null);
                     }
-                } else
+                } else {
                     timeoutSuspected = false;
+                }
 
                 Log.i(TAG, "Sent heartbeat.");
             }
@@ -145,22 +141,6 @@ class HeartbeatMonitor implements Monitor {
             } else {
                 throw new IOException(deathCause);
             }
-        }
-    }
-
-    private void ayiyaTunnelRefresh() throws ConnectionFailedException {
-        boolean tunnelChanged;
-        try {
-            tunnelChanged = vpnThread.readTunnels(); // no need to update activeTunnel - we're going to quit
-        } catch (IOException ioe) {
-            Log.i(TAG, "TIC and Ayiya both disturbed - assuming network problems", ioe);
-            return;
-        }
-        if (tunnelChanged) {
-            // TIC had new data - signal a configuration problem to rebuild tunnel
-            throw new ConnectionFailedException("TIC information changed", null);
-        } else {
-            throw new ConnectionFailedException("This TIC tunnel doesn't receive data", null);
         }
     }
 }

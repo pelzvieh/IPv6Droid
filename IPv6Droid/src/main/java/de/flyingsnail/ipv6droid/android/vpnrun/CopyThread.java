@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
  *
  *
  */
-package de.flyingsnail.ipv6droid.android;
+package de.flyingsnail.ipv6droid.android.vpnrun;
 
 import android.net.TrafficStats;
 import android.util.Log;
@@ -36,6 +36,7 @@ import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.UserNotificationCallback;
 import de.flyingsnail.ipv6droid.android.statistics.TransmissionStatistics;
 
 /**
@@ -52,13 +53,13 @@ class CopyThread extends Thread {
     private boolean stopCopy;
     private final int networkTag;
     // instance of the service controlling this thread
-    private IPv6DroidVpnService IPv6DroidVpnService;
-    // instance of the Thread controlling the copy threads.
-    private VpnThread vpnThread;
+    private final UserNotificationCallback service;
+    // instance of the RemoteEnd controlling the copy threads.
+    private final RemoteEnd remoteEnd;
     // time when last packet received
     private Date lastPacketReceived;
     // the instance that will keep statistics for this copy thread
-    private TransmissionStatistics statisticsCollector;
+    private final TransmissionStatistics statisticsCollector;
 
     // the throwable that caused this thread to die
     private Throwable deathCause;
@@ -76,8 +77,8 @@ class CopyThread extends Thread {
      * Instantiate and run(!) a thread that copies from in to out until interrupted.
      * @param in The stream to copy from.
      * @param out The stream to copy to.
-     * @param IPv6DroidVpnService the service instance of the active IPv6DroidVpnService that controls this thread.
-     * @param vpnThread the VpnThread controlling the copy threads.
+     * @param service the service instance of the active IPv6DroidVpnService that controls this thread.
+     * @param remoteEnd the RemoteEnd controlling the copy threads.
      * @param threadName a String giving the name of the Thread (as shown in some logs and debuggers)
      * @param networkTag an int representing the tag for network statistics of this thread
      * @param packetBundlingPeriod a long that gives the time in millisecs that the copy thread will try
@@ -85,8 +86,8 @@ class CopyThread extends Thread {
      */
     public CopyThread(final @NonNull InputStream in,
                       final @NonNull OutputStream out,
-                      @NonNull IPv6DroidVpnService IPv6DroidVpnService,
-                      @NonNull VpnThread vpnThread,
+                      final @NonNull UserNotificationCallback service,
+                      @NonNull RemoteEnd remoteEnd,
                       @NonNull String threadName,
                       int networkTag,
                       long packetBundlingPeriod,
@@ -97,8 +98,8 @@ class CopyThread extends Thread {
         this.out = out;
         this.networkTag = networkTag;
         this.setName(threadName);
-        this.IPv6DroidVpnService = IPv6DroidVpnService;
-        this.vpnThread = vpnThread;
+        this.service = service;
+        this.remoteEnd = remoteEnd;
         this.packetBundlingPeriod = packetBundlingPeriod;
         int packetBufferLength = (packetBundlingPeriod > 0) ? MAX_PACKET_BUFFER_LENGTH : 0;
         this.statisticsCollector = statisticsCollector;
@@ -176,7 +177,7 @@ class CopyThread extends Thread {
                     out.write(packet, 0, len);
                     // statistics
                     if (!packetReceived) {
-                        vpnThread.notifyFirstPacketReceived();
+                        remoteEnd.notifyFirstPacketReceived();
                         packetReceived = true;
                     }
 
@@ -186,7 +187,7 @@ class CopyThread extends Thread {
                 } else {
                     recvZero++;
                     if (recvZero == 10000) {
-                        IPv6DroidVpnService.notifyUserOfError(R.string.copythreadexception, new IllegalStateException(
+                        service.notifyUserOfError(R.string.copythreadexception, new IllegalStateException(
                                 Thread.currentThread().getName() + ": received 0 byte packages"
                         ));
                     }
@@ -200,10 +201,10 @@ class CopyThread extends Thread {
         } catch (Exception e) {
             deathCause = e;
             Log.e(TAG, "Copy thread " + getName() + " got exception", e);
-            IPv6DroidVpnService.notifyUserOfError(R.string.copythreadexception, e);
+            service.notifyUserOfError(R.string.copythreadexception, e);
         } finally {
             cleanAll();
-            vpnThread.copyThreadDied(this);
+            remoteEnd.copyThreadDied(this);
         }
     }
 

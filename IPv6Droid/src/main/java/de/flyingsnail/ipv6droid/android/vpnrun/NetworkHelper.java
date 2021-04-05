@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -21,9 +21,8 @@
  *
  */
 
-package de.flyingsnail.ipv6droid.android;
+package de.flyingsnail.ipv6droid.android.vpnrun;
 
-import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
@@ -64,24 +63,24 @@ public class NetworkHelper  {
     /**
      * The system service ConnectivityManager
      */
-    private ConnectivityManager connectivityManager;
+    private final ConnectivityManager connectivityManager;
 
-    NetworkHelper(NetworkChangeListener networkChangeListener, Context notificationContext) {
+    NetworkHelper(final NetworkChangeListener networkChangeListener, final ConnectivityManager connectivityManager) {
         this.networkChangeListener = networkChangeListener;
         // resolve system service "ConnectivityManager"
-        connectivityManager = (ConnectivityManager) notificationContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+        this.connectivityManager = connectivityManager;
+
+        Network currentlyActiveNetwork = connectivityManager.getActiveNetwork();
+
+        // get current link properties associated with network
+        LinkProperties currentLinkProperties = connectivityManager.getLinkProperties(currentlyActiveNetwork);
+        updateNetworkDetails(currentlyActiveNetwork, currentLinkProperties);
     }
 
     /**
      * Register as listener, i.e. start dispatching network events
      */
     synchronized void start() {
-        Network currentlyActiveNetwork = connectivityManager.getActiveNetwork();
-
-        // get current link properties associated with network
-        LinkProperties currentLinkProperties = connectivityManager.getLinkProperties(currentlyActiveNetwork);
-        updateNetworkDetails(currentlyActiveNetwork, currentLinkProperties);
-
         if (networkCallback == null)
             registerConnectivityReceiver();
     }

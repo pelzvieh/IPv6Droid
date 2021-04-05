@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
  *
  */
 
-package de.flyingsnail.ipv6droid.android;
+package de.flyingsnail.ipv6droid.android.vpnrun;
 
 import android.util.Log;
 
@@ -42,14 +42,14 @@ class SimpleMonitor implements Monitor {
 
     private final CopyThread inThread;
     private final CopyThread outThread;
-    private final VpnThread vpnThread;
+    private final RemoteEnd remoteEnd;
     private final Transporter transporter;
 
-    SimpleMonitor(VpnThread vpnThread, CopyThread inThread, CopyThread outThread) {
+    SimpleMonitor(RemoteEnd remoteEnd, CopyThread inThread, CopyThread outThread) {
         this.inThread = inThread;
         this.outThread = outThread;
-        this.vpnThread = vpnThread;
-        this.transporter = vpnThread.getTransporter();
+        this.remoteEnd = remoteEnd;
+        this.transporter = remoteEnd.getTransporter();
     }
 
     /**
@@ -62,17 +62,17 @@ class SimpleMonitor implements Monitor {
      */
     public void loop() throws InterruptedException, IOException, ConnectionFailedException {
         TunnelSpec activeTunnel = transporter.getTunnelSpec();
-        while (vpnThread.isIntendedToRun() && (inThread != null && inThread.isAlive()) && (outThread != null && outThread.isAlive())) {
+        while (remoteEnd.isIntendedToRun() && (inThread != null && inThread.isAlive()) && (outThread != null && outThread.isAlive())) {
             // wait for the heartbeat interval to finish or until inThread dies.
             // Note: the inThread is reading from the network socket to the POP
             // in case of network changes, this socket breaks immediately, so
             // inThread crashes on external network changes even if no transfer
             // is active.
             inThread.join();
-            if (!vpnThread.isIntendedToRun())
+            if (!remoteEnd.isIntendedToRun())
                 break;
             // re-check cached network information
-            if (!vpnThread.isCurrentSocketStillValid()) {
+            if (!remoteEnd.isCurrentSocketStillValid()) {
                 throw new IOException("Network changed");
             }
         }

@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -23,10 +23,27 @@
 
 package de.flyingsnail.ipv6droid.android;
 
-import java.io.IOException;
+import androidx.annotation.NonNull;
 
-import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
+public interface UserNotificationCallback {
+    /**
+     * Generate a user notification with the supplied expection's cause as detail message.
+     *
+     * @param resourceId the string resource supplying the notification title
+     * @param e          the Exception the cause of which is to be displayed
+     */
+    void notifyUserOfError(int resourceId, @NonNull Throwable e);
 
-interface Monitor {
-    void loop() throws InterruptedException, IOException, ConnectionFailedException;
+    /**
+     * Cancel an error notification, if currently active.
+     */
+    void notifyUserOfErrorCancel();
+
+    /**
+     * Generate an Android Toast
+     * @param resId the ressource ID of the string to post
+     * @param duration constant coding the duration
+     */
+    void postToast (final int resId, final int duration);
+
 }

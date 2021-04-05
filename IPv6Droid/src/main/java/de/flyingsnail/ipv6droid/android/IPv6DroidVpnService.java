@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -33,6 +33,7 @@ import android.content.SharedPreferences;
 import android.net.VpnService;
 import android.os.Binder;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.util.Log;
@@ -40,6 +41,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.app.TaskStackBuilder;
@@ -56,6 +58,8 @@ import java.util.concurrent.Executors;
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.statistics.Statistics;
 import de.flyingsnail.ipv6droid.android.statusdetail.StatisticsActivity;
+import de.flyingsnail.ipv6droid.android.vpnrun.VpnStatusReport;
+import de.flyingsnail.ipv6droid.android.vpnrun.VpnThread;
 
 import static android.app.Notification.PRIORITY_LOW;
 
@@ -63,7 +67,7 @@ import static android.app.Notification.PRIORITY_LOW;
  * The Android service controlling the VpnThread.
  * Created by pelzi on 15.08.13.
  */
-public class IPv6DroidVpnService extends VpnService {
+public class IPv6DroidVpnService extends VpnService implements UserNotificationCallback {
 
     private static final String TAG = IPv6DroidVpnService.class.getName();
     private static final String SESSION_NAME = IPv6DroidVpnService.class.getSimpleName();
@@ -100,6 +104,8 @@ public class IPv6DroidVpnService extends VpnService {
      */
     private static final int ongoingNotificationId = 0xaffe;
 
+    private Handler handler;
+
     /**
      * A flag that keeps track if the VPN is inteded to run or not.
      */
@@ -107,7 +113,7 @@ public class IPv6DroidVpnService extends VpnService {
     private TunnelPersisting tunnelPersisting;
     private Tunnels cachedTunnels;
     private boolean errorNotification;
-    private static ExecutorService executor = Executors.newCachedThreadPool();
+    private static final ExecutorService executor = Executors.newCachedThreadPool();
 
     public IPv6DroidVpnService() {
         cachedTunnels = null;
@@ -118,6 +124,8 @@ public class IPv6DroidVpnService extends VpnService {
     public void onCreate() {
         Log.i(TAG, "Instance about to be created");
         super.onCreate();
+
+        handler = new Handler(getMainLooper());
 
         // create notification builders
         createNotificationChannels();
@@ -186,6 +194,53 @@ public class IPv6DroidVpnService extends VpnService {
 
         }
         return START_REDELIVER_INTENT;
+    }
+
+    /**
+     * Generate a user notification with the supplied expection's cause as detail message.
+     *
+     * @param resourceId the string resource supplying the notification title
+     * @param e          the Exception the cause of which is to be displayed
+     */
+    @Override
+    public void notifyUserOfError(int resourceId, @NonNull Throwable e) {
+        Log.d(IPv6DroidVpnService.TAG, "Notifying user of error", e);
+        errorNotificationBuilder.setContentTitle(getString(resourceId));
+        errorNotificationBuilder.setContentText(String.valueOf(e.getClass()));
+        errorNotificationBuilder.setSubText(String.valueOf(e.getLocalizedMessage()));
+        errorNotificationBuilder.setAutoCancel(true);
+        errorNotificationBuilder.setWhen(new Date().getTime());
+
+        // provide the expanded layout
+        NotificationCompat.BigTextStyle bigTextStyle = new NotificationCompat.BigTextStyle();
+        bigTextStyle.setBigContentTitle(getString(resourceId));
+        bigTextStyle.setSummaryText(String.valueOf(e.getClass()));
+        bigTextStyle.bigText(e.getLocalizedMessage());
+        errorNotificationBuilder.setStyle(bigTextStyle);
+
+        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+        // mId allows you to update the notification later on.
+        notificationManager.notify(IPv6DroidVpnService.exceptionNotificationID, errorNotificationBuilder.build());
+        errorNotification = true;
+    }
+
+    /**
+     * Cancel an error notification, if currently active.
+     */
+    @Override
+    public void notifyUserOfErrorCancel() {
+        if (errorNotification) {
+            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+            // mId allows you to update the notification later on.
+            notificationManager.cancel(IPv6DroidVpnService.exceptionNotificationID);
+            errorNotification = false;
+        }
+    }
+
+    @Override
+    public void postToast(int resId, int duration) {
+
+        handler.post(() -> Toast.makeText(this, resId, duration).show());
     }
 
     /**
@@ -258,7 +313,7 @@ public class IPv6DroidVpnService extends VpnService {
      *
      * @return a new instance.
      */
-    protected Builder createBuilder() {
+    public Builder createBuilder() {
         return new Builder();
     }
 
@@ -305,7 +360,7 @@ public class IPv6DroidVpnService extends VpnService {
      * Prepare errorNotificationBuilder to build a notification from this service. Called from the
      * two specific notification display helper methods.
      */
-    private NotificationCompat.Builder createNotificationBuilder(Class intentClass, String channelId) {
+    private NotificationCompat.Builder createNotificationBuilder(Class<? extends AppCompatActivity> intentClass, String channelId) {
         NotificationCompat.Builder notificationBuilder =
                 new NotificationCompat.Builder(getApplicationContext(), channelId)
                         .setSmallIcon(R.drawable.ic_notification)
@@ -317,45 +372,6 @@ public class IPv6DroidVpnService extends VpnService {
 
         notificationBuilder.setContentIntent(stackBuilder.getPendingIntent(0, 0));
         return notificationBuilder;
-    }
-
-    /**
-     * Generate a user notification with the supplied expection's cause as detail message.
-     *
-     * @param resourceId the string resource supplying the notification title
-     * @param e          the Exception the cause of which is to be displayed
-     */
-    protected void notifyUserOfError(int resourceId, @NonNull Throwable e) {
-        Log.d(TAG, "Notifying user of error", e);
-        errorNotificationBuilder.setContentTitle(getString(resourceId));
-        errorNotificationBuilder.setContentText(String.valueOf(e.getClass()));
-        errorNotificationBuilder.setSubText(String.valueOf(e.getLocalizedMessage()));
-        errorNotificationBuilder.setAutoCancel(true);
-        errorNotificationBuilder.setWhen(new Date().getTime());
-
-        // provide the expanded layout
-        NotificationCompat.BigTextStyle bigTextStyle = new NotificationCompat.BigTextStyle();
-        bigTextStyle.setBigContentTitle(getString(resourceId));
-        bigTextStyle.setSummaryText(String.valueOf(e.getClass()));
-        bigTextStyle.bigText(e.getLocalizedMessage());
-        errorNotificationBuilder.setStyle(bigTextStyle);
-
-        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
-        // mId allows you to update the notification later on.
-        notificationManager.notify(exceptionNotificationID, errorNotificationBuilder.build());
-        errorNotification = true;
-    }
-
-    /**
-     * Cancel an error notification, if currently active.
-     */
-    private void notifyUserOfErrorCancel() {
-        if (errorNotification) {
-            NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
-            // mId allows you to update the notification later on.
-            notificationManager.cancel(exceptionNotificationID);
-            errorNotification = false;
-        }
     }
 
     /**
@@ -415,7 +431,7 @@ public class IPv6DroidVpnService extends VpnService {
          * @return the Statistics, or null
          */
         public Statistics getStatistics() {
-            return (thread == null || !thread.isTunnelUp()) ? null : thread.getStatistics();
+            return (thread == null ) ? null : thread.getStatistics();
         }
     }
 

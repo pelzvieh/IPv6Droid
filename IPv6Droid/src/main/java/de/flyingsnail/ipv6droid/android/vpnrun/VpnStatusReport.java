@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
  *
  */
 
-package de.flyingsnail.ipv6droid.android;
+package de.flyingsnail.ipv6droid.android.vpnrun;
 
 import android.content.Context;
 import android.content.Intent;
@@ -35,6 +35,8 @@ import java.io.Serializable;
 import java.util.List;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.IPv6DroidVpnService;
+import de.flyingsnail.ipv6droid.android.Tunnels;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
 /**
@@ -88,7 +90,7 @@ public class VpnStatusReport implements Serializable, Cloneable {
      * An Android Context object. Will be initialized by the constructor. Status-changing,
      * protected methods as clear() and all setters, will throw Exceptions if this is not set.
      */
-    private Context context;
+    private final Context context;
 
     /**
      * Constructor setting defaults.

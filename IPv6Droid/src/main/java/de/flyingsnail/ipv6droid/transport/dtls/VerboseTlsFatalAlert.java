@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2019 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -21,19 +21,23 @@
  *
  */
 
-package de.flyingsnail.ipv6droid.android;
+package de.flyingsnail.ipv6droid.transport.dtls;
 
-/**
- * An object interested in high level connectivity changes as provided by NetworkHelper.
- */
-interface NetworkChangeListener {
-    /**
-     * The device has a new connection. Details can be queried from NetworkHelper.
-     */
-    public void onNewConnection();
+import androidx.annotation.NonNull;
 
-    /**
-     * The device just went offline.
-     */
-    public void onDisconnected();
+import org.bouncycastle.tls.TlsFatalAlert;
+
+public class VerboseTlsFatalAlert extends TlsFatalAlert {
+    public VerboseTlsFatalAlert(short alertDescription, Throwable alertCause) {
+        super(alertDescription, alertCause);
+    }
+
+    @NonNull
+    @Override
+    public String toString() {
+        Throwable cause = getCause();
+        return cause == null ? super.toString() : (
+                super.toString() + ": " + cause.getClass().getSimpleName() + " \"" + cause.getMessage() + "\""
+        );
+    }
 }

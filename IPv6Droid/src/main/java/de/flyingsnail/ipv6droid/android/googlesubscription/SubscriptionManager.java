@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -49,6 +49,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -71,9 +72,7 @@ public class SubscriptionManager {
 
     private String alias;
 
-    private static final int RESPONSE_CODE_OK = 0;
-    private static final int RC_BUY = 3;
-    private static Map<Integer, SubscriptionCheckResultListener.ResultType> codeMapping = new HashMap<Integer, SubscriptionCheckResultListener.ResultType>() {{
+    private static final Map<Integer, SubscriptionCheckResultListener.ResultType> codeMapping = new HashMap<Integer, SubscriptionCheckResultListener.ResultType>() {{
         put (BillingResponseCode.OK, SubscriptionCheckResultListener.ResultType.PURCHASE_COMPLETED);
         put (BillingResponseCode.BILLING_UNAVAILABLE, SubscriptionCheckResultListener.ResultType.PURCHASE_FAILED);
         put (BillingResponseCode.DEVELOPER_ERROR, SubscriptionCheckResultListener.ResultType.NO_SERVICE_PERMANENT);
@@ -88,49 +87,17 @@ public class SubscriptionManager {
         put (BillingResponseCode.USER_CANCELED, SubscriptionCheckResultListener.ResultType.PURCHASE_FAILED);
     }};
 
-    private ExecutorService executor = Executors.newSingleThreadExecutor();
-
-    /**
-     * Helper implementation of the PurchasesUpdatedListener interface. Receives updates on purchases from Google.
-     */
-    private final PurchasesUpdatedListener googlePurchasesUpdatesListener = new PurchasesUpdatedListener() {
-        @Override
-        public void onPurchasesUpdated(BillingResult billingResult, @Nullable List<Purchase> purchases) {
-            Log.i(TAG, "received Google purchase update");
-            if (billingResult.getResponseCode() == BillingResponseCode.OK
-                    && purchases != null) {
-                boolean validPurchase = false;
-                for (Purchase purchase : purchases) {
-                    if (SubscriptionManager.this.onGoogleProductPurchased(purchase)) {
-                        validPurchase = true;
-                    }
-                }
-                listener.onSubscriptionCheckResult(validPurchase ?
-                        SubscriptionCheckResultListener.ResultType.PURCHASE_COMPLETED :
-                        SubscriptionCheckResultListener.ResultType.PURCHASE_FAILED,
-                        validPurchase ? null : billingResult.getDebugMessage());
-            } else {
-                Log.e(TAG, "Purchase not completed: " + billingResult.getDebugMessage());
-                listener.onSubscriptionCheckResult(
-                        map(billingResult.getResponseCode()),
-                        billingResult.getDebugMessage());
-            }
-        }
-        private SubscriptionCheckResultListener.ResultType map (final int billingResponseCode) {
-            SubscriptionCheckResultListener.ResultType mapped = codeMapping.get(billingResponseCode);
-            return mapped != null ? mapped : SubscriptionCheckResultListener.ResultType.PURCHASE_FAILED;
-        }
-    };
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     /**
      * The client representing the SubscrptionsApi of the IPv6Server.
      */
-    private CertificationApi certificationClient;
+    private final CertificationApi certificationClient;
 
     /**
      * An instance of the Google BillingClient.
      */
-    private BillingClient googleBillingClient;
+    private final BillingClient googleBillingClient;
 
     /**
      * The SubscriptionCheckResultListener that should be informed about this Manager's progress.
@@ -182,22 +149,24 @@ public class SubscriptionManager {
             throw new IllegalStateException("App packaging faulty, illegal URL: " + e);
         }
         certificationClient = RestProxyFactory.createCertificationClient(baseUrl.toString());
+        PurchasesUpdatedListener googlePurchasesUpdatesListener = new IPv6DroidPurchasesUpdatedListener();
         googleBillingClient = BillingClient.newBuilder(context).
                 setListener(googlePurchasesUpdatesListener).
                 enablePendingPurchases().
                 build();
+        BillingClientStateListener stateListener = new IPv6DroidBillingClientStateListener();
         googleBillingClient.startConnection(stateListener);
     }
 
     /**
      * A list of TicTunnels associated with the current user's subscriptions
      */
-    private List<TunnelSpec> tunnels;
+    private final List<TunnelSpec> tunnels;
 
     /**
      * An instance implementing ServiceConnection by setting this object's service class when bound.
      */
-    private BillingClientStateListener stateListener = new BillingClientStateListener() {
+    private class IPv6DroidBillingClientStateListener implements BillingClientStateListener {
         @Override
         public void onBillingServiceDisconnected() {
             Log.i(TAG, "Billing service is disconnected");
@@ -227,7 +196,7 @@ public class SubscriptionManager {
                 boolean subHandled = false;
                 Purchase.PurchasesResult purchasesResult = googleBillingClient.queryPurchases(BillingClient.SkuType.SUBS);
                 if (purchasesResult.getResponseCode() == BillingResponseCode.OK) {
-                    for (Purchase purchase: purchasesResult.getPurchasesList()) {
+                    for (Purchase purchase: Objects.requireNonNull(purchasesResult.getPurchasesList())) {
                         Log.i(TAG, "Initial load of purchases retrieved purchase " + purchase.getOrderId());
                         try {
                             if (onGoogleProductPurchased(purchase)) {
@@ -295,7 +264,7 @@ public class SubscriptionManager {
                         billingResult.getDebugMessage());
             }
         }
-    };
+    }
 
     /**
      * Deal with a Google purchase information. Convenience method for {@link #onGoogleProductPurchased(String, String, String)}
@@ -365,18 +334,23 @@ public class SubscriptionManager {
                 // when purchases were cancelled
                 googleBillingClient.queryPurchaseHistoryAsync(BillingClient.SkuType.SUBS,
                         (billingResult, purchasesList) -> {
-                            Log.i(TAG, "Received online update of purchases");
-                            if (purchasesList == null || purchasesList.isEmpty()) {
-                                listener.onSubscriptionCheckResult(
-                                        SubscriptionCheckResultListener.ResultType.NO_SUBSCRIPTIONS,
-                                        "Status corrected online"
-                                );
-                            } else {
-                                for (PurchaseHistoryRecord record: purchasesList) {
-                                    Log.i(TAG, "Purchase " + record.getSku() + ": " + record.getPurchaseToken());
+                            if (billingResult.getResponseCode() == BillingResponseCode.OK) {
+                                Log.i(TAG, "Received online update of purchases");
+                                if (purchasesList == null || purchasesList.isEmpty()) {
+                                    listener.onSubscriptionCheckResult(
+                                            SubscriptionCheckResultListener.ResultType.NO_SUBSCRIPTIONS,
+                                            "Status corrected online"
+                                    );
+                                } else {
+                                    for (PurchaseHistoryRecord record : purchasesList) {
+                                        Log.i(TAG, "Purchase " + record.getSku() + ": " + record.getPurchaseToken());
+                                    }
                                 }
+                            } else {
+                                Log.i(TAG, "No online update of purchases available, rc="  + billingResult.getResponseCode());
                             }
-                        });
+                        }
+                    );
 
             } else {
                 listener.onSubscriptionCheckResult(
@@ -469,5 +443,38 @@ public class SubscriptionManager {
         Log.i(TAG, "Destroying Subscription Manager.");
         googleBillingClient.endConnection();
         executor.shutdownNow();
+    }
+
+    /**
+     * Helper implementation of the PurchasesUpdatedListener interface. Receives updates on purchases from Google.
+     */
+    private class IPv6DroidPurchasesUpdatedListener implements PurchasesUpdatedListener {
+        @Override
+        public void onPurchasesUpdated(BillingResult billingResult, @Nullable List<Purchase> purchases) {
+            Log.i(TAG, "received Google purchase update");
+            if (billingResult.getResponseCode() == BillingResponseCode.OK
+                    && purchases != null) {
+                boolean validPurchase = false;
+                for (Purchase purchase : purchases) {
+                    if (SubscriptionManager.this.onGoogleProductPurchased(purchase)) {
+                        validPurchase = true;
+                    }
+                }
+                listener.onSubscriptionCheckResult(validPurchase ?
+                                SubscriptionCheckResultListener.ResultType.PURCHASE_COMPLETED :
+                                SubscriptionCheckResultListener.ResultType.PURCHASE_FAILED,
+                        validPurchase ? null : billingResult.getDebugMessage());
+            } else {
+                Log.e(TAG, "Purchase not completed: " + billingResult.getDebugMessage());
+                listener.onSubscriptionCheckResult(
+                        map(billingResult.getResponseCode()),
+                        billingResult.getDebugMessage());
+            }
+        }
+
+        private SubscriptionCheckResultListener.ResultType map(final int billingResponseCode) {
+            SubscriptionCheckResultListener.ResultType mapped = codeMapping.get(billingResponseCode);
+            return mapped != null ? mapped : SubscriptionCheckResultListener.ResultType.PURCHASE_FAILED;
+        }
     }
 }

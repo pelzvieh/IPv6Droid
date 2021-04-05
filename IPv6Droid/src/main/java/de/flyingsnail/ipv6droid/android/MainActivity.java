@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -55,6 +55,7 @@ import java.io.IOException;
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.googlesubscription.SubscribeTunnelActivity;
 import de.flyingsnail.ipv6droid.android.statusdetail.StatisticsActivity;
+import de.flyingsnail.ipv6droid.android.vpnrun.VpnStatusReport;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
 /**
@@ -474,8 +475,17 @@ public class MainActivity extends AppCompatActivity {
                 tunnelListView.setVisibility(View.INVISIBLE);
             }
             Throwable cause = statusReport.getCause();
-            if (cause != null && cause.getLocalizedMessage() != null) {
-                causeView.setText(cause.getLocalizedMessage());
+            if (cause != null) {
+                final String message = cause.getLocalizedMessage();
+                final Throwable cause2 = cause.getCause();
+                final String rootCause = cause2 == null ? null : cause2.getLocalizedMessage();
+                causeView.setText(
+                        String.format("%s (%s) [%s (%s)]",
+                                message == null ? "--" : message,
+                                cause.getClass().getSimpleName(),
+                                rootCause == null ? "--" : rootCause,
+                                cause2 == null ? "--" : cause2.getClass().getSimpleName())
+                );
                 causeView.setVisibility(View.VISIBLE);
             } else
                 causeView.setVisibility(View.INVISIBLE);

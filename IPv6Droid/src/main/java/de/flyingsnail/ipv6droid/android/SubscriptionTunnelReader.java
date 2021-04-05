@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -79,12 +79,14 @@ public class SubscriptionTunnelReader implements TunnelReader, SubscriptionCheck
                 finished = true;
                 failed = false;
                 noSubscriptions = false;
+                notifyAll();
                 break;
             case NO_SUBSCRIPTIONS:
             case SUBSCRIPTION_UNPARSABLE:
                 finished = true;
                 failed = false;
                 noSubscriptions = true;
+                notifyAll();
                 break;
             case TEMPORARY_PROBLEM:
             case CHECK_FAILED:
@@ -92,12 +94,12 @@ public class SubscriptionTunnelReader implements TunnelReader, SubscriptionCheck
             case NO_SERVICE_TRY_AGAIN:
                 finished = true;
                 failed = true;
+                notifyAll();
                 break;
             case NO_SERVICE_AUTO_RECOVERY:
                 finished = false;
                 failed = true;
                 break;
         }
-        notifyAll();
     }
 }

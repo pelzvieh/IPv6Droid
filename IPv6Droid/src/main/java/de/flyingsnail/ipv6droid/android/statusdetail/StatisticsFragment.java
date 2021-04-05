@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -233,7 +233,7 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
      * a private class that is scheduled for regular execution
      */
     private class Updater implements Runnable {
-        private Handler handler;
+        private final Handler handler;
         private Statistics oldstats = null;
 
         public Updater (Handler handler) {
@@ -267,7 +267,7 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
      * A private class that updates the UI with new Statistics.
      */
     private class RedrawHandler extends Handler {
-        private NumberFormat numberFormat = NumberFormat.getNumberInstance();
+        private final NumberFormat numberFormat = NumberFormat.getNumberInstance();
         @Override
         public void handleMessage(Message inputMessage) {
             View myView = getView();
@@ -303,7 +303,7 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
                 updateTextView(vpnRoutesView, stats.getVpnRouting());
                 updateTextView(nativeDnsView, stats.getNativeDnsSetting());
                 updateTextView(vpnDnsView, stats.getVpnDnsSetting());
-                updateTextView(timestampView, timestampFormatter.format(stats.getTimestamp()));
+                updateTextView(timestampView, stats.getTimestamp() == null ? "??" : timestampFormatter.format(stats.getTimestamp()));
                 updateTextView(isRoutedView, getString(
                         stats.isTunnelRouted() ?
                                 R.string.statistics_isrouted_yes :
