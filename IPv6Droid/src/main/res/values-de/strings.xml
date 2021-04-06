@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   ~ /*
-  ~  * Copyright (c) 2020 Dr. Andreas Feldner.
+  ~  * Copyright (c) 2021 Dr. Andreas Feldner.
   ~  *
   ~  *     This program is free software; you can redistribute it and/or modify
   ~  *     it under the terms of the GNU General Public License as published by
@@ -22,23 +22,18 @@
   ~
   -->
 
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <string name="app_name">IPv6Droid</string>
     <string name="action_settings">Einstellungen</string>
-    <string name="pref_title_routes">Routen</string>
     <string name="action_connect">Verbinden</string>
     <string name="action_tic_reload">Tunneldefinitionen neu laden</string>
     <string name="action_help">Hilfe</string>
 
     <string name="password_set">&lt;gesetzt&gt;</string>
     <string name="password_unset">&lt;leer&gt;</string>
-    <string name="boolean_set">aktiviert</string>
-    <string name="boolean_unset">deaktiviert</string>
     <string name="action_disconnect">Trennen</string>
     <string name="main_activity_please_start">Bitte starten</string>
-    <string name="routingbroken">IPv6-Routing scheint defekt zu sein</string>
-    <string name="routingfixed">IPv6-Routing durch Workaround behoben</string>
 
     <string name="statistics_bytes">Bytes</string>
     <string name="statistics_packets">IP-Pakete</string>
@@ -51,7 +46,6 @@
     <string name="headline_received">von Provider</string>
     <string name="headline_transmitted">von Gerät</string>
     <string name="action_show_statistics">Statistiken</string>
-    <string name="title_activity_initial_setup">Ersteinrichtung</string>
     <string name="title_activity_subscribe_tunnel">Tunnel abonnieren</string>
     <string name="title_activity_statistics">Statistik</string>
     <string name="statistics_timestamp">Stand von</string>
@@ -59,9 +53,8 @@
     <string name="unexpected_runtime_exception">Unerwartetes Problem, Tunnel bricht ab</string>
     <string name="ayiyavpnservice_destroyed">"AyiyaVpnService wird zerstört"</string>
     <string name="ayiyavpnservice_revoked">"AyiyaVpnServices Genehmigung zum VPN-Betrieb zurückgezogen"</string>
-    <string name="subscription_label">IPv6-Tunneldienst abonnieren</string>
     <string name="manual_setup_label">Selbst betrieben</string>
-    <string name="user_has_subscription">Sie haben %d Tunnel abonniert</string>
+    <plurals name="user_has_subscription" tools:ignore="MissingQuantity"><item quantity="other">Sie haben %d Tunnel abonniert</item></plurals>
     <string name="user_has_unparsable_subscription_status">Unverständlicher Abo-Status</string>
     <string name="subscribe_to_tunnel_service">IPv6-Tunneldienst abonnieren</string>
     <string name="user_not_subscribed">Kein Tunnel-Abonnement</string>
@@ -77,7 +70,6 @@
     <string name="statistics_bytes_per_burst">Bytes/Block</string>
     <string name="technical_problem">Abo-Abschluss fehlgeschlagen - bitte versuchen Sie es in wenigen Minuten noch einmal oder prüfen Sie Ihre Internet-Verbindung</string>
     <string name="user_subscription_checking">Frage Abo-Daten ab…</string>
-    <string name="user_subscription_verifying">Überprüfe Abo-Angaben…</string>
     <string name="user_subscription_failed">Überprüfung fehlgeschlagen</string>
     <string name="user_subscription_starting_wizard">Google Abo wird gestartet…</string>
     <string name="user_subscription_purchase_done">Vielen Dank für den Kauf! Richte Tunnel für Sie ein…</string>
@@ -91,18 +83,28 @@
     <string name="subscriptions_manage_subscriptions">Abonnement verwalten</string>
     <string name="user_subscription_management_not_launched">Aufruf des Google Play Abo-Manager fehlgeschlagen</string>
     <string name="manage_subscriptions">Hier können Sie Google Play aufrufen, um Details Ihres Tunnel-Abos einzusehen und zu verwalten (ggf. zu kündigen).</string>
-    <string name="intro_app_title">Einführung in IPv6Droid</string>
-    <string name="intro_app_description">IPv6Droid dient dazu, IPv6-Unterstützung auf Android-Mobilgeräten bereit zu stellen, auch wenn diese sich in reinen IPv4-Netzen befinden.</string>
-    <string name="user_subscription_subscribe_hint">Hier können Sie einen 4er-Satz Tunnel mit wenigen Klicks abonnieren. Der Abo-Vorgang wird vollständig von Google abgewickelt, einschließlich Zahlungsinformationen. Das erste Abo auf Ihr Konto beginnt mit einem 60-tägigen kostenlosen Probezeitraum, der Ihnen auch bei Kündigung im Probezeitraum vollständig zur Verfügung steht. Ohne ausdrückliche Kündigung geht der Probezeitraum automatisch in ein kostenpflichtiges monatliches Abonnement über.</string>
-    <string name="user_subscription_terms_link">Ich akzeptiere die Leistungsbeschreibung <![CDATA[https://flyingsnail.de/lstbeschr.html]]></string>
+    <string name="user_subscription_subscribe_hint">Hier können Sie einen 4er-Satz Tunnel mit wenigen Klicks abonnieren.
+        Der Abo-Vorgang wird vollständig von Google abgewickelt, einschließlich Zahlungsinformationen.
+        Das erste Abo auf Ihr Konto beginnt mit einem 60-tägigen kostenlosen Probezeitraum, der Ihnen auch bei Kündigung im
+        Probezeitraum vollständig zur Verfügung steht. Ohne ausdrückliche Kündigung geht der Probezeitraum automatisch in ein
+        kostenpflichtiges monatliches Abonnement über.<br/><br/>
+        Der Dienst unterliegt den Bediungen der folgenden Leistungsbeschreibung, bitte tippen Sie den
+        Link an und nehmen Sie sich die Zeit, diese gründlich zu lesen:<br/>
+         <![CDATA[https://flyingsnail.de/lstbeschr.html]]>
+    </string>
+    <string name="user_subscription_terms_link">Ich habe die oben referenzierte Leistungsbeschreibung
+        gelesen und stimme den Bedingungen zu.</string>
     <string name="user_subscription_valid_until">Gültig bis</string>
-    <string name="user_subscription_error_not_accepted">Sie müssen der Leistungsbeschreibung zustimmen, um ein Abo abzuschließen.</string>
+    <string name="user_subscription_error_not_accepted">Sie müssen der Leistungsbeschreibung
+        zustimmen, um ein Abo abzuschließen.</string>
     <string name="SubManConnectionLost">Verbindung abgerissen</string>
     <string name="SubManEmptySKUdetails">Keine Produktdetails erhalten</string>
     <string name="SubManStartingUp">Baue Verbindung auf</string>
     <string name="subscriptionPurchaseStarted">Abo-Abschluss bei Google gestartet</string>
-    <string name="user_subscription_no_service">Der Abo-Dienst von Google ist gerade nicht verfügbar, wir versuchen es bald noch einmal.</string>
-    <string name="user_subscription_no_service_on_this_device">Auf diesem Gerät stehen keine Google-Abonnements zur Verfügung. Kontaktieren Sie uns bitte für andere Optionen.</string>
+    <string name="user_subscription_no_service">Der Abo-Dienst von Google ist gerade nicht verfügbar,
+        wir versuchen es bald noch einmal.</string>
+    <string name="user_subscription_no_service_on_this_device">Auf diesem Gerät stehen keine
+        Google-Abonnements zur Verfügung. Kontaktieren Sie uns bitte für andere Optionen.</string>
     <string name="pref_header_experimental">Experimentelle Einstellungen</string>
     <string name="statistics_started_at">Startzeit</string>
     <string name="statistics_reconnects">Wiederverb.</string>

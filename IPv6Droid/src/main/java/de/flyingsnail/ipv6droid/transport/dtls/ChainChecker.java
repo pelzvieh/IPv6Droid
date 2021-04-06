@@ -117,7 +117,7 @@ class ChainChecker {
    */
   public void checkChain(TlsCertificate[] chain) throws IOException, TlsFatalAlert {
     final X509CertSelector target = new X509CertSelector();
-    final List<X509Certificate> intermediates = new ArrayList<X509Certificate>(chain.length);
+    final List<X509Certificate> intermediates = new ArrayList<>(chain.length);
     // some pointless conversions required
     try {
       X509Certificate clientStdCert = (X509Certificate)certificateFactory.generateCertificate(
@@ -148,7 +148,7 @@ class ChainChecker {
     } catch (NoSuchAlgorithmException | InvalidAlgorithmParameterException e) {
       throw new TlsFatalAlert(AlertDescription.internal_error, e);
     } catch (CertPathBuilderException e) {
-      StringBuffer diagnostics = new StringBuffer("Failed to verify cert chain:\n");
+      StringBuilder diagnostics = new StringBuilder("Failed to verify cert chain:\n");
       for (TlsCertificate cert: chain)
         diagnostics.append(
             "-----BEGIN CERTIFICATE-----\n" 

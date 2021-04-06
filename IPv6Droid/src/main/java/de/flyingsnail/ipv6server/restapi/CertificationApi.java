@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -62,8 +62,7 @@ public interface CertificationApi {
    * @return a List of Strings of PEM encoded X509 certificates forming a certificate chain, starting from
    *     the client's new or existing certificate, ending with the trusted CA's certificate.
    * @throws IOException in case of technical problems
-   * @throws SubscriptionRejectedException in case of definitive falsification of supplied data
-   * @throws 
+   * @throws CertificationRejectedException in case of definitive falsification of supplied data
    */
   @FormUrlEncoded
   @POST("certification/associate")

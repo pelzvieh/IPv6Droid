@@ -23,12 +23,14 @@
 
 package de.flyingsnail.ipv6droid.android.statusdetail;
 
+import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -122,17 +124,22 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
      * request to bind to the statistics interface of the IPv6DroidVpnService.
      */
     private void bindToStatistics() {
-        Intent intent = new Intent(getActivity(), IPv6DroidVpnService.class);
-        intent.setAction(IPv6DroidVpnService.STATISTICS_INTERFACE);
-        if (!getActivity().bindService(intent, this, 0))
-            Log.e(StatisticsFragment.TAG, "Bind request to statistics interface failed");
+        Activity myActivity = getActivity();
+        if (myActivity != null) {
+            Intent intent = new Intent(getActivity(), IPv6DroidVpnService.class);
+            intent.setAction(IPv6DroidVpnService.STATISTICS_INTERFACE);
+            if (!myActivity.bindService(intent, this, 0))
+                Log.e(StatisticsFragment.TAG, "Bind request to statistics interface failed");
+        }
     }
 
     @Override
     public void onDestroy() {
         Log.d(TAG, "onDestroy started");
-        getActivity().unbindService(this);
-
+        Activity myActivity = getActivity();
+        if (myActivity != null) {
+            myActivity.unbindService(this);
+        }
         if (updaterFuture != null) {
             updaterFuture.cancel(true);
             updaterFuture = null;
@@ -268,6 +275,14 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
      */
     private class RedrawHandler extends Handler {
         private final NumberFormat numberFormat = NumberFormat.getNumberInstance();
+
+        /**
+         * Constructor.
+         */
+        public RedrawHandler() {
+            super(Looper.getMainLooper());
+        }
+
         @Override
         public void handleMessage(Message inputMessage) {
             View myView = getView();

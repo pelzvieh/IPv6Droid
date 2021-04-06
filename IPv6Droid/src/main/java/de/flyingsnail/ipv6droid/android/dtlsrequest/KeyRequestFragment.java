@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -55,9 +55,7 @@ import de.flyingsnail.ipv6droid.R;
 public class KeyRequestFragment extends Fragment {
     private static final String TAG = KeyRequestFragment.class.getName();
     private EditText createKeyAlias;
-    private Button createButton;
     private TextView csrText;
-    private Spinner existingKeysSpinner;
     private ArrayAdapter<String> spinnerAdapter;
     private Button copyButton;
 
@@ -92,8 +90,8 @@ public class KeyRequestFragment extends Fragment {
         // read references to views of relevance
         createKeyAlias = myView.findViewById(R.id.keyAlias);
         csrText = myView.findViewById(R.id.csrText);
-        existingKeysSpinner = myView.findViewById(R.id.selectedKeyAlias);
-        createButton = myView.findViewById(R.id.keyCreate);
+        Spinner existingKeysSpinner = myView.findViewById(R.id.selectedKeyAlias);
+        Button createButton = myView.findViewById(R.id.keyCreate);
         copyButton = myView.findViewById(R.id.copyToClipboard);
 
         // initialise with adapters and callbacks
@@ -125,13 +123,9 @@ public class KeyRequestFragment extends Fragment {
             existingKeysSpinner.setSelection(0);
         }
 
-        createButton.setOnClickListener(v -> {
-            createNewKey(createKeyAlias.getText().toString().trim());
-        });
+        createButton.setOnClickListener(v -> createNewKey(createKeyAlias.getText().toString().trim()));
 
-        copyButton.setOnClickListener(v -> {
-            copyCsrToClipboard();
-        });
+        copyButton.setOnClickListener(v -> copyCsrToClipboard());
 
         return myView;
     }
@@ -139,9 +133,12 @@ public class KeyRequestFragment extends Fragment {
     private void copyCsrToClipboard() {
         String csr = csrText.getText().toString();
         if (!csr.isEmpty()) {
-            ClipboardManager clipboardManager =
-                    (ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
-            clipboardManager.setPrimaryClip(ClipData.newPlainText("IPv6Droid CSR", csr));
+            Context context = getContext();
+            if (context != null) {
+                ClipboardManager clipboardManager =
+                        (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                clipboardManager.setPrimaryClip(ClipData.newPlainText("IPv6Droid CSR", csr));
+            }
         }
     }
 
@@ -179,12 +176,12 @@ public class KeyRequestFragment extends Fragment {
                 throw new IllegalArgumentException("Alias already existing");
             }
             AndroidBackedKeyPair.create(newAlias);
+            spinnerAdapter.insert(newAlias, aliases.size());
+            spinnerAdapter.notifyDataSetChanged();
         } catch (Exception e) {
             Toast.makeText(getContext(), e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
             Log.e(TAG, "failed to create new key", e);
         }
-        spinnerAdapter.insert(newAlias, aliases.size());
-        spinnerAdapter.notifyDataSetChanged();
     }
 
 }

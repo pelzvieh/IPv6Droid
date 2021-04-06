@@ -75,6 +75,7 @@ public class LocalEnd {
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
     private RemoteEnd remoteEnd = null;
+    private final boolean forcedRoute;
 
 
     /**
@@ -86,6 +87,7 @@ public class LocalEnd {
     LocalEnd(final VpnThread vpnThread,
              final VpnService.Builder builder,
              final VpnService.Builder builderNotRouted,
+             final boolean forcedRoute,
              final VpnStatusReport vpnStatus,
              final TunnelSpec tunnel,
              final UserNotificationCallback userNotificationCallback
@@ -93,6 +95,7 @@ public class LocalEnd {
         this.vpnThread = vpnThread;
         this.builder = builder;
         this.builderNotRouted = builderNotRouted;
+        this.forcedRoute = forcedRoute;
         this.vpnStatus = vpnStatus;
         this.tunnel = tunnel;
         this.userNotificationCallback = userNotificationCallback;
@@ -116,6 +119,7 @@ public class LocalEnd {
                 // timestamp base mechanism to prevent busy looping through e.g. IOException
                 long lastIterationRun = new Date().getTime() - lastStartAttempt.getTime();
                 if (lastIterationRun < 1000L)
+                    //noinspection BusyWait
                     Thread.sleep(1000L - lastIterationRun);
                 lastStartAttempt = new Date();
 
@@ -123,7 +127,7 @@ public class LocalEnd {
                 Log.i(TAG, "Constructing remote end");
                 remoteEnd = new RemoteEnd(this,
                         vpnStatus,
-                        true,
+                        forcedRoute,
                         tunnelRouted,
                         executor,
                         userNotificationCallback,
@@ -187,7 +191,15 @@ public class LocalEnd {
             } finally {
                 if (remoteEnd != null)
                     remoteEnd.stop();
-                stop();
+                final ParcelFileDescriptor myVpnFD = vpnFD;
+                if (myVpnFD != null) {
+                    try {
+                        myVpnFD.close();
+                    } catch (IOException e) {
+                        Log.e(TAG, "Cannot close vpn socket", e);
+                    }
+                }
+
                 userNotificationCallback.postToast(R.string.vpnservice_tunnel_down, Toast.LENGTH_SHORT);
             }
         }

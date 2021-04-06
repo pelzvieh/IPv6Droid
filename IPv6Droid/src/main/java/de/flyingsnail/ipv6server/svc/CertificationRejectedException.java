@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -45,32 +45,32 @@ public class CertificationRejectedException extends Exception implements Seriali
   }
 
   /**
-   * @param message
+   * @param message a String describing the problem
    */
   public CertificationRejectedException(String message) {
     super(message);
   }
 
   /**
-   * @param cause
+   * @param cause the Throwable that caused throwing this exception
    */
   public CertificationRejectedException(Throwable cause) {
     super(cause);
   }
 
   /**
-   * @param message
-   * @param cause
+   * @param message a String describing the problem
+   * @param cause the Throwable that caused throwing this exception
    */
   public CertificationRejectedException(String message, Throwable cause) {
     super(message, cause);
   }
 
   /**
-   * @param message
-   * @param cause
-   * @param enableSuppression
-   * @param writableStackTrace
+   * @param message a String describing the problem
+   * @param cause the Throwable that caused throwing this exception
+   * @param enableSuppression a boolean
+   * @param writableStackTrace a boolean
    */
   @RequiresApi(api = Build.VERSION_CODES.N)
   public CertificationRejectedException(String message, Throwable cause, boolean enableSuppression,

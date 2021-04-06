@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -138,7 +138,7 @@ public interface Transporter {
 
   /**
    * Configure this AYIYA to use a different UDP port on IPv4.
-   * @todo this should eventually become an attribute of TicTunnel
+   * todo this should eventually become an attribute of TicTunnel
    * @param port an int giving the port number to use.
    */
   void setPort(int port);

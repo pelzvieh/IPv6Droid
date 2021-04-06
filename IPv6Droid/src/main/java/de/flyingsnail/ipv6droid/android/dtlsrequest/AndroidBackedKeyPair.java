@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -69,8 +69,6 @@ public class AndroidBackedKeyPair {
 
     private static final String TAG = AndroidBackedKeyPair.class.getName();
 
-    private final KeyStore keyStore;
-
     private final KeyPair keyPair;
 
     private final String alias;
@@ -113,7 +111,7 @@ public class AndroidBackedKeyPair {
      * @return a List&lt;String&gt; giving all aliases in keystore.
      */
     public static List<String> listAliases() throws IOException {
-        KeyStore ks = null;
+        KeyStore ks;
         try {
             ks = KeyStore.getInstance("AndroidKeyStore");
         } catch (KeyStoreException e) {
@@ -139,10 +137,10 @@ public class AndroidBackedKeyPair {
 
     public AndroidBackedKeyPair(final String alias) throws IOException {
         this.alias = alias;
-        KeyStore.Entry entry = null;
+        KeyStore.Entry entry;
 
         try {
-            keyStore = KeyStore.getInstance("AndroidKeyStore");
+            KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
             keyStore.load(null);
             // read keypair for alias
             entry = keyStore.getEntry(alias, null);
@@ -190,8 +188,7 @@ public class AndroidBackedKeyPair {
                     s = Signature.getInstance("NONEwithRSA");
                     s.initSign(getPrivateKey());
                     s.update(hash);
-                    byte[] signature = s.sign();
-                    return signature;
+                    return s.sign();
                 } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
                     throw new IOException("Cannot create requested signature", e);
                 }
@@ -236,7 +233,7 @@ public class AndroidBackedKeyPair {
 
     public ContentSigner getContentSigner() {
         return new ContentSigner() {
-            private ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            private final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
             @Override
             public AlgorithmIdentifier getAlgorithmIdentifier() {

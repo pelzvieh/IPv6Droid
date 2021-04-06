@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -64,9 +64,9 @@ public class SimpleDateSerializer implements JsonDeserializer<Date> {
   public Date deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
     if (Date.class.equals(typeOfT)) {
       String value = json.getAsString();
-      Long epochLapse;
+      long epochLapse;
       try {
-        epochLapse = Long.valueOf(value);
+        epochLapse = Long.parseLong(value);
       } catch (NumberFormatException e) {
         throw new JsonParseException("Value not parseable to long", e);
       }

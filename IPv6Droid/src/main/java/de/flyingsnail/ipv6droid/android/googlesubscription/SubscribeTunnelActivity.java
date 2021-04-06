@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -36,6 +36,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
@@ -61,9 +62,6 @@ import de.flyingsnail.ipv6droid.transport.TunnelSpec;
  */
 public class SubscribeTunnelActivity extends AppCompatActivity implements SubscriptionCheckResultListener {
     private static final String TAG = SubscribeTunnelActivity.class.getSimpleName();
-
-    private static final int RESPONSE_CODE_OK = 0;
-    private static final int RC_BUY = 3;
 
     private ScheduledExecutorService executor;
 
@@ -94,9 +92,6 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
     /** The last diagnostic message, explaining a "negative" purchasingResult in detail. May be null. */
     private @Nullable String purchasingDebugMessage = null;
 
-    /** the JobId passed to JobScheduler if we do automated retry. */
-    public final static int RETRY_JOB_ID = 0xdeadaffe;
-
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // Activity Life Cycle methods
@@ -108,20 +103,19 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
         Toolbar myToolbar = findViewById(R.id.subscriptionsToolbar);
         setSupportActionBar(myToolbar);
 
+        boolean cachedTunnelsAvailable;
         try {
-            boolean cachedTunnelsAvailable;
-            try {
-                cachedTunnelsAvailable = !new TunnelPersistingFile(getApplicationContext()).readTunnels().isEmpty();
-            } catch (IOException | NullPointerException e) {
-                cachedTunnelsAvailable = false;
-            }
+            cachedTunnelsAvailable = !new TunnelPersistingFile(getApplicationContext()).readTunnels().isEmpty();
+        } catch (IOException | NullPointerException e) {
+            cachedTunnelsAvailable = false;
+        }
+        ActionBar supportActionBar = getSupportActionBar();
+        if (supportActionBar != null) {
             if (MainActivity.isConfigurationRequired(this, cachedTunnelsAvailable)) {
                 getSupportActionBar().setIcon(R.drawable.ic_launcher);
             } else {
                 getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             }
-        } catch (NullPointerException npe) {
-            Log.d(TAG, "No action bar", npe);
         }
 
         purchasingInfoView = findViewById(R.id.subscriptionStatus);
@@ -198,7 +192,7 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
                     case HAS_TUNNELS:
                         if (nrTunnels > 0) {
                             purchasingInfoView.setText(
-                                    String.format(getString(R.string.user_has_subscription), nrTunnels)
+                                    getResources().getQuantityString(R.plurals.user_has_subscription, nrTunnels, nrTunnels)
                             );
                             setUiStateManagerYieldsTunnels();
                         } else { // should not happen at all

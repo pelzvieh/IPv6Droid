@@ -23,6 +23,8 @@
 
 package de.flyingsnail.ipv6droid.android;
 
+import androidx.annotation.NonNull;
+
 /**
  * This represents the end-user configuration related to local nativeRouting.
  */
@@ -97,6 +99,7 @@ public class RoutingConfiguration implements Cloneable {
     }
 
     @Override
+    @NonNull
     public Object clone() throws CloneNotSupportedException {
         return super.clone();
     }

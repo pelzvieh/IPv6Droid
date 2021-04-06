@@ -1,6 +1,6 @@
 <!--
   ~ /*
-  ~  * Copyright (c) 2020 Dr. Andreas Feldner.
+  ~  * Copyright (c) 2021 Dr. Andreas Feldner.
   ~  *
   ~  *     This program is free software; you can redistribute it and/or modify
   ~  *     it under the terms of the GNU General Public License as published by
@@ -27,11 +27,6 @@
     <!-- Strings related to Settings -->
 
     <!-- Login settings -->
-    <string name="pref_header_login">Login</string>
-    <string name="pref_title_username">Username</string>
-    <string name="pref_title_password">Password</string>
-    <string name="pref_title_host">TIC host</string>
-    <string name="pref_default_host" translatable="false"></string>
     <string name="pref_header_autostart">Start</string>
     <string name="pref_title_autostart">Start Tunnel at Boot</string>
     <string name="pref_summary_autostart_on">Automatically start the IPv6 tunnel after (re-)starting the device</string>

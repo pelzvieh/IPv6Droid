@@ -27,7 +27,6 @@ import android.util.Log;
 
 import java.io.IOException;
 
-import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
 import de.flyingsnail.ipv6droid.transport.Transporter;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
@@ -55,12 +54,10 @@ class SimpleMonitor implements Monitor {
     /**
      * @throws IOException in case of a (usually temporary) technical problem with the current transporter.
      *   Often, this means that our IP address did change.
-     * @throws ConnectionFailedException in case of a more fundamental problem, e.g. if the tunnel
-     *   is not enabled any more in TIC, or the given and up-to-date TIC information in the tunnel
-     *   repeatedly doesn't lead to a working tunnel.
      * @throws InterruptedException on interrupts during various waits
      */
-    public void loop() throws InterruptedException, IOException, ConnectionFailedException {
+    @Override
+    public void loop() throws InterruptedException, IOException {
         TunnelSpec activeTunnel = transporter.getTunnelSpec();
         while (remoteEnd.isIntendedToRun() && (inThread != null && inThread.isAlive()) && (outThread != null && outThread.isAlive())) {
             // wait for the heartbeat interval to finish or until inThread dies.

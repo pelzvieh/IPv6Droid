@@ -233,7 +233,9 @@ public class VpnThread extends Thread {
                 builderNotRouted = service.createBuilder();
                 configureBuilderFromTunnelSpecification(builderNotRouted, activeTunnel, true);
             }
-            LocalEnd myLocalEnd = new LocalEnd(this, builder, builderNotRouted, vpnStatus, tunnels.getActiveTunnel(), service);
+            LocalEnd myLocalEnd = new LocalEnd(this, builder, builderNotRouted,
+                    routingConfiguration.isForceRouting(), vpnStatus, tunnels.getActiveTunnel(),
+                    service);
             localEnd = myLocalEnd; // avoid race condition with next statements
             myLocalEnd.refreshTunnelLoop();
             closeTunnel = true;

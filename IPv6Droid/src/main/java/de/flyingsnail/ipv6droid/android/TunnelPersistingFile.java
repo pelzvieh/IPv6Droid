@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -27,8 +27,6 @@ import android.content.Context;
 
 import androidx.annotation.NonNull;
 
-import androidx.annotation.NonNull;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InvalidClassException;
@@ -44,7 +42,7 @@ import de.flyingsnail.ipv6droid.transport.TunnelSpec;
  * Created by pelzi on 03.02.16.
  */
 public class TunnelPersistingFile implements TunnelPersisting  {
-    private Context context;
+    private final Context context;
 
     /**
      * A String giving the file name for persisting tunnel information

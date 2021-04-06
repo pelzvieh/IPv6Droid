@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -101,13 +101,13 @@ public class Ayiya implements Transporter {
     private int maxPacketSize = 0;
 
     /** The IPv4 address of the PoP - the only address we can send packets to. */
-    private Inet4Address ipv4Pop;
+    private final Inet4Address ipv4Pop;
 
     /** Our IPv6 address, in other words, the IPv6 endpoint of the tunnel. */
-    private Inet6Address ipv6Local;
+    private final Inet6Address ipv6Local;
 
     /** The sha1 hash of the tunnel password */
-    private byte[] hashedPassword;
+    private final byte[] hashedPassword;
 
     /** Expiration time of supplied tunnel */
     private final @Nullable Date expiry;

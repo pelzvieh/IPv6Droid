@@ -1,6 +1,6 @@
 <!--
   ~ /*
-  ~  * Copyright (c) 2020 Dr. Andreas Feldner.
+  ~  * Copyright (c) 2021 Dr. Andreas Feldner.
   ~  *
   ~  *     This program is free software; you can redistribute it and/or modify
   ~  *     it under the terms of the GNU General Public License as published by
@@ -116,31 +116,26 @@
         android:layout_centerHorizontal="true"
         android:onClick="startVPN" />
 
-    <FrameLayout
-        android:id="@+id/statistics"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="?android:attr/detailsElementBackground"
-        android:layout_alignParentBottom="true">
-        <fragment
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:id="@+id/statistics_content"
-            class="de.flyingsnail.ipv6droid.android.statusdetail.StatisticsFragment"
-            tools:layout="@layout/fragment_statistics"
-            android:layout_gravity="center_horizontal" />
-    </FrameLayout>
-
     <ListView
+        android:id="@+id/tunnelList"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_centerHorizontal="true"
-        android:layout_below="@id/earthView"
         android:layout_above="@id/statistics"
-        android:id="@+id/tunnelList"
-        android:choiceMode="singleChoice"
-        tools:listitem="@android:layout/simple_list_item_2"
+        android:layout_below="@id/earthView"
+        android:layout_centerHorizontal="true"
         android:layout_marginTop="20dp"
-        android:listSelector="#ff0000" />
+        android:choiceMode="singleChoice"
+        android:listSelector="#ff0000"
+        tools:listitem="@android:layout/simple_list_item_2" />
+
+    <androidx.fragment.app.FragmentContainerView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:id="@+id/statistics"
+        android:background="?android:attr/detailsElementBackground"
+        class="de.flyingsnail.ipv6droid.android.statusdetail.StatisticsFragment"
+        tools:layout="@layout/fragment_statistics"
+        android:layout_gravity="center_horizontal" />
 
 </RelativeLayout>

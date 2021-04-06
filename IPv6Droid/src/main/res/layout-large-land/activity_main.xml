@@ -1,6 +1,6 @@
 <!--
   ~ /*
-  ~  * Copyright (c) 2020 Dr. Andreas Feldner.
+  ~  * Copyright (c) 2021 Dr. Andreas Feldner.
   ~  *
   ~  *     This program is free software; you can redistribute it and/or modify
   ~  *     it under the terms of the GNU General Public License as published by
@@ -43,21 +43,16 @@
         android:theme="@style/ThemeOverlay.AppCompat.ActionBar"
         android:popupTheme="@style/ThemeOverlay.AppCompat.Light"/>
 
-    <FrameLayout
+    <androidx.fragment.app.FragmentContainerView
         android:id="@+id/statistics"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_below="@id/mainToolbar"
         android:layout_alignParentRight="true"
         android:layout_marginLeft="@dimen/activity_horizontal_margin"
-        android:background="?android:attr/detailsElementBackground" >
-        <fragment
-            android:id="@+id/statistics_content"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            class="de.flyingsnail.ipv6droid.android.statusdetail.StatisticsFragment"
-            tools:layout="@layout/fragment_statistics" />
-    </FrameLayout>
+        class="de.flyingsnail.ipv6droid.android.statusdetail.StatisticsFragment"
+        tools:layout="@layout/fragment_statistics"
+        android:background="?android:attr/detailsElementBackground"/>
 
 
     <TextView

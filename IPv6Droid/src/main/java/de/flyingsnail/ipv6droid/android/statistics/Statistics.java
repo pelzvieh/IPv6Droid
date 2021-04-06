@@ -33,6 +33,7 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Created by pelzi on 01.05.15.
@@ -99,11 +100,11 @@ public class Statistics {
 
     /**
      * Constructor setting fields that are known right at the point of tunnel startup.
-     * @param startedAt
-     * @param brokerIPv4
-     * @param brokerIPv6
-     * @param myIPv6
-     * @param mtu
+     * @param startedAt a Date giving the point of time when the tunnel was started
+     * @param brokerIPv4 an Inet4Address giving the broker's IP address
+     * @param brokerIPv6 an Inet6Address giving the broker's IP address
+     * @param myIPv6 an Inet6Address giving my own IP
+     * @param mtu an int giving the maximum number of bytes transferable in a single packet
      */
     public Statistics(Date startedAt, Inet4Address brokerIPv4, Inet6Address brokerIPv6, Inet6Address myIPv6, int mtu) {
         this.startedAt = startedAt;
@@ -384,19 +385,15 @@ public class Statistics {
         if (mtu != that.mtu) return false;
         if (tunnelRouted != that.tunnelRouted) return false;
         if (!brokerIPv4.equals(that.brokerIPv4)) return false;
-        if (myIPv4 != null ? !myIPv4.equals(that.myIPv4) : that.myIPv4 != null) return false;
+        if (!Objects.equals(myIPv4, that.myIPv4)) return false;
         if (!brokerIPv6.equals(that.brokerIPv6)) return false;
         if (!myIPv6.equals(that.myIPv6)) return false;
-        if (nativeRouting != null ? !nativeRouting.equals(that.nativeRouting) : that.nativeRouting != null)
+        if (!Objects.equals(nativeRouting, that.nativeRouting))
             return false;
-        if (vpnRouting != null ? !vpnRouting.equals(that.vpnRouting) : that.vpnRouting != null)
+        if (!Objects.equals(vpnRouting, that.vpnRouting))
             return false;
-        return !(vpnDnsSetting != null
-                 ? !vpnDnsSetting.equals(that.vpnDnsSetting)
-                 : that.vpnDnsSetting != null)
-                && !(nativeDnsSetting != null
-                     ? !nativeDnsSetting.equals(that.nativeDnsSetting)
-                     : that.nativeDnsSetting != null);
+        return Objects.equals(vpnDnsSetting, that.vpnDnsSetting)
+                && Objects.equals(nativeDnsSetting, that.nativeDnsSetting);
 
     }
 

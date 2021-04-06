@@ -138,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
         tunnelListView = findViewById(R.id.tunnelList);
         causeView = findViewById(R.id.cause);
         tunnels = new Tunnels();
-        ArrayAdapter<TunnelSpec> adapter = new ArrayAdapter<TunnelSpec>(MainActivity.this,
+        ArrayAdapter<TunnelSpec> adapter = new ArrayAdapter<>(MainActivity.this,
                 R.layout.tunnellist_template);
         adapter.addAll(tunnels);
         tunnelListView.setAdapter(adapter);
@@ -323,21 +323,17 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        switch (requestCode) {
-            case REQUEST_START_VPN:
-                if (resultCode == RESULT_OK) {
-                    Intent intent = new Intent(this, IPv6DroidVpnService.class).setAction("android.net.VpnService");
-                    if (tunnels.isTunnelActive()) {
-                        // Android's Parcel system doesn't handle subclasses well, so...
-                        intent.putExtra(IPv6DroidVpnService.EXTRA_CACHED_TUNNELS, tunnels.getAndroidSerializable());
-                    }
-                    if (Build.VERSION.SDK_INT >= 26) {
-                        startForegroundService(intent);
-                    } else {
-                        startService(intent);
-                    }
-                }
-                break;
+        if (requestCode == REQUEST_START_VPN && resultCode == RESULT_OK) {
+            Intent intent = new Intent(this, IPv6DroidVpnService.class).setAction("android.net.VpnService");
+            if (tunnels.isTunnelActive()) {
+                // Android's Parcel system doesn't handle subclasses well, so...
+                intent.putExtra(IPv6DroidVpnService.EXTRA_CACHED_TUNNELS, tunnels.getAndroidSerializable());
+            }
+            if (Build.VERSION.SDK_INT >= 26) {
+                startForegroundService(intent);
+            } else {
+                startService(intent);
+            }
         }
     }
 

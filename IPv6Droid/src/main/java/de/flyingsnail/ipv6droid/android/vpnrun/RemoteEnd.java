@@ -126,7 +126,7 @@ public class RemoteEnd implements NetworkChangeListener {
      * @param executor an ExecutorService to be used for asnychronous tasks.
      * @param userNotificationCallback a UserNotificationCallback to generate user notifications to
      * @param tunnel a TunnelSpec specifying the tunnel to be set up
-     * @throws ConnectionFailedException
+     * @throws ConnectionFailedException in case of a permanent problem with the tunnel
      */
     RemoteEnd(final LocalEnd localEnd,
               final VpnStatusReport vpnStatus,
@@ -204,6 +204,7 @@ public class RemoteEnd implements NetworkChangeListener {
                 Date now = new Date();
                 long lastIterationRun = now.getTime() - lastStartAttempt.getTime();
                 if (lastIterationRun < 1000L)
+                    //noinspection BusyWait
                     Thread.sleep(1000L - lastIterationRun);
                 lastStartAttempt = new Date();
 
@@ -498,7 +499,7 @@ public class RemoteEnd implements NetworkChangeListener {
     void notifyFirstPacketReceived() {
         if (transporter.isValidPacketReceived()) {
             // major status update, just once per session
-            vpnStatus.setTunnelProvedWorking(true);
+            vpnStatus.setTunnelProvedWorking();
             vpnStatus.setStatus(VpnStatusReport.Status.Connected);
             vpnStatus.setProgressPerCent(100);
             vpnStatus.setCause(null);

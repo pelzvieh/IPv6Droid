@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2016 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -23,15 +23,10 @@
 
 package de.flyingsnail.ipv6droid.android.googlesubscription;
 
-import android.util.Log;
-
-import org.json.JSONException;
-import org.json.JSONObject;
+import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import androidx.annotation.Nullable;
 
 public class SubscriptionBuilder {
     static final String SKU_TUNNEL_SUBSCRIPTION = "de.flyingsnail.ipv6.tunnelsub";
@@ -50,48 +45,9 @@ public class SubscriptionBuilder {
     }
 
     public static List<String> getSupportedSku() {
-        ArrayList<String> result = new ArrayList<String>(1);
+        ArrayList<String> result = new ArrayList<>(1);
         result.add(SKU_TUNNEL_SUBSCRIPTION);
         return result;
     }
 
-    public static void setData(Subscription subscription, String googlePurchaseData) throws IllegalArgumentException {
-        JSONObject jo;
-        try {
-            jo = new JSONObject(googlePurchaseData);
-        } catch (JSONException e) {
-            throw new IllegalArgumentException("Unparsable data supplied", e);
-        }
-        try {
-            subscription.setSku(jo.getString("productId"));
-        } catch (JSONException e) {
-            handleJsonException(e);
-        }
-        try {
-            subscription.setOrderId(jo.getString("orderId"));
-        } catch (JSONException e) {
-            handleJsonException(e);
-        }
-        try {
-            subscription.setPurchaseTime(jo.getInt("purchaseTime"));
-        } catch (JSONException e) {
-            handleJsonException(e);
-        }
-        try {
-            subscription.setPurchaseToken(jo.getString("purchaseToken"));
-        } catch (JSONException e) {
-            handleJsonException(e);
-        }
-        try {
-            subscription.setDeveloperPayload(jo.getString("developerPayload"));
-        } catch (JSONException e) {
-            handleJsonException(e);
-        }
-
-    }
-
-    private static void handleJsonException(JSONException e) {
-        if (!e.getMessage().startsWith("No value for"))
-            Log.e(TAG, "JSONException with unknown message", e);
-    }
 }

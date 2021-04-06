@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
@@ -50,8 +51,8 @@ public class Tunnels extends ArrayList<TunnelSpec> implements Cloneable {
      * A Serializable for the whole purpose to have a Serializable for which Android didn't implement
      * special treatment - only this can be sent over Intents :-(
      */
-    private class AndroidParcelShield implements Serializable {
-        public Tunnels tunnels;
+    private static class AndroidParcelShield implements Serializable {
+        public final Tunnels tunnels;
         public AndroidParcelShield(Tunnels t) {
             tunnels = t;
         }
@@ -197,10 +198,7 @@ public class Tunnels extends ArrayList<TunnelSpec> implements Cloneable {
     @Override
     public boolean equals(Object o) {
         return super.equals(o) &&
-                (activeTunnel == null ?
-                        ((Tunnels)o).activeTunnel == null :
-                        activeTunnel.equals(((Tunnels)o).activeTunnel)
-                );
+                Objects.equals(activeTunnel, ((Tunnels) o).activeTunnel);
     }
 
     @Override

@@ -67,6 +67,7 @@ import retrofit2.Response;
 /**
  * Created by pelzi on 18.10.17.
  */
+@SuppressWarnings("ConstantConditions")
 public class SubscriptionManager {
     private static final String TAG = SubscriptionManager.class.getSimpleName();
 

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   ~ /*
-  ~  * Copyright (c) 2020 Dr. Andreas Feldner.
+  ~  * Copyright (c) 2021 Dr. Andreas Feldner.
   ~  *
   ~  *     This program is free software; you can redistribute it and/or modify
   ~  *     it under the terms of the GNU General Public License as published by
@@ -25,7 +25,6 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/frameLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".android.dtlsrequest.KeyRequestFragment">
@@ -83,7 +82,8 @@ EE7UxSOajKHxmQyDFh0rucNeYVonFt7TGFAWW1A4VWl6S/tEyBS3oRKq6MF5TleZ\n
 fcKv9NrdUFvUByVlHqA5Ht6pPJ//nRiNwKS7tAxOqoPhORdg1E4iGrHlNRfkbF9q\n
 wCowNc/kiy6+54EUv2WJK7SVfQe7cp2oGO8FdHRC+dwz6DNnBpVWqiaONeHD4/I4\n
 vxJ42DUufKzH9ODDnyt5RSCWwipOZoEiTuJrRQ==\n
------END CERTIFICATE REQUEST-----" />
+-----END CERTIFICATE REQUEST-----"
+        tools:ignore="SmallSp" />
 
     <Button
         android:id="@+id/copyToClipboard"

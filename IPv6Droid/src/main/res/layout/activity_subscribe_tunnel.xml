@@ -1,6 +1,6 @@
 <!--
   ~ /*
-  ~  * Copyright (c) 2020 Dr. Andreas Feldner.
+  ~  * Copyright (c) 2021 Dr. Andreas Feldner.
   ~  *
   ~  *     This program is free software; you can redistribute it and/or modify
   ~  *     it under the terms of the GNU General Public License as published by
@@ -54,7 +54,6 @@
             android:paddingTop="@dimen/activity_vertical_margin">
 
             <TextView
-                android:id="@+id/textView2"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/subscription"
@@ -65,7 +64,6 @@
                 android:layout_height="5pt" />
 
             <TextView
-                android:id="@+id/textView3"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/subscription_status"
@@ -101,7 +99,6 @@
                 android:orientation="horizontal">
 
                 <TextView
-                    android:id="@+id/textView5"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/user_subscription_valid_until"
@@ -130,9 +127,11 @@
                 android:layout_height="5pt" />
 
             <TextView
-                android:id="@+id/textView4"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:autoLink="web"
+                android:clickable="true"
+                android:focusable="auto"
                 android:text="@string/user_subscription_subscribe_hint"
                 android:textAppearance="@android:style/TextAppearance.Material.Body1" />
 
@@ -164,15 +163,13 @@
                 android:layout_height="5pt" />
 
             <TextView
-                android:id="@+id/textView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/manage_subscriptions"
-                android:textAppearance="@android:style/TextAppearance.Material.Body1" />
+                android:textAppearance="@android:style/TextAppearance.Material.Body1"
             />
 
             <Button
-                android:id="@+id/button"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:onClick="onManageSubscriptions"
@@ -186,7 +183,6 @@
 
 
             <TextView
-                android:id="@+id/labelSettings"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20pt"
@@ -197,7 +193,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/action_settings"
-                android:id="@+id/settingsButton"
                 android:onClick="onOpenSettings" />
 
         </LinearLayout>

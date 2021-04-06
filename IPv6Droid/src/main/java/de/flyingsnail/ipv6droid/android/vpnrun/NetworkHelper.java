@@ -67,13 +67,18 @@ public class NetworkHelper  {
 
     NetworkHelper(final NetworkChangeListener networkChangeListener, final ConnectivityManager connectivityManager) {
         this.networkChangeListener = networkChangeListener;
-        // resolve system service "ConnectivityManager"
         this.connectivityManager = connectivityManager;
 
         Network currentlyActiveNetwork = connectivityManager.getActiveNetwork();
+        if (currentlyActiveNetwork != null) {
+            NetworkInfo ni = connectivityManager.getNetworkInfo(currentlyActiveNetwork);
+            if (ni == null || ni.getType() == ConnectivityManager.TYPE_VPN) {
+                currentlyActiveNetwork = null;
+            }
+        }
 
         // get current link properties associated with network
-        LinkProperties currentLinkProperties = connectivityManager.getLinkProperties(currentlyActiveNetwork);
+        LinkProperties currentLinkProperties = currentlyActiveNetwork == null ? null : connectivityManager.getLinkProperties(currentlyActiveNetwork);
         updateNetworkDetails(currentlyActiveNetwork, currentLinkProperties);
     }
 
@@ -104,6 +109,12 @@ public class NetworkHelper  {
         // register specific connectivity callback
         if (connectivityManager != null && networkCallback == null) {
             networkCallback = new ConnectivityManager.NetworkCallback () {
+                @Override
+                public void onAvailable(Network network) {
+                    LinkProperties linkProperties = connectivityManager.getLinkProperties(network);
+                    updateNetworkDetails(network, linkProperties);
+                    networkChangeListener.onNewConnection();
+                }
 
                 @Override
                 public void onLinkPropertiesChanged(Network network, LinkProperties linkProperties) {
@@ -160,7 +171,7 @@ public class NetworkHelper  {
      * updated network!
      *
      * @param network the currently active Network
-     * @param newLinkProperties the new link properties if this call is the resulat of a network
+     * @param newLinkProperties the new link properties if this call is the result of a network
      *                          change callback.
      */
     void updateNetworkDetails(@NonNull final Network network, @Nullable final LinkProperties newLinkProperties) {
@@ -169,8 +180,8 @@ public class NetworkHelper  {
         networkDetails.setNativeProperties(network, newLinkProperties);
         for (Network n : connectivityManager.getAllNetworks()) {
             NetworkInfo ni = connectivityManager.getNetworkInfo(n);
-            LinkProperties linkProperties = connectivityManager.getLinkProperties(n);
             if (ni != null) {
+                LinkProperties linkProperties = connectivityManager.getLinkProperties(n);
                 if (ni.getType() == ConnectivityManager.TYPE_VPN) {
                     networkDetails.setVpnProperties(linkProperties);
                 }

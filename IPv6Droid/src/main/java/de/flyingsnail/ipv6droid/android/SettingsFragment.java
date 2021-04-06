@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -56,39 +56,45 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         setPreferencesFromResource(R.xml.preferences, rootKey);
 
         final EditTextPreference routesSpecific = findPreference("routes_specific");
-        routesSpecific.setOnBindEditTextListener(
-                editText -> {
-                    editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS | InputType.TYPE_TEXT_VARIATION_URI);
-                    editText.setSingleLine(true);
-                    editText.setSelectAllOnFocus(false);
-                }
-        );
+        if (routesSpecific != null) {
+            routesSpecific.setOnBindEditTextListener(
+                    editText -> {
+                        editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS | InputType.TYPE_TEXT_VARIATION_URI);
+                        editText.setSingleLine(true);
+                        editText.setSelectAllOnFocus(false);
+                    }
+            );
+        }
 
         final ListPreference dtlsKeyAlias = findPreference("dtls_key_alias");
-        CharSequence[] keys = new CharSequence[0];
-        try {
-            keys = AndroidBackedKeyPair.listAliases().toArray(keys);
-        } catch (IOException e) {
-            Log.i(TAG, "No key pair in Android Key Store");
-        }
-        dtlsKeyAlias.setEntries(keys);
-        dtlsKeyAlias.setEntryValues(keys);
+        if (dtlsKeyAlias != null) {
+            CharSequence[] keys = new CharSequence[0];
+            try {
+                keys = AndroidBackedKeyPair.listAliases().toArray(keys);
+            } catch (IOException e) {
+                Log.i(TAG, "No key pair in Android Key Store");
+            }
 
+            dtlsKeyAlias.setEntries(keys);
+            dtlsKeyAlias.setEntryValues(keys);
+        }
         final EditTextPreference dtlsCerts = findPreference("dtls_certs");
-        dtlsCerts.setOnBindEditTextListener(
-                editText -> {
-                    editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_VARIATION_LONG_MESSAGE);
-                    editText.setSingleLine(false);
-                    editText.setSelectAllOnFocus(false);
-                }
-        );
+        if (dtlsCerts != null) {
+            dtlsCerts.setOnBindEditTextListener(
+                    editText -> {
+                        editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_VARIATION_LONG_MESSAGE);
+                        editText.setSingleLine(false);
+                        editText.setSelectAllOnFocus(false);
+                    }
+            );
+        }
     }
 
     /**
      * A preference value change listener that updates the preference's summary
      * to reflect its new value.
      */
-    private SharedPreferences.OnSharedPreferenceChangeListener preferenceSummaryToValueListener =
+    private final SharedPreferences.OnSharedPreferenceChangeListener preferenceSummaryToValueListener =
             (sharedPreferences, key) -> {
                 Preference preference = findPreference(key);
                 if (preference == null)

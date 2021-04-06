@@ -104,8 +104,8 @@ class CopyThread extends Thread {
         int packetBufferLength = (packetBundlingPeriod > 0) ? MAX_PACKET_BUFFER_LENGTH : 0;
         this.statisticsCollector = statisticsCollector;
         // allocate packet buffer
-        packetQueue = new ArrayBlockingQueue<byte[]>(packetBufferLength == 0 ? 1 : packetBufferLength);
-        bufferPool = new ArrayBlockingQueue<byte[]>(packetBufferLength +1);
+        packetQueue = new ArrayBlockingQueue<>(packetBufferLength == 0 ? 1 : packetBufferLength);
+        bufferPool = new ArrayBlockingQueue<>(packetBufferLength + 1);
         for (int i = 0; i <= packetBufferLength; i++)
             bufferPool.add(new byte[32767]);
     }
@@ -191,7 +191,8 @@ class CopyThread extends Thread {
                                 Thread.currentThread().getName() + ": received 0 byte packages"
                         ));
                     }
-                    Thread.sleep(100 + ((recvZero < 10000) ? recvZero : 10000)); // wait minimum 0.1, maximum 10 seconds
+                    //noinspection BusyWait
+                    Thread.sleep(100 + (Math.min(recvZero, 10000))); // wait minimum 0.1, maximum 10 seconds
                 }
                 bufferPool.add(packet);
             }

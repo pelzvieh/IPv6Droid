@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2016 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -22,6 +22,8 @@
  */
 
 package de.flyingsnail.ipv6droid.android.googlesubscription;
+
+import androidx.annotation.NonNull;
 
 /**
  * Base class for all subscription types.
@@ -86,6 +88,7 @@ public class Subscription {
     }
 
     @Override
+    @NonNull
     public String toString() {
         return "Subscription{" +
                 "signature='" + signature + '\'' +

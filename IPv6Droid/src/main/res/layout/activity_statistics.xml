@@ -1,6 +1,6 @@
 <!--
   ~ /*
-  ~  * Copyright (c) 2020 Dr. Andreas Feldner.
+  ~  * Copyright (c) 2021 Dr. Andreas Feldner.
   ~  *
   ~  *     This program is free software; you can redistribute it and/or modify
   ~  *     it under the terms of the GNU General Public License as published by
@@ -46,7 +46,7 @@
         android:fadeScrollbars="true">
 
         <androidx.fragment.app.FragmentContainerView
-            android:id="@+id/fragment"
+            android:id="@+id/statistics"
             android:name="de.flyingsnail.ipv6droid.android.statusdetail.StatisticsFragment"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

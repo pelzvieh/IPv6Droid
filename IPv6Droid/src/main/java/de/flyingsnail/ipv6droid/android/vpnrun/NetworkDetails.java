@@ -28,6 +28,7 @@ import android.net.Network;
 import android.net.RouteInfo;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -63,7 +64,7 @@ class NetworkDetails {
      * @param network the Network that is now available
      * @param nativeProperties the LinkProperties of the Link associated with the given Network.
      */
-    public void setNativeProperties(@NonNull Network network, @NonNull LinkProperties nativeProperties) {
+    public void setNativeProperties(@NonNull Network network, @Nullable LinkProperties nativeProperties) {
         currentNativeNetwork = network;
         currentNativeProperties = nativeProperties;
     }
@@ -105,7 +106,7 @@ class NetworkDetails {
                 : null;
         // read information out of the cached linkProperties
         if (routeInfos == null)
-            routeInfos = new ArrayList<RouteInfo>(0);
+            routeInfos = new ArrayList<>(0);
 
         return routeInfos;
     }
@@ -135,7 +136,7 @@ class NetworkDetails {
                 : null;
 
         if (dnsServers == null)
-            dnsServers = new ArrayList<InetAddress>(0);
+            dnsServers = new ArrayList<>(0);
 
         return dnsServers;
     }

@@ -33,6 +33,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Objects;
 
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.IPv6DroidVpnService;
@@ -151,20 +152,19 @@ public class VpnStatusReport implements Serializable, Cloneable {
             reportStatus();
     }
 
-    protected void setTunnelProvedWorking(boolean tunnelProvedWorking) {
-        boolean changed = this.tunnelProvedWorking != tunnelProvedWorking;
-        this.tunnelProvedWorking = tunnelProvedWorking;
+    protected void setTunnelProvedWorking() {
+        boolean changed = this.tunnelProvedWorking != true;
+        this.tunnelProvedWorking = true;
         if (changed)
             reportStatus();
     }
 
     protected void setCause(@Nullable Throwable cause) {
-        boolean changed = (this.cause != cause) && (
-                this.cause == null || !this.cause.equals(cause)
-        );
-        this.cause = cause;
-        if (changed)
+        boolean changed = !Objects.equals(this.cause, cause);
+        if (changed) {
+            this.cause = cause;
             reportStatus();
+        }
     }
 
     @Override
@@ -179,9 +179,7 @@ public class VpnStatusReport implements Serializable, Cloneable {
         if (activity != that.activity
                 || status != that.status)
             return false;
-        return !(tunnels != null ?
-                 !tunnels.equals(that.tunnels) :
-                 that.tunnels != null);
+        return Objects.equals(tunnels, that.tunnels);
     }
 
     @Override
@@ -298,6 +296,7 @@ public class VpnStatusReport implements Serializable, Cloneable {
 
 
     @Override
+    @NonNull
     public String toString() {
         // @todo internationalize
         return "changed to " + status.toString() + ", " +

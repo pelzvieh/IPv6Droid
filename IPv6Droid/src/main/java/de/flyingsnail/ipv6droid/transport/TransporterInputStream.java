@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -37,8 +37,8 @@ import de.flyingsnail.ipv6droid.transport.ayiya.Ayiya;
 
 public class TransporterInputStream extends InputStream {
   private final static String TAG = TransporterInputStream.class.getName();
-  private Transporter transporter;
-  private ThreadLocal<ByteBuffer> streamBuffer = new ThreadLocal<>();
+  private final Transporter transporter;
+  private final ThreadLocal<ByteBuffer> streamBuffer = new ThreadLocal<>();
 
   public TransporterInputStream(Transporter transporter) {
     this.transporter = transporter;

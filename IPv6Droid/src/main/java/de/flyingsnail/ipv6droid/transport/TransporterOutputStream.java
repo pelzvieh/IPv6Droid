@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2019 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ import java.nio.ByteBuffer;
 
 public class TransporterOutputStream extends OutputStream {
 
-  private Transporter transporter;
+  private final Transporter transporter;
 
   public TransporterOutputStream(Transporter transporter) {
     this.transporter = transporter;

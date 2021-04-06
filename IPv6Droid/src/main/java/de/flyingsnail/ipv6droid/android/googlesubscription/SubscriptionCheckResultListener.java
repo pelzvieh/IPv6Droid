@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ package de.flyingsnail.ipv6droid.android.googlesubscription;
  */
 
 public interface SubscriptionCheckResultListener {
-    public enum ResultType {
+    enum ResultType {
         /** We successfully read provisioned tunnels, we're ready to use them */
         HAS_TUNNELS,
         /** We know that the user does not have a subscription  */
@@ -61,5 +61,5 @@ public interface SubscriptionCheckResultListener {
         NO_SERVICE_TRY_AGAIN
     }
 
-    public void onSubscriptionCheckResult(ResultType result, String debugMessage);
+    void onSubscriptionCheckResult(ResultType result, String debugMessage);
 }

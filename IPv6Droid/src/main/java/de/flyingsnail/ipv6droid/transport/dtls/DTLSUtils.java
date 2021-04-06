@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -59,7 +59,7 @@ import java.util.List;
  * Refer to the @link{https://github.com/bcgit/bc-java/blob/master/tls/src/test/java/org/bouncycastle/tls/test/TlsTestUtils.java} BC implementation.
  */
 class DTLSUtils {
-    private static String TAG = DTLSUtils.class.getName();
+    private static final String TAG = DTLSUtils.class.getName();
 
     private DTLSUtils() {}
 
@@ -84,7 +84,7 @@ class DTLSUtils {
 
     private static TlsCertificate parseCertificateString(TlsCrypto crypto, String certString) throws IOException {
         PemObject pem = parsePemString(certString);
-        if (pem != null && pem.getType().endsWith("CERTIFICATE")) {
+        if (pem.getType().endsWith("CERTIFICATE")) {
             return crypto.createCertificate(pem.getContent());
         }
         throw new IllegalArgumentException("Supplied PEM string doesn't specify a valid certificate");

@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -57,7 +57,7 @@ import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
 public class TransporterParams implements TunnelSpec, Serializable {
     private static final String TAG = TransporterParams.class.getName();
-    private static ExecutorService resolverPool = Executors.newCachedThreadPool();
+    private static final ExecutorService resolverPool = Executors.newCachedThreadPool();
     static final String TUNNEL_TYPE = "DTLSTunnel";
     private TlsCrypto crypto;
 

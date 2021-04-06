@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?><!--
   ~ /*
-  ~  * Copyright (c) 2020 Dr. Andreas Feldner.
+  ~  * Copyright (c) 2021 Dr. Andreas Feldner.
   ~  *
   ~  *     This program is free software; you can redistribute it and/or modify
   ~  *     it under the terms of the GNU General Public License as published by
@@ -25,19 +25,14 @@
 
     <string name="app_name">IPv6Droid</string>
     <string name="action_settings">Settings</string>
-    <string name="pref_title_routes">Route settings</string>
     <string name="action_connect">Connect</string>
     <string name="action_tic_reload">Reload tunnels</string>
     <string name="action_help">Help</string>
 
     <string name="password_set">&lt;set&gt;</string>
     <string name="password_unset">&lt;unset&gt;</string>
-    <string name="boolean_set">enabled</string>
-    <string name="boolean_unset">disabled</string>
     <string name="action_disconnect">Disconnect</string>
     <string name="main_activity_please_start">Please start</string>
-    <string name="routingbroken">IPv6 nativeRouting broken</string>
-    <string name="routingfixed">IPv6 nativeRouting has been fixed</string>
 
     <string name="statistics_bytes">Bytes</string>
     <string name="statistics_packets">IP packets</string>
@@ -66,17 +61,17 @@
     <string name="statistics_packets_per_burst">Pckt./burst</string>
     <string name="statistics_bytes_per_burst">B./burst</string>
     <string name="title_activity_subscribe_tunnel">SubscribeTunnel</string>
-    <string name="title_activity_initial_setup">Initial Setup</string>
-    <string name="subscription_label">Subscribe to IPv6 tunnel service</string>
     <string name="manual_setup_label">Self-hosted</string>
-    <string name="user_has_subscription">You are subscribed to %d tunnels</string>
+    <plurals name="user_has_subscription">
+        <item quantity="one">You are subscribed to %d tunnel</item>
+        <item quantity="other">You are subscribed to %d tunnels</item>
+    </plurals>
     <string name="user_has_unparsable_subscription_status">Could not understand subscription status</string>
     <string name="subscribe_to_tunnel_service">Subscribe to Tunnel Service</string>
     <string name="user_not_subscribed">Not subscribed</string>
     <string name="action_subscribe">Subscribe</string>
     <string name="technical_problem">Subscription failed - temporary problem contacting server</string>
     <string name="user_subscription_checking">Checking user subscription…</string>
-    <string name="user_subscription_verifying">Verifying subscription…</string>
     <string name="user_subscription_failed">Verification failed</string>
     <string name="user_subscription_starting_wizard">Starting Google subscription wizard…</string>
     <string name="user_subscription_purchase_done">Thank you for purchasing! Provisioning tunnels for you…</string>
@@ -87,14 +82,15 @@
     <string name="channel_errors_description">Error messages from IPv6 tunnel</string>
     <string name="channel_status_description">Current status of IPv6 tunnel</string>
 
-    <string name="intro_app_title">Introduction to IPv6Droid</string>
-    <string name="intro_app_description">IPv6Droid is an Android client to use certain types of IPv6 tunnels, in order to bring IPv6 support to Android mobile devices on networks that do not support IPv6, plus use any kind of server-side NAT and therefore disabling the most boadly available types of IPv6 tunnels. Specifically, all mobile networks in Germany at the time of writing meet both criteria.</string>
     <string name="subscription">Subscription</string>
     <string name="manage_subscriptions">Here you can launch Google Play to review and manage (e.g. terminate) your tunnel subscription.</string>
     <string name="subscription_status">The following status is determined from the Google account that your device is linked to. Retrieving the status may take a few seconds. If valid until date is reached, subscription will be extended (with the monthly fee), unless you terminated the subscription.</string>
     <string name="subscriptions_manage_subscriptions">Manage Subscriptions</string>
-    <string name="user_subscription_subscribe_hint">Here you can subscribe to a set of 4 tunnels with a few clicks. The subscription process is entirely handled by Google, including credit card or other payment details. You will be shown the exact price for your region. First time users have a full 60 days free testing period! After the free period, the subscription is extended automatically each month, with the indicated monthly fee in the indicated currency.</string>
-    <string name="user_subscription_terms_link">I accept terms and conditions: <![CDATA[https://flyingsnail.de/svcdesc.html]]></string>
+    <string name="user_subscription_subscribe_hint">Here you can subscribe to a set of 4 tunnels with a few clicks. The subscription process is entirely handled by Google, including credit card or other payment details. You will be shown the exact price for your region. First time users have a full 60 days free testing period! After the free period, the subscription is extended automatically each month, with the indicated monthly fee in the indicated currency.
+        <br/><br/>
+        The service is subject to the following terms and conditions (tap to read): <br/><![CDATA[https://flyingsnail.de/svcdesc.html]]>
+    </string>
+    <string name="user_subscription_terms_link">I read and accept the terms and conditions referenced above</string>
     <string name="user_subscription_error_not_accepted">You must accept terms and conditions to subscribe</string>
     <string name="user_subscription_valid_until">Valid until</string>
     <string name="SubManStartingUp">starting up</string>
@@ -105,7 +101,6 @@
     <string name="user_subscription_no_service_on_this_device">Google subscription services are not available on this device - please contact support.</string>
     <string name="pref_header_experimental">Experimental settings</string>
     <string name="ipv6_test_host" translatable="false">2a06:1c40::309</string>
-    <string name="subscription_default_url_base" translatable="false">https://flyingsnail.de/services/services/</string>
     <string name="certification_default_url_base" translatable="false">https://flyingsnail.de/services/services/</string>
     <string name="statistics_started_at">Started at</string>
     <string name="statistics_reconnects">Reconnects</string>

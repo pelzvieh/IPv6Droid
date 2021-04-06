@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -48,6 +48,7 @@ import static org.bouncycastle.tls.CipherSuite.TLS_DHE_RSA_WITH_AES_128_CBC_SHA2
  * A TlsClient as defined by the Bouncy Castle low level TLS API, sub-class-configured to serve
  * for the IPv6Droid DTLS implementation.
  */
+@SuppressWarnings("rawtypes")
 class IPv6DTlsClient extends AbstractTlsClient {
 
     private final int heartbeat;
