@@ -99,6 +99,7 @@ class SelfCheckingUDPTransport extends UDPTransport {
     lastReadTimeout = new Date();
     lastReadTimeout.setTime(lastReadTimeout.getTime() + waitMillis + 1000L);
     try {
+      // todo remove logging code if re-connecting is fixed
       if (Log.isLoggable(TAG, Log.VERBOSE))
         Log.v(TAG, String.format("Receive called with deadline at %s", lastReadTimeout.toString()));
       int read = super.receive(buf, off, len, waitMillis);
