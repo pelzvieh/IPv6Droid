@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -33,7 +33,6 @@ import org.bouncycastle.tls.DTLSTransport;
 import org.bouncycastle.tls.DatagramTransport;
 import org.bouncycastle.tls.SignatureAlgorithm;
 import org.bouncycastle.tls.TlsClient;
-import org.bouncycastle.tls.UDPTransport;
 import org.bouncycastle.tls.crypto.TlsCrypto;
 import org.bouncycastle.tls.crypto.impl.bc.BcTlsCrypto;
 
@@ -67,14 +66,14 @@ public class DTLSTransporter implements Transporter {
   private int maxPacketSize = 0;
   private boolean validPacketReceived = false;
 
-  private final static int OVERHEAD = 92;
+  final static int OVERHEAD = 92;
 
   private Inet4Address ipv4Pop;
   private final int mtu;
-    /**
-     * The size of our receive buffers. We do not want to limit the transmission by our buffers...
-     */
-  private static final int MAX_MTU = 64*1024;
+  /**
+   * The size of our receive buffers. We do not want to limit the transmission by our buffers...
+   */
+  static final int MAX_MTU = 64*1024;
   private final int heartbeat;
 
 
@@ -94,12 +93,14 @@ public class DTLSTransporter implements Transporter {
     // IPv4Pop needs network to be resolvable, so we postpone reading it until connect()
     port = params.getPortPop();
     mtu = params.getMtu();
-    heartbeat = params.getHeartbeatInterval();
+    heartbeat = params.getHeartbeatInterval() * 1000;
     certChain = params.getCertChain();
     keyPair = params.getKeyPair();
     dnsName = params.getDnsPop();
 
-    Log.i(TAG, "DTLS transporter constructed");
+    Log.i(TAG,
+            String.format("DTLS transporter constructed: port={0}, mtu={1}, heartbeat={2}, dnsName={3}",
+                    port, mtu, heartbeat, dnsName));
   }
 
   /**
@@ -187,19 +188,14 @@ public class DTLSTransporter implements Transporter {
     // we need a timeout for the connect phase, otherwise we're facing infinite hangs
     socket.setSoTimeout(10000);
 
-    DatagramTransport transport = new UDPTransport(socket, mtu + 2*OVERHEAD) {
-        @Override
-        public int getReceiveLimit() {
-            // we do not want to limit incoming packages
-            return MAX_MTU - OVERHEAD;
-        }
-    };
+    DatagramTransport transport = new SelfCheckingUDPTransport(socket, mtu + 2 * DTLSTransporter.OVERHEAD);
     TlsClient client = new IPv6DTlsClient(crypto, heartbeat, certChain, keyPair, dnsName);
     DTLSClientProtocol protocol = new DTLSClientProtocol();
     dtls = protocol.connect(client, transport);
 
+    // todo check if it BC really manages SO_TIMEOUT itself. The clause below might be the reason why it didn't work well
     // after the connect, we do not want a timeout
-    socket.setSoTimeout(heartbeat); // with every heartbeat interval, there should be communication
+    // socket.setSoTimeout(heartbeat); // with every heartbeat interval, there should be communication
 
     Log.i(TAG, "DTLS tunnel to POP IP " + ipv4Pop + " created.");
   }

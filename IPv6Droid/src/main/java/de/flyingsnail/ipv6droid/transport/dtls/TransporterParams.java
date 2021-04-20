@@ -224,11 +224,19 @@ public class TransporterParams implements TunnelSpec, Serializable {
         this.mtu = mtu;
     }
 
+    /**
+     * Time after which heartbeat package should be sent or is expected.
+     * @return an int giving the heartbeat time interval in seconds.
+     */
     @Override
     public int getHeartbeatInterval() {
         return heartbeat;
     }
 
+    /**
+     * Set the time after which a heartbeat package should be sent or is expected.
+     * @param heartbeat an int giving the heartbeat time interval in seconds.
+     */
     @Override
     public void setHeartbeatInterval(int heartbeat) {
         this.heartbeat = heartbeat;

@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2021 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -82,7 +82,7 @@ public class DTLSTunnelReader implements TunnelReader {
         } catch (IOException | IllegalArgumentException | IllegalStateException illegal) {
             throw new ConnectionFailedException("Invalid certificate configuration", illegal);
         }
-        params.setHeartbeatInterval(10*60*1000); // 10 Minutes
+        params.setHeartbeatInterval(10*60); // 10 Minutes
         params.setMtu(1300);
         return params;
     }

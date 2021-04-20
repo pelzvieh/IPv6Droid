@@ -59,19 +59,21 @@ class SimpleMonitor implements Monitor {
     @Override
     public void loop() throws InterruptedException, IOException {
         TunnelSpec activeTunnel = transporter.getTunnelSpec();
+        long heartbeatInterval = activeTunnel.getHeartbeatInterval() * 1000L;
         while (remoteEnd.isIntendedToRun() && (inThread != null && inThread.isAlive()) && (outThread != null && outThread.isAlive())) {
             // wait for the heartbeat interval to finish or until inThread dies.
             // Note: the inThread is reading from the network socket to the POP
             // in case of network changes, this socket breaks immediately, so
             // inThread crashes on external network changes even if no transfer
             // is active.
-            inThread.join();
+            inThread.join(heartbeatInterval);
             if (!remoteEnd.isIntendedToRun())
                 break;
             // re-check cached network information
             if (!remoteEnd.isCurrentSocketStillValid()) {
                 throw new IOException("Network changed");
             }
+
         }
         Log.i(TAG, "Terminated loop of current transporter object (interrupt or end of a copy thread)");
         Throwable deathCause = null;
