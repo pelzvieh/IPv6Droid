@@ -268,13 +268,14 @@ public class SubscriptionManager {
     }
 
     /**
-     * Deal with a Google purchase information. Convenience method for {@link #onGoogleProductPurchased(String, String, String)}
+     * Deal with a Google purchase information. Convenience method for
+     * {@link #onGoogleProductPurchased(List, String, String)}
      * @param purchase a Purchase object from the Google Billing API
      * @return true if purchase deals with a product relevant for this app
      */
     private boolean onGoogleProductPurchased (Purchase purchase) {
         if (purchase.getPurchaseState() == Purchase.PurchaseState.PURCHASED) {
-            return onGoogleProductPurchased(purchase.getSku(), purchase.getOriginalJson(), purchase.getSignature());
+            return onGoogleProductPurchased(purchase.getSkus(), purchase.getOriginalJson(), purchase.getSignature());
         } else {
             Log.d(TAG, "Purchase is not in state PURCHASED - ignoring for now");
             return false;
@@ -283,16 +284,16 @@ public class SubscriptionManager {
 
     /**
      * Deal with a Google purchase information (exploded parameters).
-     * @param sku a String quoting the SKU (product identifier)
+     * @param sku a List of String quoting the purchased SKUs (product identifier)
      * @param skuData a String quoting the JSON that describes the concrete purchase
      * @param skuSignature a String signing the skuData JSON
      * @return true if purchase deals with a product relevant for this app.
      */
-    private boolean onGoogleProductPurchased(String sku, String skuData, String skuSignature) {
+    private boolean onGoogleProductPurchased(List<String> sku, String skuData, String skuSignature) {
         Log.d(TAG, "Examining SKU " + sku
                 + ",\n Data '" + skuData + "',\n signature '" + skuSignature);
 
-        if (!SubscriptionBuilder.getSupportedSku().contains(sku)) {
+        if (!SubscriptionBuilder.getSupportedSku().containsAll(sku)) {
             return false;
         }
         try {
@@ -344,7 +345,7 @@ public class SubscriptionManager {
                                     );
                                 } else {
                                     for (PurchaseHistoryRecord record : purchasesList) {
-                                        Log.i(TAG, "Purchase " + record.getSku() + ": " + record.getPurchaseToken());
+                                        Log.i(TAG, "Purchase " + record.getSkus() + ": " + record.getPurchaseToken());
                                     }
                                 }
                             } else {

@@ -99,7 +99,7 @@ public class DTLSTransporter implements Transporter {
     dnsName = params.getDnsPop();
 
     Log.i(TAG,
-            String.format("DTLS transporter constructed: port={0}, mtu={1}, heartbeat={2}, dnsName={3}",
+            String.format("DTLS transporter constructed: port=%d, mtu=%d, heartbeat=%d, dnsName=%s",
                     port, mtu, heartbeat, dnsName));
   }
 
@@ -281,11 +281,8 @@ public class DTLSTransporter implements Transporter {
       if (bytecount > maxPacketSize)
         maxPacketSize = bytecount;
 
-      if (bytecount < 0) {
-        throw new TunnelBrokenException("Received end-of-stream indicator from dtls", null);
-      }
-      if (bytecount == 0) {
-        Log.d(TAG, "Received 0 bytes within timeout");
+      if (bytecount <= 0) {
+        Log.d(TAG, "Received no payload bytes within timeout");
         try {
           Thread.sleep(100L);
         } catch (InterruptedException e) {
