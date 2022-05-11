@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ /*
+  ~  * Copyright (c) 2022 Dr. Andreas Feldner.
+  ~  *
+  ~  *     This program is free software; you can redistribute it and/or modify
+  ~  *     it under the terms of the GNU General Public License as published by
+  ~  *     the Free Software Foundation; either version 2 of the License, or
+  ~  *     (at your option) any later version.
+  ~  *
+  ~  *     This program is distributed in the hope that it will be useful,
+  ~  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~  *     GNU General Public License for more details.
+  ~  *
+  ~  *     You should have received a copy of the GNU General Public License along
+  ~  *     with this program; if not, write to the Free Software Foundation, Inc.,
+  ~  *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  ~  *
+  ~  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
+  ~  */
+  ~
+  -->
+
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:scrollbars="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingLeft="@dimen/activity_horizontal_margin"
+        android:paddingTop="@dimen/activity_vertical_margin"
+        android:paddingRight="@dimen/activity_horizontal_margin"
+        android:paddingBottom="@dimen/activity_vertical_margin">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/subscription"
+            android:textAppearance="@android:style/TextAppearance.Material.Display1" />
+
+        <android.widget.Space
+            android:layout_width="match_parent"
+            android:layout_height="5pt" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/subscription_status"
+            android:textAppearance="@android:style/TextAppearance.Material.Body1" />
+
+        <View style="@style/HorizontalLine" />
+
+        <TextView
+            android:id="@+id/subscriptionStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/user_not_subscribed"
+            android:textAlignment="viewStart"
+            android:textAppearance="@style/HighlightedTextMedium" />
+
+        <LinearLayout
+            android:id="@+id/validUntilLine"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/user_subscription_valid_until"
+                android:textAppearance="@style/HighlightedText" />
+
+            <TextView
+                android:id="@+id/validUntil"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ems="10"
+                android:paddingLeft="10pt"
+                android:paddingRight="0pt"
+                android:textAlignment="viewEnd"
+                android:textAppearance="@style/HighlightedText" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/renewingLine"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Will renew"
+                android:textAppearance="@style/HighlightedText" />
+
+            <CheckBox
+                android:id="@+id/renewing"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ems="10"
+                android:paddingLeft="10pt"
+                android:paddingRight="0pt"
+                android:textAlignment="viewEnd"
+                android:textAppearance="@style/HighlightedText"
+                android:enabled="false"
+                />
+
+        </LinearLayout>
+
+        <View style="@style/HorizontalLine" />
+
+        <android.widget.Space
+            android:layout_width="match_parent"
+            android:layout_height="5pt" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:autoLink="web"
+            android:clickable="true"
+            android:focusable="true"
+            android:text="@string/user_subscription_subscribe_hint"
+            android:textAppearance="@android:style/TextAppearance.Material.Body1" />
+
+        <android.widget.Space
+            android:layout_width="match_parent"
+            android:layout_height="10pt" />
+
+
+        <CheckBox
+            android:id="@+id/acceptTerms"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:autoLink="web"
+            android:minHeight="48dp"
+            android:text="@string/user_subscription_terms_link"
+            android:textIsSelectable="true" />
+
+        <Button
+            android:id="@+id/purchase"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:backgroundTint="@color/ipv6droid_green"
+            android:text="@string/subscribe_to_tunnel_service" />
+
+        <android.widget.Space
+            android:layout_width="match_parent"
+            android:layout_height="5pt" />
+
+        <View style="@style/HorizontalLine" />
+
+<!--
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20pt"
+            android:text="@string/manual_setup_label"
+            android:textAppearance="@android:style/TextAppearance.Material.Display1" />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:onClick="onOpenSettings"
+            android:text="@string/action_settings" />
+-->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/manage_subscriptions"
+            android:textAppearance="@android:style/TextAppearance.Material.Body1" />
+
+        <Button
+            android:id="@+id/consumepurchase"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:backgroundTint="@color/ipv6droid_green"
+            android:text="@string/subscriptions_manage_subscriptions" />
+    </LinearLayout>
+</ScrollView>

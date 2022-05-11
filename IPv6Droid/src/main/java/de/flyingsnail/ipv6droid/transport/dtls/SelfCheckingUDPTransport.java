@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2022 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -44,7 +44,7 @@ import java.util.Date;
  */
 class SelfCheckingUDPTransport extends UDPTransport {
 
-  private final String TAG = SelfCheckingUDPTransport.class.getName();
+  private final String TAG = SelfCheckingUDPTransport.class.getSimpleName();
 
   /**
    * The Date when the currently active read operation was started or null if it is
@@ -100,11 +100,9 @@ class SelfCheckingUDPTransport extends UDPTransport {
     lastReadTimeout.setTime(lastReadTimeout.getTime() + waitMillis + 1000L);
     try {
       // todo remove logging code if re-connecting is fixed
-      if (Log.isLoggable(TAG, Log.VERBOSE))
-        Log.v(TAG, String.format("Receive called with deadline at %s", lastReadTimeout.toString()));
+      Log.v(TAG, String.format("Receive called with deadline at %s", lastReadTimeout.toString()));
       int read = super.receive(buf, off, len, waitMillis);
-      if (Log.isLoggable(TAG, Log.VERBOSE))
-        Log.v(TAG, String.format("Receive finished at %s", new Date().toString()));
+      Log.v(TAG, String.format("Receive finished at %s", new Date()));
       return read;
     } finally {
       lastReadTimeout = null;

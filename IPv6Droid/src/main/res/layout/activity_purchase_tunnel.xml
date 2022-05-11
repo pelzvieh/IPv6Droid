@@ -1,0 +1,84 @@
+<!--
+  ~ /*
+  ~  * Copyright (c) 2022 Dr. Andreas Feldner.
+  ~  *
+  ~  *     This program is free software; you can redistribute it and/or modify
+  ~  *     it under the terms of the GNU General Public License as published by
+  ~  *     the Free Software Foundation; either version 2 of the License, or
+  ~  *     (at your option) any later version.
+  ~  *
+  ~  *     This program is distributed in the hope that it will be useful,
+  ~  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~  *     GNU General Public License for more details.
+  ~  *
+  ~  *     You should have received a copy of the GNU General Public License along
+  ~  *     with this program; if not, write to the Free Software Foundation, Inc.,
+  ~  *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  ~  *
+  ~  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
+  ~  */
+  ~
+  -->
+
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/subscriptionsToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        android:elevation="4dp"
+        android:theme="@style/ThemeOverlay.AppCompat.ActionBar"
+        android:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+        android:layout_alignParentTop="true"/>
+
+    <androidx.slidingpanelayout.widget.SlidingPaneLayout
+        android:id="@+id/sliding_panes"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/purchasingInfoDebug"
+        android:layout_below="@id/subscriptionsToolbar">
+
+        <!-- A list of products goes here -->
+        <ListView
+            android:id="@+id/sku_list"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_gravity="start"
+            tools:itemCount="3"
+            tools:listitem="@layout/recycler_view_item" />
+
+        <!-- this shows the details and purchase controls of the product
+             selected in the left list -->
+        <androidx.fragment.app.FragmentContainerView
+            android:id="@+id/productpurchasecontainer"
+            android:name="de.flyingsnail.ipv6droid.android.googlesubscription.SubscribeTunnelFragment"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            tools:layout="@layout/fragment_subscribe_tunnel">
+
+        </androidx.fragment.app.FragmentContainerView>
+
+    </androidx.slidingpanelayout.widget.SlidingPaneLayout>
+
+    <TextView
+        android:id="@+id/purchasingInfoDebug"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentBottom="true"
+        android:minHeight="48dp"
+        android:selectAllOnFocus="false"
+        android:text="@string/user_not_subscribed"
+        android:textAlignment="viewStart"
+        android:textAppearance="@style/DetailsForInterestedUser"
+        android:textColor="#546E7A"
+        android:textIsSelectable="true" />
+
+
+</RelativeLayout>

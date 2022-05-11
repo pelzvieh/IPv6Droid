@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2022 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -25,11 +25,20 @@ package de.flyingsnail.ipv6droid.android;
 
 import android.content.Context;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.android.billingclient.api.Purchase;
+import com.android.billingclient.api.SkuDetails;
+
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 
+import de.flyingsnail.ipv6droid.android.googlesubscription.CertificationResultListener;
+import de.flyingsnail.ipv6droid.android.googlesubscription.PurchaseManager;
+import de.flyingsnail.ipv6droid.android.googlesubscription.PurchaseToTunnel;
 import de.flyingsnail.ipv6droid.android.googlesubscription.SubscriptionCheckResultListener;
-import de.flyingsnail.ipv6droid.android.googlesubscription.SubscriptionManager;
 import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
@@ -37,15 +46,21 @@ import de.flyingsnail.ipv6droid.transport.TunnelSpec;
  * Created by pelzi on 18.10.17.
  */
 
-public class SubscriptionTunnelReader implements TunnelReader, SubscriptionCheckResultListener {
-    final private SubscriptionManager subscriptionManager;
+public class SubscriptionTunnelReader implements
+        TunnelReader,
+        SubscriptionCheckResultListener,
+        CertificationResultListener {
+    final private PurchaseManager purchaseManager;
 
     private boolean finished = false;
     private boolean failed = false;
     private boolean noSubscriptions = false;
+    private final PurchaseToTunnel helper;
+    private List<TunnelSpec> readTunnels;
 
     public SubscriptionTunnelReader(final Context context) {
-        subscriptionManager = new SubscriptionManager(this, context);
+        purchaseManager = new PurchaseManager(this, context);
+        helper = new PurchaseToTunnel(context);
     }
 
     /**
@@ -69,22 +84,20 @@ public class SubscriptionTunnelReader implements TunnelReader, SubscriptionCheck
             throw new IOException("Temporary failure of subscription query");
         if (noSubscriptions)
             throw new ConnectionFailedException("This user has no active subscriptions", null);
-        return subscriptionManager.getTunnels();
+        return Objects.requireNonNull(readTunnels, "finished, not failed, yet no tunnels");
     }
 
     @Override
-    public synchronized void onSubscriptionCheckResult(ResultType result, String debugMessage) {
+    public synchronized void onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType result, Purchase p, String debugMessage) {
         switch (result) {
             case HAS_TUNNELS:
-                finished = true;
-                failed = false;
-                noSubscriptions = false;
-                notifyAll();
+                helper.certifyTunnelsForPurchase(p, this);
                 break;
-            case NO_SUBSCRIPTIONS:
+            case NO_PURCHASES:
             case SUBSCRIPTION_UNPARSABLE:
                 finished = true;
                 failed = false;
+                // todo check usage of this: absence of one-time purchases does not imply no active tunnels
                 noSubscriptions = true;
                 notifyAll();
                 break;
@@ -99,6 +112,51 @@ public class SubscriptionTunnelReader implements TunnelReader, SubscriptionCheck
             case NO_SERVICE_AUTO_RECOVERY:
                 finished = false;
                 failed = true;
+                break;
+        }
+    }
+
+    /**
+     * Notify listener on a change of available SKU.
+     *
+     * @param knownSku a List of SkuDetails objects representing the now known list of SKU.
+     */
+    @Override
+    public void onAvailableSkuUpdate(@NonNull List<SkuDetails> knownSku) {
+        // no action required
+    }
+
+    /**
+     * Callback to inform about an ansychronous attempt to get tunnels from a purchase.
+     *
+     * @param purchase
+     * @param tunnels    the Tunnels created from the Purchase. May be empty.
+     * @param resulttype the ResultType classifying the outcome of the attempt, @see {ResultType}
+     * @param e          an Exception giving details of failure and rejections.
+     */
+    @Override
+    public void onCertificationRequestResult(
+            @NonNull Purchase purchase,
+            @NonNull List<TunnelSpec> tunnels,
+            CertificationResultListener.ResultType resulttype,
+            @Nullable Exception e) {
+        switch (resulttype) {
+            case OK:
+                readTunnels = tunnels;
+                finished = true;
+                failed = false;
+                noSubscriptions = false;
+                notifyAll();
+                break;
+
+            case PURCHASE_REJECTED:
+                purchaseManager.revalidateCache(purchase, e); // will notify callbacks again
+                break;
+
+            case TECHNICAL_FAILURE:
+                finished = true;
+                failed = true;
+                notifyAll();
                 break;
         }
     }

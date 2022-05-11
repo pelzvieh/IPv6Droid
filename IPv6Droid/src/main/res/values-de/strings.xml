@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   ~ /*
-  ~  * Copyright (c) 2021 Dr. Andreas Feldner.
+  ~  * Copyright (c) 2022 Dr. Andreas Feldner.
   ~  *
   ~  *     This program is free software; you can redistribute it and/or modify
   ~  *     it under the terms of the GNU General Public License as published by
@@ -78,7 +78,7 @@
     <string name="channel_status_name">IPv6 Status</string>
     <string name="channel_errors_description">Error messages from IPv6 tunnel</string>
     <string name="channel_status_description">Current status of IPv6 tunnel</string>
-    <string name="subscription">Abonnement</string>
+    <string name="subscription">Erworbene Tunnel</string>
     <string name="subscription_status">Der hier angezeigte Status wird aus Ihrem Google-Konto abgefragt. Dies kann ein paar Sekunden dauern. Am \"gültig bis\"-Datum wird das Abonnement kostenpflichtig um einen Monat verlängert, wenn Sie es nicht beendet haben.</string>
     <string name="subscriptions_manage_subscriptions">Abonnement verwalten</string>
     <string name="user_subscription_management_not_launched">Aufruf des Google Play Abo-Manager fehlgeschlagen</string>
@@ -116,5 +116,8 @@
     <string name="certificate_signing_request">Zertifizierungsantrag</string>
     <string name="copy_to_clipboard">Kopieren</string>
     <string name="vpnservice_activity_connecting">Baue Sitzung auf</string>
+    <string name="user_purchase_checking">Checking available purchases</string>
+    <string name="hello_blank_fragment">Hier wird noch nichts dargestellt</string>
+    <string name="user_consumed_purchases">Keine zusätzlichen Produkte verfügbar</string>
 
 </resources>

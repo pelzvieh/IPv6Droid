@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2022 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -53,7 +53,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import de.flyingsnail.ipv6droid.R;
-import de.flyingsnail.ipv6droid.android.googlesubscription.SubscribeTunnelActivity;
+import de.flyingsnail.ipv6droid.android.googlesubscription.PurchaseTunnelActivity;
 import de.flyingsnail.ipv6droid.android.statusdetail.StatisticsActivity;
 import de.flyingsnail.ipv6droid.android.vpnrun.VpnStatusReport;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
@@ -277,7 +277,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void openSubscriptionOverview () {
-        Intent setupIntent = new Intent(this, SubscribeTunnelActivity.class);
+        Intent setupIntent = new Intent(this, PurchaseTunnelActivity.class);
         startActivity(setupIntent);
     }
 

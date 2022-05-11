@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2022 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -59,7 +59,7 @@ public interface SubscriptionsApi {
   Call<Void> deleteUnusedPayload(@Path("payload") String payload);
   
   /**
-   * Check validity of supplied Subscription object that supposedly is filled from
+   * Check validity of supplied Purchase object that supposedly is filled from
    * Google Play API. If valid, return the list of tunnels associated with this subscription.
    * The following validation steps are run through:
    * <ol>
@@ -69,7 +69,7 @@ public interface SubscriptionsApi {
    *   <li>If all tests pass, return the list of tunnels associated with the matching user
    *       entry.</li>
    * </ol>
-   * @param subscriptionData the Subscription JSON string as sent by Google
+   * @param subscriptionData the Purchase JSON string as sent by Google
    * @param signature the corresponding signature string as sent by Google
    * @return a List of TicTunnel objects constructed
    */

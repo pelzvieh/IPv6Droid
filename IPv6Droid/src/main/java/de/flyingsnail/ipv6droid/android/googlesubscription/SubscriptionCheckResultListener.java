@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2022 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -23,6 +23,14 @@
 
 package de.flyingsnail.ipv6droid.android.googlesubscription;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.android.billingclient.api.Purchase;
+import com.android.billingclient.api.SkuDetails;
+
+import java.util.List;
+
 /**
  * Created by pelzi on 18.10.17.
  */
@@ -32,7 +40,7 @@ public interface SubscriptionCheckResultListener {
         /** We successfully read provisioned tunnels, we're ready to use them */
         HAS_TUNNELS,
         /** We know that the user does not have a subscription  */
-        NO_SUBSCRIPTIONS,
+        NO_PURCHASES,
         /** We're having a problem, most probably temporary, to read required information */
         TEMPORARY_PROBLEM,
         /**
@@ -49,7 +57,7 @@ public interface SubscriptionCheckResultListener {
         /** The purchase process has been initiated, user is currently interacting with google */
         PURCHASE_STARTED,
         /** We could not yet contact the Google subscription service, or lost connection.
-         * SubscriptionManager took action to automatically recover from this condition. */
+         * PurchaseManager took action to automatically recover from this condition. */
         NO_SERVICE_AUTO_RECOVERY,
         /** There is no subscription service suitable to our needs on this device.
          * Retrying is pointless. */
@@ -61,5 +69,19 @@ public interface SubscriptionCheckResultListener {
         NO_SERVICE_TRY_AGAIN
     }
 
-    void onSubscriptionCheckResult(ResultType result, String debugMessage);
+    /**
+     * React on an achieved result of subscription/purchase check.
+     * @param result a ResultType indicating the status of purchase or subscription
+     * @param activePurchase a Purchase object giving details of the active purchase, if any. May be null.
+     * @param debugMessage a String indicating the origin of a problem, if applicable. May be null.
+     */
+    void onSubscriptionCheckResult(@NonNull ResultType result,
+                                   @Nullable Purchase activePurchase,
+                                   @Nullable String debugMessage);
+
+    /**
+     * Notify listener on a change of available SKU.
+     * @param knownSku a List of SkuDetails objects representing the now known list of SKU.
+     */
+    void onAvailableSkuUpdate(@NonNull List<SkuDetails> knownSku);
 }

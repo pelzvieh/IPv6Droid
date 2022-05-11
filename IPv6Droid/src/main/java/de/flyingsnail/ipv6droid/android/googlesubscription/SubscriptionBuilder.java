@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2022 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -23,31 +23,29 @@
 
 package de.flyingsnail.ipv6droid.android.googlesubscription;
 
-import androidx.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.List;
 
 public class SubscriptionBuilder {
     static final String SKU_TUNNEL_SUBSCRIPTION = "de.flyingsnail.ipv6.tunnelsub";
+    private static final String SKU_TUNNEL_ONE_HOUR = "de.flyingsnail.ipv6.tunnelonehour";
+    private static final String SKU_TUNNEL_ONE_DAY = "de.flyingsnail.ipv6.tunneloneday";
     static final String TAG = SubscriptionBuilder.class.getSimpleName();
 
-    public SubscriptionBuilder() {
+    private SubscriptionBuilder() {
 
     }
 
-    @Nullable
-    public static Subscription create(String sku) {
-        if (SKU_TUNNEL_SUBSCRIPTION.equals(sku))
-            return new Subscription();
-        else
-            return null;
-    }
-
-    public static List<String> getSupportedSku() {
+    public static List<String> getSupportedSubscriptionSku() {
         ArrayList<String> result = new ArrayList<>(1);
         result.add(SKU_TUNNEL_SUBSCRIPTION);
         return result;
     }
 
+    public static List<String> getSupportedPurchasesSku() {
+        ArrayList<String> result = new ArrayList<>(2);
+        result.add(SKU_TUNNEL_ONE_HOUR);
+        result.add(SKU_TUNNEL_ONE_DAY);
+        return result;
+    }
 }

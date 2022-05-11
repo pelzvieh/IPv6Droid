@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?><!--
   ~ /*
-  ~  * Copyright (c) 2021 Dr. Andreas Feldner.
+  ~  * Copyright (c) 2022 Dr. Andreas Feldner.
   ~  *
   ~  *     This program is free software; you can redistribute it and/or modify
   ~  *     it under the terms of the GNU General Public License as published by
@@ -82,14 +82,11 @@
     <string name="channel_errors_description">Error messages from IPv6 tunnel</string>
     <string name="channel_status_description">Current status of IPv6 tunnel</string>
 
-    <string name="subscription">Subscription</string>
+    <string name="subscription">Purchased tunnels</string>
     <string name="manage_subscriptions">Here you can launch Google Play to review and manage (e.g. terminate) your tunnel subscription.</string>
     <string name="subscription_status">The following status is determined from the Google account that your device is linked to. Retrieving the status may take a few seconds. If valid until date is reached, subscription will be extended (with the monthly fee), unless you terminated the subscription.</string>
     <string name="subscriptions_manage_subscriptions">Manage Subscriptions</string>
-    <string name="user_subscription_subscribe_hint">Here you can subscribe to a set of 4 tunnels with a few clicks. The subscription process is entirely handled by Google, including credit card or other payment details. You will be shown the exact price for your region. First time users have a full 60 days free testing period! After the free period, the subscription is extended automatically each month, with the indicated monthly fee in the indicated currency.
-        <br/><br/>
-        The service is subject to the following terms and conditions (tap to read): <br/><![CDATA[https://flyingsnail.de/svcdesc.html]]>
-    </string>
+    <string name="user_subscription_subscribe_hint">"Here you can subscribe to a set of 4 tunnels with a few clicks. The subscription process is entirely handled by Google, including credit card or other payment details. You will be shown the exact price for your region. First time users have a full 60 days free testing period! After the free period, the subscription is extended automatically each month, with the indicated monthly fee in the indicated currency.         <br /><br />         The service is subject to the following terms and conditions (tap to read): <br /><![CDATA[https://flyingsnail.de/svcdesc.html]]>     "</string>
     <string name="user_subscription_terms_link">I read and accept the terms and conditions referenced above</string>
     <string name="user_subscription_error_not_accepted">You must accept terms and conditions to subscribe</string>
     <string name="user_subscription_valid_until">Valid until</string>
@@ -114,4 +111,13 @@
     <string name="certificate_signing_request">Certificate Signing Request</string>
     <string name="copy_to_clipboard">Copy to Clipboard</string>
     <string name="vpnservice_activity_connecting">Establish session</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="user_purchase_checking">Checking available purchases</string>
+    <string name="user_consumed_purchases">No additional purchases available</string>
+    <string name="description_no_billing">No Google billing</string>
+    <string name="consume_purchase_explanation">You already purchased this service and did not use it yet. Click the following button to consume your purchase on this device.</string>
+    <string name="consume_purchase_button_label">Use one purchased item</string>
+    <string name="purchase_and_use_on_this_device">Purchase and use on this device</string>
+    <string name="purchase_available_for_consumption">You already purchased a product to use on this device</string>
 </resources>
