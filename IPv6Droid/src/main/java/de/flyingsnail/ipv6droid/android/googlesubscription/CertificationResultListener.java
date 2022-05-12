@@ -35,7 +35,7 @@ import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 public interface CertificationResultListener {
     /**
      * Callback to inform about an ansychronous attempt to get tunnels from a purchase.
-     * @param Purchase the Purchase for which the request was initiated. Guaranteed to be the
+     * @param purchase the Purchase for which the request was initiated. Guaranteed to be the
      *                 unaltered object as passed.
      * @param tunnels the Tunnels created from the Purchase. May be empty.
      * @param resulttype the ResultType classifying the outcome of the attempt, @see {ResultType}

@@ -141,10 +141,10 @@ public class PurchaseTunnelActivity
                 return true;
             } else if (activePurchase != null) {
                 // enable only the tab of an active purchase/subscription if any
-                return activePurchase.getSkus().contains(getSkuDetails().get(position).getSku());
+                return activePurchase.getSkus().contains(details.getSku());
             } else {
                 // enable all one-time purchase tabs to show cached valid tunnels
-                return BillingClient.SkuType.INAPP.equals(getSkuDetails().get(position).getType());
+                return BillingClient.SkuType.INAPP.equals(details.getType());
             }
         }
 

@@ -101,7 +101,9 @@ public class OneTimeTunnelFragment extends Fragment {
             purchaseAvailable = bundle.getBoolean(ARG_PURCHASE_AVAILABLE, false);
             Log.i(TAG, "Received bundle with " + sku + ", " + tunnels + ", and " + purchaseAvailable);
         }
-
+        if (tunnels == null) {
+            tunnels = new Tunnels();
+        }
     }
 
     @Override
