@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2022 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.0.2'
+        classpath 'com.android.tools.build:gradle:7.2.0'
     }
 }
 apply plugin: 'com.android.application'
@@ -61,32 +61,24 @@ android {
         }
     }
 
-    compileSdkVersion 30
+    compileSdkVersion 32
 
     defaultConfig {
         minSdkVersion 23
-        targetSdkVersion 30
+        targetSdkVersion 32
     }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
-
     packagingOptions {
-        pickFirst 'META-INF/ASL2.0'
-        pickFirst 'META-INF/LICENSE'
-        pickFirst 'META-INF/README'
-        pickFirst 'META-INF/INDEX.LIST'
-        pickFirst 'META-INF/DEPENDENCIES'
+        resources {
+            pickFirsts += ['META-INF/ASL2.0', 'META-INF/LICENSE', 'META-INF/README', 'META-INF/INDEX.LIST', 'META-INF/DEPENDENCIES']
+        }
     }
 
-    lintOptions {
-        checkReleaseBuilds true
-        // Or, if you prefer, you can continue to check for errors in release builds,
-        // but continue the build even when errors are found:
-        abortOnError false
-    }
+
     buildTypes {
         release {
             buildConfigField("java.lang.String", "target_host", "\"\"")
@@ -101,20 +93,25 @@ android {
             buildConfigField("java.lang.String", "target_host", "\"ipv6test\"")
         }
     }
+    lint {
+        abortOnError false
+        checkReleaseBuilds true
+    }
+    namespace 'de.flyingsnail.ipv6droid'
 
 }
 
 dependencies {
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
-    implementation 'androidx.annotation:annotation:1.2.0'
+    implementation 'androidx.annotation:annotation:1.4.0'
     implementation 'org.jetbrains.trove4j:trove4j:20160824'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.1'
-    implementation 'androidx.core:core:1.6.0'
-    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.0.0'
-    implementation 'com.android.billingclient:billing:4.0.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.core:core:1.8.0'
+    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
+    implementation 'com.android.billingclient:billing:4.1.0'
     implementation 'org.bouncycastle:bctls-jdk15to18:1.69'
     implementation 'org.bouncycastle:bcpkix-jdk15to18:1.69'
-    implementation 'androidx.preference:preference:1.1.1'
+    implementation 'androidx.preference:preference:1.2.0'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
 }
