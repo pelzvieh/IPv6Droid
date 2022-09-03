@@ -26,8 +26,8 @@ package de.flyingsnail.ipv6droid.android.googlesubscription;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.android.billingclient.api.ProductDetails;
 import com.android.billingclient.api.Purchase;
-import com.android.billingclient.api.SkuDetails;
 
 import java.util.List;
 
@@ -80,8 +80,8 @@ public interface SubscriptionCheckResultListener {
                                    @Nullable String debugMessage);
 
     /**
-     * Notify listener on a change of available SKU.
-     * @param knownSku a List of SkuDetails objects representing the now known list of SKU.
+     * Notify listener on a change of available products.
+     * @param knownProductDetails a List&lt;ProductDetails&gt representing the now known list of products.
      */
-    void onAvailableSkuUpdate(@NonNull List<SkuDetails> knownSku);
+    void onAvailableProductsUpdate(@NonNull List<ProductDetails> knownProductDetails);
 }

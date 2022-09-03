@@ -25,9 +25,7 @@ package de.flyingsnail.ipv6droid.android.googlesubscription;
 
 import android.os.Bundle;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.TextView;
@@ -36,6 +34,9 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
+
+import com.android.billingclient.api.Purchase;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -51,12 +52,12 @@ import de.flyingsnail.ipv6droid.android.Tunnels;
 public class OneTimeTunnelFragment extends Fragment {
 
     public static final String ARG_SKU = "sku";
-    public static final String ARG_TUNNELS = "tunnels";
-    public static final String ARG_PURCHASE_AVAILABLE = "purchaseAvailable";
 
     private String sku;
 
     private static final String TAG = OneTimeTunnelFragment.class.getSimpleName();
+
+    private PurchaseTunnelViewModel sharedViewModel;
 
     /** A Checkbox that shows if user accepted terms and conditions */
     private CheckBox acceptTerms;
@@ -70,16 +71,6 @@ public class OneTimeTunnelFragment extends Fragment {
     /** A Button to initiate a purchase */
     private Button purchaseButton;
 
-    /** End of validity period, if there's a purchase still valid. */
-    private @Nullable Date validUntil;
-
-    /**
-     * The list of Tunnels available.
-     */
-    private Tunnels tunnels;
-
-    /** Flag, if an unconsumed purchase is available. */
-    private boolean purchaseAvailable;
     private View consumePurchasedExplanation;
     private Button consumePurchasedButton;
 
@@ -91,31 +82,26 @@ public class OneTimeTunnelFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         Log.i(TAG, "Creating Fragment");
         super.onCreate(savedInstanceState);
+
         final Bundle bundle = getArguments();
         if (bundle != null) {
             sku = bundle.getString(ARG_SKU);
-            tunnels = bundle.getParcelable(ARG_TUNNELS);
-            if (tunnels != null && !tunnels.isEmpty()) {
-                validUntil = tunnels.get(0).getExpiryDate();
-            }
-            purchaseAvailable = bundle.getBoolean(ARG_PURCHASE_AVAILABLE, false);
-            Log.i(TAG, "Received bundle with " + sku + ", " + tunnels + ", and " + purchaseAvailable);
-        }
-        if (tunnels == null) {
-            tunnels = new Tunnels();
+            Log.i(TAG, "Received bundle with " + sku);
         }
     }
 
-    @Override
+    /*@Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         Log.i(TAG, "Creating View for fragment");
         // Inflate the layout for this fragment
         return inflater.inflate(R.layout.fragment_onetime_tunnel, container, false);
-    }
+    }*/
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
         validUntilView = view.findViewById(R.id.validUntil);
         purchaseStatusView = view.findViewById(R.id.subscriptionStatus);
         purchaseButton = view.findViewById(R.id.purchase);
@@ -126,20 +112,32 @@ public class OneTimeTunnelFragment extends Fragment {
         consumePurchasedButton = view.findViewById(R.id.consumepurchase);
         consumePurchasedButton.setOnClickListener(this::onConsumePurchased);
 
+        // retrieve the PurchaseTunnelViewModel instance shared with our Activity
+        sharedViewModel = new ViewModelProvider(requireActivity()).get(PurchaseTunnelViewModelProd.class);
+
         purchaseStatusView.setText(R.string.user_purchase_checking);
-        setupUI();
+
+        // adapt UI on availability of an active tunnel
+        sharedViewModel.getTunnels().observe(getViewLifecycleOwner(),
+                this::onIsTunnelActive
+        );
+
+        // adapt UI on availability of an unconsumed purchase
+        sharedViewModel.getActivePurchase().observe(getViewLifecycleOwner(),
+                this::onIsPurchaseAvailable
+        );
         Log.i(TAG, "Initialized fragment");
     }
 
-    private void setupUI() {
-        validUntilView.setText(
-                validUntil == null ?
-                        "" :
-                        SimpleDateFormat.getDateTimeInstance().format(validUntilView)
-        );
-        if (tunnels.isTunnelActive()) {
+    private void onIsTunnelActive(final Tunnels tunnels) {
+        boolean active = tunnels != null && tunnels.isTunnelActive() && tunnels.getActiveTunnel() != null;
+        int amount = tunnels == null ? 0 : tunnels.size();
+        Date validUntil = active ? tunnels.getActiveTunnel().getExpiryDate() : null;
+
+        if (active) {
+            // when we're having an active tunnel, no purchase-related buttons are enabled
             purchaseStatusView.setText(
-                    getResources().getQuantityString(R.plurals.user_has_subscription, tunnels.size(), tunnels.size())
+                    getResources().getQuantityString(R.plurals.user_has_subscription, amount, amount)
             );
             // we have an active tunnel, nothing can be bought or consumed
             acceptTerms.setVisibility(View.VISIBLE);
@@ -148,24 +146,40 @@ public class OneTimeTunnelFragment extends Fragment {
             purchaseButton.setEnabled(false);
             consumePurchasedExplanation.setVisibility(View.GONE);
             consumePurchasedButton.setVisibility(View.GONE);
-        } else if (purchaseAvailable) {
-            // unconsumed purchase ready for consumption
-            purchaseStatusView.setText(R.string.purchase_available_for_consumption);
-            acceptTerms.setVisibility(View.GONE);
-            purchaseButton.setVisibility(View.GONE);
-            consumePurchasedExplanation.setVisibility(View.VISIBLE);
-            consumePurchasedButton.setVisibility(View.VISIBLE);
-            consumePurchasedButton.setEnabled(true);
-        } else {
-            // nothing available, offer to purchase
-            purchaseStatusView.setText(R.string.user_consumed_purchases);
-            acceptTerms.setVisibility(View.VISIBLE);
-            acceptTerms.setEnabled(true);
-            acceptTerms.setChecked(false);
-            purchaseButton.setVisibility(View.VISIBLE);
-            purchaseButton.setEnabled(false);
-            consumePurchasedExplanation.setVisibility(View.GONE);
-            consumePurchasedButton.setVisibility(View.GONE);
+            validUntilView.setText(validUntil == null ?
+                    "" :
+                    SimpleDateFormat.getDateTimeInstance().format(validUntil)
+            );
+        }
+    }
+
+    private void onIsPurchaseAvailable(Purchase activePurchase) {
+        boolean purchaseAvailable =
+                activePurchase != null && activePurchase.getProducts().contains(sku);
+
+        // don't dare to interfere with the view if we have an active tunnel
+        Tunnels tunnels = sharedViewModel.getTunnels().getValue();
+        if (tunnels == null || !tunnels.isTunnelActive()) {
+            // we do not have an active tunnel, so it depends if there's an unconsumed purchase around
+            if (purchaseAvailable) {
+                // unconsumed purchase ready for consumption
+                purchaseStatusView.setText(R.string.purchase_available_for_consumption);
+                acceptTerms.setVisibility(View.GONE);
+                purchaseButton.setVisibility(View.GONE);
+                consumePurchasedExplanation.setVisibility(View.VISIBLE);
+                consumePurchasedButton.setVisibility(View.VISIBLE);
+                consumePurchasedButton.setEnabled(true);
+            } else {
+                // nothing available, offer to purchase
+                purchaseStatusView.setText(R.string.user_consumed_purchases);
+                acceptTerms.setVisibility(View.VISIBLE);
+                acceptTerms.setEnabled(true);
+                acceptTerms.setChecked(false);
+                purchaseButton.setVisibility(View.VISIBLE);
+                purchaseButton.setEnabled(false);
+                consumePurchasedExplanation.setVisibility(View.GONE);
+                consumePurchasedButton.setVisibility(View.GONE);
+            }
         }
     }
 
@@ -187,9 +201,7 @@ public class OneTimeTunnelFragment extends Fragment {
         }
         purchaseButton.setEnabled(false); // inhibit multiple submissions
 
-        Bundle result = new Bundle();
-        result.putString(PurchaseTunnelActivity.SKU_KEY, sku);
-        getParentFragmentManager().setFragmentResult(PurchaseTunnelActivity.PURCHASE_REQUEST_KEY, result);
+        sharedViewModel.initiatePurchase(sku, null, requireActivity());
     }
 
     /**
@@ -197,17 +209,21 @@ public class OneTimeTunnelFragment extends Fragment {
      * @param clickedView the view that the user actually clicked on
      */
     public void onAcceptTerms(View clickedView) {
-        if (!tunnels.isTunnelActive() && !purchaseAvailable) {
+        final Tunnels tunnels = sharedViewModel.getTunnels().getValue();
+        final Purchase purchase = sharedViewModel.getActivePurchase().getValue();
+        if ((tunnels != null && tunnels.isTunnelActive()) || (purchase != null && purchase.getProducts().contains(sku))) {
+            purchaseButton.setEnabled(false);
+        } else {
             purchaseButton.setEnabled(acceptTerms.isChecked());
         }
     }
 
     private void onConsumePurchased(View view) {
-        if (!tunnels.isTunnelActive() && purchaseAvailable) {
-            Bundle result = new Bundle();
-            result.putString(PurchaseTunnelActivity.SKU_KEY, sku);
-            getParentFragmentManager().setFragmentResult(PurchaseTunnelActivity.CONSUME_REQUEST_KEY, result);
+        final Tunnels tunnels = sharedViewModel.getTunnels().getValue();
+        final Purchase purchase = sharedViewModel.getActivePurchase().getValue();
+
+        if (!(tunnels != null && tunnels.isTunnelActive()) && (purchase != null && purchase.getProducts().contains(sku))) {
+            sharedViewModel.consumePurchase(sku);
         }
     }
-
 }

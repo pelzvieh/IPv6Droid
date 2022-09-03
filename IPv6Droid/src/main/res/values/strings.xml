@@ -120,4 +120,5 @@
     <string name="consume_purchase_button_label">Use one purchased item</string>
     <string name="purchase_and_use_on_this_device">Purchase and use on this device</string>
     <string name="purchase_available_for_consumption">You already purchased a product to use on this device</string>
+    <string name="subscription_label_renew_active">will renew</string>
 </resources>

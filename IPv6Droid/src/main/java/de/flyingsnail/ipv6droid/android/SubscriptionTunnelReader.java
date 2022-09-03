@@ -23,20 +23,25 @@
 
 package de.flyingsnail.ipv6droid.android;
 
-import android.content.Context;
+import android.app.Application;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.android.billingclient.api.ProductDetails;
 import com.android.billingclient.api.Purchase;
-import com.android.billingclient.api.SkuDetails;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Objects;
 
+import de.flyingsnail.ipv6droid.BuildConfig;
+import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.googlesubscription.CertificationResultListener;
 import de.flyingsnail.ipv6droid.android.googlesubscription.PurchaseManager;
+import de.flyingsnail.ipv6droid.android.googlesubscription.PurchaseManagerImpl;
 import de.flyingsnail.ipv6droid.android.googlesubscription.PurchaseToTunnel;
 import de.flyingsnail.ipv6droid.android.googlesubscription.SubscriptionCheckResultListener;
 import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
@@ -58,9 +63,23 @@ public class SubscriptionTunnelReader implements
     private final PurchaseToTunnel helper;
     private List<TunnelSpec> readTunnels;
 
-    public SubscriptionTunnelReader(final Context context) {
-        purchaseManager = new PurchaseManager(this, context);
-        helper = new PurchaseToTunnel(context);
+    public SubscriptionTunnelReader(final Application application) {
+        // initialize baseUrl to point to the IPv6Server to use
+        URI baseUrl;
+        try {
+            baseUrl = new URI(application.getString(R.string.certification_default_url_base));
+            String overrideHost = BuildConfig.target_host;
+            if (!overrideHost.trim().isEmpty()) {
+                baseUrl = new URI ("http", baseUrl.getUserInfo(), overrideHost,
+                        8080, baseUrl.getPath(), baseUrl.getQuery(), baseUrl.getFragment());
+            }
+        } catch (URISyntaxException e) {
+            throw new IllegalStateException("App packaging faulty, illegal URL: " + e);
+        }
+
+        purchaseManager = new PurchaseManagerImpl(application);
+        purchaseManager.addResultListener(this);
+        helper = new PurchaseToTunnel(baseUrl);
     }
 
     /**
@@ -119,17 +138,17 @@ public class SubscriptionTunnelReader implements
     /**
      * Notify listener on a change of available SKU.
      *
-     * @param knownSku a List of SkuDetails objects representing the now known list of SKU.
+     * @param knownSku a List of ProductDetails objects representing the now known list of purchasable products.
      */
     @Override
-    public void onAvailableSkuUpdate(@NonNull List<SkuDetails> knownSku) {
+    public void onAvailableProductsUpdate(@NonNull List<ProductDetails> knownSku) {
         // no action required
     }
 
     /**
      * Callback to inform about an ansychronous attempt to get tunnels from a purchase.
      *
-     * @param purchase
+     * @param purchase   the Purchase that should have turned into tunnel certificates.
      * @param tunnels    the Tunnels created from the Purchase. May be empty.
      * @param resulttype the ResultType classifying the outcome of the attempt, @see {ResultType}
      * @param e          an Exception giving details of failure and rejections.
@@ -150,7 +169,9 @@ public class SubscriptionTunnelReader implements
                 break;
 
             case PURCHASE_REJECTED:
-                purchaseManager.revalidateCache(purchase, e); // will notify callbacks again
+                if (e != null) {
+                    purchaseManager.revalidateCache(purchase, e); // will notify callbacks again
+                }
                 break;
 
             case TECHNICAL_FAILURE:

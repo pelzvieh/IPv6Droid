@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2022 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -175,7 +175,7 @@ public class VpnThread extends Thread {
             Log.i(TAG, "Using DTLS config");
         } catch (ConnectionFailedException e1) {
             Log.i(TAG, "Falling back to subscription tunnels", e1);
-            tr = new SubscriptionTunnelReader(service);
+            tr = new SubscriptionTunnelReader(service.getApplication());
         }
 
         this.tunnelReader = tr;
@@ -389,7 +389,9 @@ public class VpnThread extends Thread {
         Intent configureIntent = new Intent("android.intent.action.MAIN");
         configureIntent.setClass(applicationContext, MainActivity.class);
         configureIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        builder.setConfigureIntent(PendingIntent.getActivity(applicationContext, 0, configureIntent, 0));
+        builder.setConfigureIntent(
+                PendingIntent.getActivity(applicationContext, 0, configureIntent, 0)
+        );
         Log.i(TAG, "Builder is configured");
     }
 

@@ -27,25 +27,25 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class SubscriptionBuilder {
-    static final String SKU_TUNNEL_SUBSCRIPTION = "de.flyingsnail.ipv6.tunnelsub";
-    private static final String SKU_TUNNEL_ONE_HOUR = "de.flyingsnail.ipv6.tunnelonehour";
-    private static final String SKU_TUNNEL_ONE_DAY = "de.flyingsnail.ipv6.tunneloneday";
+    static final String PRODUCT_ID_TUNNEL_SUBSCRIPTION = "de.flyingsnail.ipv6.tunnelsub";
+    private static final String PRODUCT_ID_TUNNEL_ONE_HOUR = "de.flyingsnail.ipv6.tunnelonehour";
+    private static final String PRODUCT_ID_TUNNEL_ONE_DAY = "de.flyingsnail.ipv6.tunneloneday";
     static final String TAG = SubscriptionBuilder.class.getSimpleName();
 
     private SubscriptionBuilder() {
 
     }
 
-    public static List<String> getSupportedSubscriptionSku() {
+    public static List<String> getSupportedSubscriptionProductIds() {
         ArrayList<String> result = new ArrayList<>(1);
-        result.add(SKU_TUNNEL_SUBSCRIPTION);
+        result.add(PRODUCT_ID_TUNNEL_SUBSCRIPTION);
         return result;
     }
 
-    public static List<String> getSupportedPurchasesSku() {
+    public static List<String> getSupportedPurchasesProductIds() {
         ArrayList<String> result = new ArrayList<>(2);
-        result.add(SKU_TUNNEL_ONE_HOUR);
-        result.add(SKU_TUNNEL_ONE_DAY);
+        result.add(PRODUCT_ID_TUNNEL_ONE_HOUR);
+        result.add(PRODUCT_ID_TUNNEL_ONE_DAY);
         return result;
     }
 }

@@ -23,32 +23,38 @@
 
 package de.flyingsnail.ipv6droid.android.googlesubscription;
 
-import android.content.Context;
+import android.app.Activity;
+import android.app.Application;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.lifecycle.MutableLiveData;
 
 import com.android.billingclient.api.BillingClient;
 import com.android.billingclient.api.BillingClientStateListener;
+import com.android.billingclient.api.BillingFlowParams;
 import com.android.billingclient.api.BillingResult;
+import com.android.billingclient.api.ConsumeParams;
+import com.android.billingclient.api.ProductDetails;
+import com.android.billingclient.api.ProductDetailsResponseListener;
 import com.android.billingclient.api.Purchase;
 import com.android.billingclient.api.PurchasesResponseListener;
-import com.android.billingclient.api.SkuDetails;
-import com.android.billingclient.api.SkuDetailsParams;
-import com.android.billingclient.api.SkuDetailsResponseListener;
+import com.android.billingclient.api.QueryProductDetailsParams;
+import com.android.billingclient.api.QueryPurchasesParams;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import de.flyingsnail.ipv6droid.R;
 
 /**
  * Initialise BillingClient library and read active subscriptions, non-expired in-app purchases,
  * and product details. Highly asynchronous, full of listeners.
  */
-class IPv6DroidBillingStatusReader implements BillingClientStateListener, PurchasesResponseListener, SkuDetailsResponseListener {
+class IPv6DroidBillingStatusReader implements BillingClientStateListener, PurchasesResponseListener, ProductDetailsResponseListener, Closeable {
 
     private final String TAG = IPv6DroidBillingStatusReader.class.getName();
 
@@ -59,11 +65,9 @@ class IPv6DroidBillingStatusReader implements BillingClientStateListener, Purcha
             BillingClient.BillingResponseCode.SERVICE_UNAVAILABLE
     );
     
-    private final PurchaseManager purchaseManager;
+    private final PurchaseManagerImpl purchaseManager;
 
     private boolean purchasesRead = false;
-
-    final private Context originatingContext;
 
     final private BillingClient googleBillingClient;
 
@@ -78,13 +82,48 @@ class IPv6DroidBillingStatusReader implements BillingClientStateListener, Purcha
      */
     final private AtomicInteger outstandingPurchaseQueries = new AtomicInteger(0);
 
-    public IPv6DroidBillingStatusReader(PurchaseManager purchaseManager, Context context, BillingClient googleBillingClient, SubscriptionCheckResultListener checkResultListener) {
+    /**
+     * Flag if billing client is currently connected.
+     */
+    private final MutableLiveData<Boolean> connected = new MutableLiveData<>(false);
+
+    public IPv6DroidBillingStatusReader(PurchaseManagerImpl purchaseManager, Application application, SubscriptionCheckResultListener checkResultListener) {
         this.purchaseManager = purchaseManager;
-        originatingContext = context;
-        this.googleBillingClient = googleBillingClient;
         this.listener = checkResultListener;
+        googleBillingClient = BillingClient.newBuilder(application.getApplicationContext()).
+                setListener(purchaseManager).
+                enablePendingPurchases().
+                build();
         this.googleBillingClient.startConnection(this);
     }
+
+    /**
+     * Request to mark a previous Purchase as consumed. This is async, the result will be
+     * delivered to the registered PurchaseManager instance.
+     * @param purchase a Purchase that should be marked as consumed.
+     */
+    public void consumePurchase(com.android.billingclient.api.Purchase purchase) {
+        ensureConnected(() -> {
+            ConsumeParams params = ConsumeParams.newBuilder().setPurchaseToken(purchase.getPurchaseToken()).build();
+            googleBillingClient.consumeAsync(params, purchaseManager);
+        });
+    }
+
+    // execute the given Runnable if the client is currently online. Start connection of the client
+    // if required and execute task once it becomes online.
+    private void ensureConnected(Runnable task) {
+        if (Boolean.FALSE.equals(connected.getValue())) {
+            googleBillingClient.startConnection(this);
+            connected.observeForever(connected -> {
+                if (connected) {
+                    task.run();
+                }
+            });
+        } else {
+            task.run();
+        }
+    }
+
 
     @Override
     public void onBillingServiceDisconnected() {
@@ -92,36 +131,28 @@ class IPv6DroidBillingStatusReader implements BillingClientStateListener, Purcha
         listener.onSubscriptionCheckResult(
                 SubscriptionCheckResultListener.ResultType.NO_SERVICE_AUTO_RECOVERY,
                 null,
-                originatingContext.getString(R.string.SubManConnectionLost));
-        // the BillingClient itself will come back to us with onBillingSetupFinished if it re-established the connection
+                "Connection to Google billing is lost");
+        connected.setValue(false);
     }
 
     @Override
     public void onBillingSetupFinished(BillingResult billingResult) {
         Log.i(TAG, "Billing setup is finished");
         if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+            connected.setValue(true);
             try {
-                // retrieve list of Google-supported subscription SKU and filter with our supported SKU. Required for purchase init
-                final List<String> clientPurchasesSKU = SubscriptionBuilder.getSupportedSubscriptionSku();
-                final SkuDetailsParams.Builder subsParams = SkuDetailsParams.newBuilder();
-                subsParams.setSkusList(clientPurchasesSKU);
-                subsParams.setType(BillingClient.SkuType.SUBS);
-                googleBillingClient.querySkuDetailsAsync(subsParams.build(), this);
-                Log.d(TAG, "issued query for subscription SkuDetails");
-
-                // retrieve list of Google-supported one-time purchase SKU and filter with our supported SKU. Required for purchase init
-                List<String> clientPurchaseSKU = SubscriptionBuilder.getSupportedPurchasesSku();
-                final SkuDetailsParams.Builder purchaseParams = SkuDetailsParams.newBuilder();
-                purchaseParams.setSkusList(clientPurchaseSKU).setType(BillingClient.SkuType.INAPP);
-                googleBillingClient.querySkuDetailsAsync(purchaseParams.build(), this);
-                Log.d(TAG, "issued query for purchase SkuDetails");
+                queryProductDetails();
 
                 // retrieve list of purchased subscriptions
                 purchasesRead = false; // in case we already were initialized earlier
                 outstandingPurchaseQueries.addAndGet(2); // we're going to place 2 queries right now
-                googleBillingClient.queryPurchasesAsync(BillingClient.SkuType.SUBS, this);
+                googleBillingClient.queryPurchasesAsync(
+                        QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build(),
+                        this);
                 Log.d(TAG, "issued query for subscriptions");
-                googleBillingClient.queryPurchasesAsync(BillingClient.SkuType.INAPP, this);
+                googleBillingClient.queryPurchasesAsync(
+                        QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.INAPP).build(),
+                        this);
                 Log.d(TAG, "issued query for purchases");
             } catch (RuntimeException re) {
                 Log.e(TAG, "Unexpected exception when issuing billing queries", re);
@@ -132,6 +163,7 @@ class IPv6DroidBillingStatusReader implements BillingClientStateListener, Purcha
                 );
             }
         } else {
+            connected.setValue(false);
             Log.e(TAG, "Setup of Billing library yields error code. Debug message: " + billingResult.getDebugMessage());
             listener.onSubscriptionCheckResult(
                     permanentErrors.contains(billingResult.getResponseCode()) ?
@@ -140,6 +172,30 @@ class IPv6DroidBillingStatusReader implements BillingClientStateListener, Purcha
                     null,
                     billingResult.getDebugMessage());
         }
+    }
+
+    private void queryProductDetails() {
+        // retrieve list of Google-supported subscription SKU and filter with our supported SKU. Required for purchase init
+        final QueryProductDetailsParams.Builder subsParams = QueryProductDetailsParams.newBuilder();
+        List<QueryProductDetailsParams.Product> queriedProducts = new ArrayList<>(10);
+        for (String productId: SubscriptionBuilder.getSupportedSubscriptionProductIds()) {
+            queriedProducts.add(QueryProductDetailsParams.Product.newBuilder()
+                    .setProductType(BillingClient.ProductType.SUBS)
+                    .setProductId(productId)
+                    .build()
+            );
+        }
+        for (String productId: SubscriptionBuilder.getSupportedPurchasesProductIds()) {
+            queriedProducts.add(QueryProductDetailsParams.Product.newBuilder()
+                    .setProductType(BillingClient.ProductType.INAPP)
+                    .setProductId(productId)
+                    .build()
+            );
+        }
+        subsParams.setProductList(queriedProducts);
+
+        googleBillingClient.queryProductDetailsAsync(subsParams.build(), this);
+        Log.d(TAG, "issued query for ProductDetails");
     }
 
     @Override
@@ -177,25 +233,25 @@ class IPv6DroidBillingStatusReader implements BillingClientStateListener, Purcha
     }
 
     @Override
-    public void onSkuDetailsResponse(@NonNull BillingResult skuQueryResult, @Nullable List<SkuDetails> skuDetailsList) {
-        if (skuQueryResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
-            if (skuDetailsList == null || skuDetailsList.isEmpty()) {
-                Log.i(TAG, "received list of SKU details is empty");
+    public void onProductDetailsResponse(@NonNull BillingResult billingResult, @Nullable List<ProductDetails> productDetailsList) {
+        if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+            if (productDetailsList == null || productDetailsList.isEmpty()) {
+                Log.i(TAG, "received list of product details is empty");
             } else {
-                Log.i(TAG, "Received list of sku details");
+                Log.i(TAG, "Received list of product details");
                 synchronized (purchaseManager) {
-                    purchaseManager.addSupportedSKUDetails(skuDetailsList);
-                    listener.onAvailableSkuUpdate(purchaseManager.getSupportedSKUDetails());
+                    purchaseManager.addSupportedProductDetails(productDetailsList);
+                    listener.onAvailableProductsUpdate(purchaseManager.getSupportedProductDetails());
                 }
             }
         } else {
-            Log.e(TAG, "Failed to read supported SKU: " + skuQueryResult.getDebugMessage());
+            Log.e(TAG, "Failed to read supported SKU: " + billingResult.getDebugMessage());
             listener.onSubscriptionCheckResult(
-                    permanentErrors.contains(skuQueryResult.getResponseCode()) ?
+                    permanentErrors.contains(billingResult.getResponseCode()) ?
                             SubscriptionCheckResultListener.ResultType.NO_SERVICE_PERMANENT :
                             SubscriptionCheckResultListener.ResultType.NO_SERVICE_TRY_AGAIN,
                     null,
-                    skuQueryResult.getDebugMessage()
+                    billingResult.getDebugMessage()
             );
         }
     }
@@ -206,7 +262,31 @@ class IPv6DroidBillingStatusReader implements BillingClientStateListener, Purcha
      */
     public boolean hasPurchases() {
         synchronized (purchaseManager) {
-            return !purchaseManager.getSupportedSKUDetails().isEmpty();
+            return !purchaseManager.getSupportedProductDetails().isEmpty();
         }
+    }
+
+    /**
+     * Launch a billing workflow for the supplied parameters.
+     * todo find out if the client must be online for this to work
+     * @param originatingContext the Activity from which the user initiated a purchase
+     * @param flowParams the BillingFlowParams describing the product and offer to be purchased.
+     * @return the BillingResult stating if the billing workflow was successfully started.
+     */
+    public BillingResult launchBillingFlow(Activity originatingContext, BillingFlowParams flowParams) {
+        return googleBillingClient.launchBillingFlow(originatingContext, flowParams);
+    }
+
+    /**
+     * Closes this stream and releases any system resources associated
+     * with it. If the stream is already closed then invoking this
+     * method has no effect.
+     *
+     * @throws IOException if an I/O error occurs
+     */
+    @Override
+    public void close() throws IOException {
+        googleBillingClient.endConnection();
+        connected.setValue(false);
     }
 }

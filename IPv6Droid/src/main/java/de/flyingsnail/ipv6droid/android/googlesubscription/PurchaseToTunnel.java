@@ -23,7 +23,6 @@
 
 package de.flyingsnail.ipv6droid.android.googlesubscription;
 
-import android.content.Context;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -32,15 +31,12 @@ import com.android.billingclient.api.Purchase;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import de.flyingsnail.ipv6droid.BuildConfig;
-import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.DTLSTunnelReader;
 import de.flyingsnail.ipv6droid.android.dtlsrequest.AndroidBackedKeyPair;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
@@ -72,24 +68,12 @@ public class PurchaseToTunnel {
     /**
      * Constructor.
 
-     * @param context A Context that represents the Context that initiated creation of this Manager.
+     * @param baseUrl the URI pointing to the base of IPv6Server REST services.
      */
-    public PurchaseToTunnel(final @NonNull Context context) {
+    public PurchaseToTunnel(final @NonNull URI baseUrl) {
         tunnels = new ArrayList<>();
         // construct certification client
-        URI baseUrl;
-        try {
-            baseUrl = new URI(context.getString(R.string.certification_default_url_base));
-            String overrideHost = BuildConfig.target_host;
-            if (!overrideHost.trim().isEmpty()) {
-                baseUrl = new URI ("http", baseUrl.getUserInfo(), overrideHost,
-                        8080, baseUrl.getPath(), baseUrl.getQuery(), baseUrl.getFragment());
-            }
-        } catch (URISyntaxException e) {
-            throw new IllegalStateException("App packaging faulty, illegal URL: " + e);
-        }
         certificationClient = RestProxyFactory.createCertificationClient(baseUrl.toString());
-
     }
 
     /**
@@ -99,7 +83,7 @@ public class PurchaseToTunnel {
      * @param callback the CertificationResultListener that should receive the result of this attempt.
      */
     public void certifyTunnelsForPurchase(Purchase purchase, CertificationResultListener callback) {
-        final List<String> sku = purchase.getSkus();
+        final List<String> sku = purchase.getProducts();
         final String skuData = purchase.getOriginalJson();
         final String skuSignature = purchase.getSignature();
 
