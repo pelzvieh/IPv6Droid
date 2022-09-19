@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2022 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -22,6 +22,9 @@
  */
 
 package de.flyingsnail.ipv6droid.android;
+
+import static android.app.Notification.PRIORITY_LOW;
+import static android.app.PendingIntent.FLAG_IMMUTABLE;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -60,8 +63,6 @@ import de.flyingsnail.ipv6droid.android.statistics.Statistics;
 import de.flyingsnail.ipv6droid.android.statusdetail.StatisticsActivity;
 import de.flyingsnail.ipv6droid.android.vpnrun.VpnStatusReport;
 import de.flyingsnail.ipv6droid.android.vpnrun.VpnThread;
-
-import static android.app.Notification.PRIORITY_LOW;
 
 /**
  * The Android service controlling the VpnThread.
@@ -370,7 +371,7 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
         TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
         stackBuilder.addNextIntentWithParentStack(settingsIntent);
 
-        notificationBuilder.setContentIntent(stackBuilder.getPendingIntent(0, 0));
+        notificationBuilder.setContentIntent(stackBuilder.getPendingIntent(0, FLAG_IMMUTABLE));
         return notificationBuilder;
     }
 
