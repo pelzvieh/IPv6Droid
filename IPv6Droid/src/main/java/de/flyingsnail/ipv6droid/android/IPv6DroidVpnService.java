@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2022 Dr. Andreas Feldner.
+ *  * Copyright (c) 2023 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -108,7 +108,7 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
     private Handler handler;
 
     /**
-     * A flag that keeps track if the VPN is inteded to run or not.
+     * A flag that keeps track if the VPN is intended to run or not.
      */
     private boolean vpnShouldRun = false;
     private TunnelPersisting tunnelPersisting;
@@ -198,7 +198,7 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
     }
 
     /**
-     * Generate a user notification with the supplied expection's cause as detail message.
+     * Generate a user notification with the supplied exception's cause as detail message.
      *
      * @param resourceId the string resource supplying the notification title
      * @param e          the Exception the cause of which is to be displayed
@@ -220,9 +220,11 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
         errorNotificationBuilder.setStyle(bigTextStyle);
 
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
-        // mId allows you to update the notification later on.
-        notificationManager.notify(IPv6DroidVpnService.exceptionNotificationID, errorNotificationBuilder.build());
-        errorNotification = true;
+        if (notificationManager.areNotificationsEnabled()) {
+            // mId allows you to update the notification later on.
+            notificationManager.notify(IPv6DroidVpnService.exceptionNotificationID, errorNotificationBuilder.build());
+            errorNotification = true;
+        }
     }
 
     /**
@@ -240,7 +242,6 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
 
     @Override
     public void postToast(int resId, int duration) {
-
         handler.post(() -> Toast.makeText(this, resId, duration).show());
     }
 
@@ -412,7 +413,7 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
                     thread.reportStatus();
                 }
             } else if (vpnShouldRun) {
-                Log.e(TAG, "IPv6DroidVpnService's thread is broken altough it should run");
+                Log.e(TAG, "IPv6DroidVpnService's thread is broken although it should run");
             }
         }
     }

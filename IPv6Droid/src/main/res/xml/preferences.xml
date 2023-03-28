@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   ~ /*
-  ~  * Copyright (c) 2020 Dr. Andreas Feldner.
+  ~  * Copyright (c) 2023 Dr. Andreas Feldner.
   ~  *
   ~  *     This program is free software; you can redistribute it and/or modify
   ~  *     it under the terms of the GNU General Public License as published by
@@ -40,6 +40,12 @@
             <intent android:action="android.net.vpn.SETTINGS"/>
         </Preference>
 
+        <SwitchPreference
+            app:key="show-notifications"
+            app:title="Show Notifications on Errors"
+            app:summaryOff="Disabled"
+            app:summaryOn="Show Notifications"
+            app:defaultValue="true" />
     </PreferenceCategory>
     <PreferenceCategory
         app:title="@string/pref_header_routes"

@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2023 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@
 
 package de.flyingsnail.ipv6droid.android;
 
+import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -45,8 +46,11 @@ import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.io.FileNotFoundException;
@@ -72,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_STATISTICS = 3;
     public static final String DTLS_CERTS = "dtls_certs";
     public static final String DTLS_KEY_ALIAS = "dtls_key_alias";
+    public static final String SHOW_NOTIFICATIONS = "show-notifications";
 
     /** A TextView that presents in natural language, what is going on */
     private TextView activity;
@@ -112,6 +117,7 @@ public class MainActivity extends AppCompatActivity {
      * An object implementing TunnelPersisting, i.e. a Binder-based DAO to persistent tunnel storage.
      */
     private TunnelPersisting tunnelPersisting;
+    private ActivityResultLauncher<String> requestPermissionLauncher;
 
 
     /**
@@ -125,6 +131,17 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         PreferenceManager.setDefaultValues(getApplicationContext(), R.xml.preferences, false);
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+
+        requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(),
+                isGranted -> {
+                    if (!isGranted) {
+                        SharedPreferences.Editor editor = preferences.edit();
+                        editor.putBoolean(SHOW_NOTIFICATIONS, false);
+                        editor.commit();
+                    }
+                });
+
 
         Toolbar myToolbar = findViewById(R.id.mainToolbar);
         setSupportActionBar(myToolbar);
@@ -324,6 +341,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_START_VPN && resultCode == RESULT_OK) {
+            // request permission to show notification if not granted, but continue anyway
+            checkAndRequestNotificationPermission();
+
             Intent intent = new Intent(this, IPv6DroidVpnService.class).setAction("android.net.VpnService");
             if (tunnels.isTunnelActive()) {
                 // Android's Parcel system doesn't handle subclasses well, so...
@@ -334,6 +354,14 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 startService(intent);
             }
+        }
+    }
+
+    private void checkAndRequestNotificationPermission() {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        if (preferences.getBoolean(SHOW_NOTIFICATIONS, true) &&
+                !NotificationManagerCompat.from(this).areNotificationsEnabled()) {
+            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
         }
     }
 
@@ -490,10 +518,6 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             statusReport = (VpnStatusReport)intent.getSerializableExtra(VpnStatusReport.EDATA_STATUS_REPORT);
-            /*if (lastEvents.size() >= EVENT_LENGTH)
-                lastEvents.pollLast();
-            lastEvents.push(statusReport);
-            */
             updateUi();
         }
     }
