@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2022 Dr. Andreas Feldner.
+ *  * Copyright (c) 2023 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -72,10 +72,6 @@ public class VpnThread extends Thread {
      * The IPv6 address of the Google DNS servers.
      */
     private static final Inet6Address[] PUBLIC_DNS = new Inet6Address[4];
-    /**
-     * An implementation of the TunnelReader interface
-     */
-    private final TunnelReader tunnelReader;
 
     static {
         try {
@@ -169,16 +165,6 @@ public class VpnThread extends Thread {
         this.tunnels = cachedTunnels;
         // extract the application context
         this.applicationContext = service.getApplicationContext();
-        TunnelReader tr;
-        try {
-            tr = new DTLSTunnelReader(service);
-            Log.i(TAG, "Using DTLS config");
-        } catch (ConnectionFailedException e1) {
-            Log.i(TAG, "Falling back to subscription tunnels", e1);
-            tr = new SubscriptionTunnelReader(service);
-        }
-
-        this.tunnelReader = tr;
         this.startedAt = new Date(0L);
         this.closeTunnel = false;
     }
@@ -305,7 +291,18 @@ public class VpnThread extends Thread {
     boolean readTunnels() throws ConnectionFailedException, IOException {
         boolean tunnelChanged = false;
 
-        List<? extends TunnelSpec> availableTunnels = tunnelReader.queryTunnels();
+        TunnelReader tr;
+        try {
+            tr = new DTLSTunnelReader(service);
+            Log.i(TAG, "Using DTLS config");
+        } catch (ConnectionFailedException e1) {
+            Log.i(TAG, "Falling back to subscription tunnels", e1);
+            tr = new SubscriptionTunnelReader(service);
+        }
+
+        List<? extends TunnelSpec> availableTunnels = tr.queryTunnels();
+        tr.destroy();
+
         boolean activeTunnelValid = false;
         if (tunnels == null)
             tunnels = new Tunnels(availableTunnels, null);

@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2023 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -92,5 +92,10 @@ public class DTLSTunnelReader implements TunnelReader {
         List<TunnelSpec> myTunnels = new ArrayList<>(1);
         myTunnels.add(params);
         return myTunnels;
+    }
+
+    @Override
+    public void destroy() {
+        // no clean-up required here
     }
 }

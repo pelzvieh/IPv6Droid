@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2023 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -101,5 +101,15 @@ public class SubscriptionTunnelReader implements TunnelReader, SubscriptionCheck
                 failed = true;
                 break;
         }
+    }
+
+    /**
+     * Cleanup connections and resources.
+     */
+    @Override
+    public void destroy() {
+        finished = true;
+        failed = true;
+        subscriptionManager.destroy();
     }
 }

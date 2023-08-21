@@ -138,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
                     if (!isGranted) {
                         SharedPreferences.Editor editor = preferences.edit();
                         editor.putBoolean(SHOW_NOTIFICATIONS, false);
-                        editor.commit();
+                        editor.apply();
                     }
                 });
 
@@ -368,38 +368,41 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.action_connect:
+        if (item.getItemId() == R.id.action_connect) {
                 startVPN(item.getActionView());
                 return true;
-
-            case R.id.action_disconnect:
-                stopVPN();
-                return true;
-
-            case R.id.action_settings:
-                openSettings();
-                return true;
-
-            case R.id.action_help:
-                openHelp();
-                return true;
-
-            case R.id.action_tic_reload:
-                forceTunnelReload(item.getActionView());
-                return true;
-
-            case R.id.action_subscribe:
-                openSubscriptionOverview();
-                return true;
-
-            case R.id.action_show_statistics:
-                openStatistics();
-                return true;
-
-            default:
-                return false;
         }
+        if (item.getItemId() == R.id.action_disconnect) {
+            stopVPN();
+            return true;
+        }
+
+        if (item.getItemId() == R.id.action_settings) {
+            openSettings();
+            return true;
+        }
+
+        if (item.getItemId() == R.id.action_help) {
+            openHelp();
+            return true;
+        }
+
+        if (item.getItemId() == R.id.action_tic_reload) {
+            forceTunnelReload(item.getActionView());
+            return true;
+        }
+
+        if (item.getItemId() == R.id.action_subscribe) {
+            openSubscriptionOverview();
+            return true;
+        }
+
+        if (item.getItemId() == R.id.action_show_statistics) {
+            openStatistics();
+            return true;
+        }
+
+        return false;
     }
 
     private void openHelp() {

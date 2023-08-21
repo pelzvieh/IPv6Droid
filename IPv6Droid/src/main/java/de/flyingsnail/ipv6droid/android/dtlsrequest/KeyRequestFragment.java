@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2023 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -104,7 +104,7 @@ public class KeyRequestFragment extends Fragment {
         String newAlias = "IPv6Droid-" + aliases.size();
         createKeyAlias.setText(newAlias);
 
-        spinnerAdapter = new ArrayAdapter<>(requireContext(), R.layout.support_simple_spinner_dropdown_item, aliases);
+        spinnerAdapter = new ArrayAdapter<>(requireContext(), androidx.constraintlayout.widget.R.layout.support_simple_spinner_dropdown_item, aliases);
         existingKeysSpinner.setAdapter(spinnerAdapter);
         existingKeysSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -169,9 +169,8 @@ public class KeyRequestFragment extends Fragment {
     }
 
     private void createNewKey(final String newAlias) {
-        List<String> aliases = null;
         try {
-            aliases = AndroidBackedKeyPair.listAliases();
+            final List<String> aliases = AndroidBackedKeyPair.listAliases();
             if (aliases.contains(newAlias)) {
                 throw new IllegalArgumentException("Alias already existing");
             }

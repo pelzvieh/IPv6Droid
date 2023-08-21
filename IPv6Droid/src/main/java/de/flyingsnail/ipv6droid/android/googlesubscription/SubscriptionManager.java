@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2023 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -37,9 +37,11 @@ import com.android.billingclient.api.BillingFlowParams;
 import com.android.billingclient.api.BillingResult;
 import com.android.billingclient.api.Purchase;
 import com.android.billingclient.api.PurchaseHistoryRecord;
+import com.android.billingclient.api.PurchasesResponseListener;
 import com.android.billingclient.api.PurchasesUpdatedListener;
 import com.android.billingclient.api.SkuDetails;
 import com.android.billingclient.api.SkuDetailsParams;
+import com.android.billingclient.api.SkuDetailsResponseListener;
 
 import java.io.IOException;
 import java.net.URI;
@@ -49,7 +51,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -143,8 +144,8 @@ public class SubscriptionManager {
             baseUrl = new URI(context.getString(R.string.certification_default_url_base));
             String overrideHost = BuildConfig.target_host;
             if (!overrideHost.trim().isEmpty()) {
-                baseUrl = new URI ("http", baseUrl.getUserInfo(), overrideHost,
-                        8080, baseUrl.getPath(), baseUrl.getQuery(), baseUrl.getFragment());
+                baseUrl = new URI ("https", baseUrl.getUserInfo(), overrideHost,
+                        443, baseUrl.getPath(), baseUrl.getQuery(), baseUrl.getFragment());
             }
         } catch (URISyntaxException e) {
             throw new IllegalStateException("App packaging faulty, illegal URL: " + e);
@@ -167,7 +168,9 @@ public class SubscriptionManager {
     /**
      * An instance implementing ServiceConnection by setting this object's service class when bound.
      */
-    private class IPv6DroidBillingClientStateListener implements BillingClientStateListener {
+    private class IPv6DroidBillingClientStateListener
+            implements BillingClientStateListener, PurchasesResponseListener, SkuDetailsResponseListener {
+        private boolean hasSubscriptions = false;
         @Override
         public void onBillingServiceDisconnected() {
             Log.i(TAG, "Billing service is disconnected");
@@ -193,65 +196,8 @@ public class SubscriptionManager {
                     return;
                 }
 
-                // retrieve list of purchased subscriptions
-                boolean subHandled = false;
-                Purchase.PurchasesResult purchasesResult = googleBillingClient.queryPurchases(BillingClient.SkuType.SUBS);
-                if (purchasesResult.getResponseCode() == BillingResponseCode.OK) {
-                    for (Purchase purchase: Objects.requireNonNull(purchasesResult.getPurchasesList())) {
-                        Log.i(TAG, "Initial load of purchases retrieved purchase " + purchase.getOrderId());
-                        try {
-                            if (onGoogleProductPurchased(purchase)) {
-                                subHandled = true;
-                            }
-                        } catch (RuntimeException re) {
-                            Log.e(TAG, "Runtime exception caught during handling of subscription purchase", re);
-                        }
-                    }
-                } else {
-                    listener.onSubscriptionCheckResult(
-                            SubscriptionCheckResultListener.ResultType.NO_SERVICE_TRY_AGAIN,
-                            purchasesResult.getBillingResult().getDebugMessage());
-                }
-                final boolean hasSubscriptions = subHandled;
-                if (hasSubscriptions) {
-                    synchronized (listener) { // is in race with "HAS_TUNNELS"
-                        if (tunnels.size() == 0) { // the asynchronous query of IPv6Server about the tunnel details has not finished yet
-                            listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.PURCHASE_COMPLETED, null);
-                        }
-                    }
-                }
-
-                // retrieve list of Google-supported SKU and filter with our supported SKU. Required for purchase init
-                List<String> clientSKU = SubscriptionBuilder.getSupportedSku();
-                SkuDetailsParams.Builder params = SkuDetailsParams.newBuilder();
-                params.setSkusList(clientSKU).setType(BillingClient.SkuType.SUBS);
-                googleBillingClient.querySkuDetailsAsync(params.build(),
-                        (BillingResult skuQueryResult, List<SkuDetails> skuDetailsList) -> {
-                            if (skuQueryResult.getResponseCode() == BillingResponseCode.OK) {
-                                Log.i(TAG, "Received list of sku details");
-                                SubscriptionManager.this.supportedSKUDetails = skuDetailsList;
-                                // if the user has subscriptions, there's already check result reported
-                                if (!hasSubscriptions) {
-                                    if (skuDetailsList == null || skuDetailsList.isEmpty()) {
-                                        Log.e(TAG, "received list of SKU details is empty");
-                                        listener.onSubscriptionCheckResult(
-                                                SubscriptionCheckResultListener.ResultType.NO_SERVICE_TRY_AGAIN,
-                                                originatingContext.getString(R.string.SubManEmptySKUdetails));
-                                    } else {
-                                        // we positively know the available SKU and that the user has no active purchase
-                                        // this will enable the purchase process in suitable caller contexts
-                                        listener.onSubscriptionCheckResult(
-                                                SubscriptionCheckResultListener.ResultType.NO_SUBSCRIPTIONS, null);
-                                    }
-                                }
-                            } else {
-                                Log.e(TAG, "Failed to read supported SKU: " + skuQueryResult.getDebugMessage());
-                                listener.onSubscriptionCheckResult(
-                                        SubscriptionCheckResultListener.ResultType.NO_SERVICE_TRY_AGAIN,
-                                        skuQueryResult.getDebugMessage()
-                                );
-                            }
-                        });
+                // request list of purchased subscriptions
+                googleBillingClient.queryPurchasesAsync(BillingClient.SkuType.SUBS, this);
             } else {
                 Log.e (TAG, "Setup of Billing library yields error code. Debug message: " + billingResult.getDebugMessage());
                 listener.onSubscriptionCheckResult(
@@ -263,6 +209,68 @@ public class SubscriptionManager {
                                 SubscriptionCheckResultListener.ResultType.NO_SERVICE_PERMANENT :
                                 SubscriptionCheckResultListener.ResultType.NO_SERVICE_TRY_AGAIN,
                         billingResult.getDebugMessage());
+            }
+        }
+        @Override
+        public void onQueryPurchasesResponse(@NonNull BillingResult billingResult, @NonNull List<Purchase> list) {
+            boolean subHandled = false;
+            if (billingResult.getResponseCode() == BillingResponseCode.OK) {
+                for (Purchase purchase: list) {
+                    Log.i(TAG, "Initial load of purchases retrieved purchase " + purchase.getOrderId());
+                    try {
+                        if (onGoogleProductPurchased(purchase)) {
+                            subHandled = true;
+                        }
+                    } catch (RuntimeException re) {
+                        Log.e(TAG, "Runtime exception caught during handling of subscription purchase", re);
+                    }
+                }
+            } else {
+                listener.onSubscriptionCheckResult(
+                        SubscriptionCheckResultListener.ResultType.NO_SERVICE_TRY_AGAIN,
+                        billingResult.getDebugMessage());
+            }
+            hasSubscriptions = hasSubscriptions || subHandled;
+            if (hasSubscriptions) {
+                synchronized (listener) { // is in race with "HAS_TUNNELS"
+                    if (tunnels.size() == 0) { // the asynchronous query of IPv6Server about the tunnel details has not finished yet
+                        listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.PURCHASE_COMPLETED, null);
+                    }
+                }
+            }
+
+            // retrieve list of Google-supported SKU and filter with our supported SKU. Required for purchase init
+            List<String> clientSKU = SubscriptionBuilder.getSupportedSku();
+            SkuDetailsParams.Builder params = SkuDetailsParams.newBuilder();
+            params.setSkusList(clientSKU).setType(BillingClient.SkuType.SUBS);
+            googleBillingClient.querySkuDetailsAsync(params.build(), this);
+        }
+
+        @Override
+        public void onSkuDetailsResponse (BillingResult skuQueryResult, List<SkuDetails> skuDetailsList) {
+            if (skuQueryResult.getResponseCode() == BillingResponseCode.OK) {
+                Log.i(TAG, "Received list of sku details");
+                SubscriptionManager.this.supportedSKUDetails = skuDetailsList;
+                // if the user has subscriptions, there's already check result reported
+                if (!hasSubscriptions) {
+                    if (skuDetailsList == null || skuDetailsList.isEmpty()) {
+                        Log.e(TAG, "received list of SKU details is empty");
+                        listener.onSubscriptionCheckResult(
+                                SubscriptionCheckResultListener.ResultType.NO_SERVICE_TRY_AGAIN,
+                                originatingContext.getString(R.string.SubManEmptySKUdetails));
+                    } else {
+                        // we positively know the available SKU and that the user has no active purchase
+                        // this will enable the purchase process in suitable caller contexts
+                        listener.onSubscriptionCheckResult(
+                                SubscriptionCheckResultListener.ResultType.NO_SUBSCRIPTIONS, null);
+                    }
+                }
+            } else {
+                Log.e(TAG, "Failed to read supported SKU: " + skuQueryResult.getDebugMessage());
+                listener.onSubscriptionCheckResult(
+                        SubscriptionCheckResultListener.ResultType.NO_SERVICE_TRY_AGAIN,
+                        skuQueryResult.getDebugMessage()
+                );
             }
         }
     }
