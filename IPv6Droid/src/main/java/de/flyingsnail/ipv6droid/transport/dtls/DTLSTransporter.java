@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2023 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -192,10 +192,6 @@ public class DTLSTransporter implements Transporter {
     TlsClient client = new IPv6DTlsClient(crypto, heartbeat, certChain, keyPair, dnsName);
     DTLSClientProtocol protocol = new DTLSClientProtocol();
     dtls = protocol.connect(client, transport);
-
-    // todo check if it BC really manages SO_TIMEOUT itself. The clause below might be the reason why it didn't work well
-    // after the connect, we do not want a timeout
-    // socket.setSoTimeout(heartbeat); // with every heartbeat interval, there should be communication
 
     Log.i(TAG, "DTLS tunnel to POP IP " + ipv4Pop + " created.");
   }

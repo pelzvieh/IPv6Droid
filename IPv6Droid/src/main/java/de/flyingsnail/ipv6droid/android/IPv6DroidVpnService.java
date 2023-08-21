@@ -26,6 +26,7 @@ package de.flyingsnail.ipv6droid.android;
 import static android.app.Notification.PRIORITY_LOW;
 import static android.app.PendingIntent.FLAG_IMMUTABLE;
 
+import android.Manifest;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
@@ -33,6 +34,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.net.VpnService;
 import android.os.Binder;
 import android.os.Build;
@@ -45,6 +47,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.app.TaskStackBuilder;
@@ -221,8 +224,9 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
 
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
         if (notificationManager.areNotificationsEnabled()) {
-            // mId allows you to update the notification later on.
-            notificationManager.notify(IPv6DroidVpnService.exceptionNotificationID, errorNotificationBuilder.build());
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+                notificationManager.notify(IPv6DroidVpnService.exceptionNotificationID, errorNotificationBuilder.build());
+            }
             errorNotification = true;
         }
     }
@@ -234,7 +238,6 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
     public void notifyUserOfErrorCancel() {
         if (errorNotification) {
             NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
-            // mId allows you to update the notification later on.
             notificationManager.cancel(IPv6DroidVpnService.exceptionNotificationID);
             errorNotification = false;
         }
@@ -383,6 +386,7 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
     private void displayOngoingNotification(@Nullable VpnStatusReport statusReport) {
         Log.d(TAG, "Displaying/updating ongoing notification " + statusReport);
 
+        ongoingNotificationBuilder.setWhen(new Date().getTime());
         if (statusReport != null)
             ongoingNotificationBuilder.setContentText(getResources().getString(statusReport.getActivity()));
         else
