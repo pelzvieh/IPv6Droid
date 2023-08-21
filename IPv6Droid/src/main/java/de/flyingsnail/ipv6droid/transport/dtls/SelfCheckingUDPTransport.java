@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2022 Dr. Andreas Feldner.
+ *  * Copyright (c) 2023 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -99,10 +99,7 @@ class SelfCheckingUDPTransport extends UDPTransport {
     lastReadTimeout = new Date();
     lastReadTimeout.setTime(lastReadTimeout.getTime() + waitMillis + 1000L);
     try {
-      // todo remove logging code if re-connecting is fixed
-      Log.v(TAG, String.format("Receive called with deadline at %s", lastReadTimeout.toString()));
       int read = super.receive(buf, off, len, waitMillis);
-      Log.v(TAG, String.format("Receive finished at %s", new Date()));
       return read;
     } finally {
       lastReadTimeout = null;
