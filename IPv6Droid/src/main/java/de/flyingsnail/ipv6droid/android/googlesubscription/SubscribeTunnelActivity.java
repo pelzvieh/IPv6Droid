@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2024 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -437,6 +437,7 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
      */
     public void onOpenSettings (View view) {
         Intent settingsIntent = new Intent(this, SettingsActivity.class);
+        settingsIntent.setPackage(getPackageName());
         startActivity(settingsIntent);
     }
 

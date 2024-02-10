@@ -27,7 +27,7 @@ buildscript {
         google()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.1.0'
+        classpath 'com.android.tools.build:gradle:8.1.4'
     }
 }
 apply plugin: 'com.android.application'
@@ -59,11 +59,11 @@ android {
         }
     }
 
-    compileSdkVersion 33
+    compileSdkVersion 34
 
     defaultConfig {
         minSdkVersion 23
-        targetSdkVersion 33
+        targetSdkVersion 34
     }
 
     compileOptions {
@@ -79,16 +79,16 @@ android {
 
     buildTypes {
         release {
-            buildConfigField("java.lang.String", "target_host", "\"\"")
+            buildConfigField("java.lang.String", "target_uri", "\"\"")
             signingConfig signingConfigs.release
         }
         debug {
             matchingFallbacks = []
-            buildConfigField("java.lang.String", "target_host", "\"\"")
+            buildConfigField("java.lang.String", "target_uri", "\"\"")
         }
         debug_internal {
             initWith debug
-            buildConfigField("java.lang.String", "target_host", "\"ipv6test\"")
+            buildConfigField("java.lang.String", "target_uri", "\"http://ipv6test.internal.flying-snail.de:8080/services/services/\"")
         }
     }
     lint {
@@ -100,24 +100,16 @@ android {
 }
 
 dependencies {
-    constraints {
-        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.0") {
-            because("kotlin-stdlib-jdk7 is now a part of kotlin-stdlib")
-        }
-        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.0") {
-            because("kotlin-stdlib-jdk8 is now a part of kotlin-stdlib")
-        }
-    }
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
-    implementation 'androidx.annotation:annotation:1.6.0'
+    implementation 'androidx.annotation:annotation:1.7.1'
     implementation 'org.jetbrains.trove4j:trove4j:20160824'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    implementation 'androidx.core:core:1.10.1'
+    implementation 'androidx.core:core:1.12.0'
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
-    implementation 'com.android.billingclient:billing:6.0.1'
-    implementation 'org.bouncycastle:bctls-jdk15to18:1.76'
-    implementation 'org.bouncycastle:bcpkix-jdk15to18:1.76'
+    implementation 'com.android.billingclient:billing:6.1.0'
+    implementation 'org.bouncycastle:bctls-jdk15to18:1.77'
+    implementation 'org.bouncycastle:bcpkix-jdk15to18:1.77'
     implementation 'androidx.preference:preference:1.2.1'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
 }

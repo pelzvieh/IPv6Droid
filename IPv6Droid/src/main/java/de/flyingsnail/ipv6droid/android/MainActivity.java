@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2023 Dr. Andreas Feldner.
+ *  * Copyright (c) 2024 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -290,11 +290,13 @@ public class MainActivity extends AppCompatActivity {
      */
     private void openSettings () {
         Intent settingsIntent = new Intent(this, SettingsActivity.class);
+        settingsIntent.setPackage(getApplicationContext().getPackageName());
         startActivity(settingsIntent);
     }
 
     private void openSubscriptionOverview () {
         Intent setupIntent = new Intent(this, SubscribeTunnelActivity.class);
+        setupIntent.setPackage(getApplicationContext().getPackageName());
         startActivity(setupIntent);
     }
 
@@ -306,6 +308,7 @@ public class MainActivity extends AppCompatActivity {
     public void openStatistics () {
         // Start system-managed intent for VPN
         Intent settingsIntent = new Intent(this, StatisticsActivity.class);
+        settingsIntent.setPackage(getApplicationContext().getPackageName());
         startActivityForResult(settingsIntent, REQUEST_STATISTICS);
     }
 

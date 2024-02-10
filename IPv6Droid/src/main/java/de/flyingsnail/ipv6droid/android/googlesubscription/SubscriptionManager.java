@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2023 Dr. Andreas Feldner.
+ *  * Copyright (c) 2024 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -139,18 +139,17 @@ public class SubscriptionManager {
         listener.onSubscriptionCheckResult(SubscriptionCheckResultListener.ResultType.NO_SERVICE_AUTO_RECOVERY,
                 context.getString(R.string.SubManStartingUp));
 
-        URI baseUrl;
+        URI baseUri;
         try {
-            baseUrl = new URI(context.getString(R.string.certification_default_url_base));
-            String overrideHost = BuildConfig.target_host;
-            if (!overrideHost.trim().isEmpty()) {
-                baseUrl = new URI ("https", baseUrl.getUserInfo(), overrideHost,
-                        443, baseUrl.getPath(), baseUrl.getQuery(), baseUrl.getFragment());
+            baseUri = new URI(context.getString(R.string.certification_default_url_base));
+            String overrideUri = BuildConfig.target_uri;
+            if (!overrideUri.trim().isEmpty()) {
+                baseUri = new URI (overrideUri);
             }
         } catch (URISyntaxException e) {
             throw new IllegalStateException("App packaging faulty, illegal URL: " + e);
         }
-        certificationClient = RestProxyFactory.createCertificationClient(baseUrl.toString());
+        certificationClient = RestProxyFactory.createCertificationClient(baseUri.toString());
         PurchasesUpdatedListener googlePurchasesUpdatesListener = new IPv6DroidPurchasesUpdatedListener();
         googleBillingClient = BillingClient.newBuilder(context).
                 setListener(googlePurchasesUpdatesListener).
