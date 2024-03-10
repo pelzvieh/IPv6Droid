@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   ~ /*
-  ~  * Copyright (c) 2021 Dr. Andreas Feldner.
+  ~  * Copyright (c) 2024 Dr. Andreas Feldner.
   ~  *
   ~  *     This program is free software; you can redistribute it and/or modify
   ~  *     it under the terms of the GNU General Public License as published by
@@ -49,10 +49,10 @@
     <string name="title_activity_subscribe_tunnel">Tunnel abonnieren</string>
     <string name="title_activity_statistics">Statistik</string>
     <string name="statistics_timestamp">Stand von</string>
-    <string name="copythreadexception">Kopierablauf ist auf einen Fehler gelaufen</string>
-    <string name="unexpected_runtime_exception">Unerwartetes Problem, Tunnel bricht ab</string>
-    <string name="ayiyavpnservice_destroyed">"AyiyaVpnService wird zerstört"</string>
-    <string name="ayiyavpnservice_revoked">"AyiyaVpnServices Genehmigung zum VPN-Betrieb zurückgezogen"</string>
+    <string name="copythreadexception">IPv4-IPv6-Kommunikation ist auf einen Fehler gelaufen</string>
+    <string name="unexpected_runtime_exception">Unerwartetes Problem, IPv6-Tunnel bricht ab</string>
+    <string name="ayiyavpnservice_destroyed">"Der IPv6-Tunnel ist jetzt geschlossen"</string>
+    <string name="ayiyavpnservice_revoked">"IPv6Droid ist nicht für VPN-Aufbau berechtigt"</string>
     <string name="manual_setup_label">Selbst betrieben</string>
     <plurals name="user_has_subscription" tools:ignore="MissingQuantity"><item quantity="other">Sie haben %d Tunnel abonniert</item></plurals>
     <string name="user_has_unparsable_subscription_status">Unverständlicher Abo-Status</string>
@@ -76,8 +76,8 @@
     <string name="user_subscription_aborted">Sie haben das Abo nicht abgeschlossen. Haben Sie noch Fragen? Zögern Sie nicht, uns zu kontaktieren.</string>
     <string name="channel_errors_name">IPv6 Errors</string>
     <string name="channel_status_name">IPv6 Status</string>
-    <string name="channel_errors_description">Error messages from IPv6 tunnel</string>
-    <string name="channel_status_description">Current status of IPv6 tunnel</string>
+    <string name="channel_errors_description">Fehlermeldungen aus dem IPv6-Tunnel</string>
+    <string name="channel_status_description">Status des IPv6-Tunnels</string>
     <string name="subscription">Abonnement</string>
     <string name="subscription_status">Der hier angezeigte Status wird aus Ihrem Google-Konto abgefragt. Dies kann ein paar Sekunden dauern. Am \"gültig bis\"-Datum wird das Abonnement kostenpflichtig um einen Monat verlängert, wenn Sie es nicht beendet haben.</string>
     <string name="subscriptions_manage_subscriptions">Abonnement verwalten</string>

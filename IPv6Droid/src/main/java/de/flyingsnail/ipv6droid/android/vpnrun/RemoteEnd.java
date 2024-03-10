@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2024 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -63,6 +63,7 @@ public class RemoteEnd implements NetworkChangeListener {
     static final String TAG = RemoteEnd.class.getName();
     private final LocalEnd localEnd;
     private final VpnStatusReport vpnStatus;
+    private final Date expiryDate;
     private boolean intendedToRun;
     private final boolean forcedRoute;
     private final boolean isRouted;
@@ -112,7 +113,7 @@ public class RemoteEnd implements NetworkChangeListener {
     private final UserNotificationCallback service;
 
     enum EndCause {
-        REQUIRES_ROUTIING, INHIBITS_ROUTING, FD_INVALID, ON_REQUEST
+        REQUIRES_ROUTIING, INHIBITS_ROUTING, FD_INVALID, EXPIRED, ON_REQUEST
     }
 
     /**
@@ -144,6 +145,7 @@ public class RemoteEnd implements NetworkChangeListener {
         this.reconnectCount = 0;
         this.executor = executor;
         this.service = userNotificationCallback;
+        this.expiryDate = tunnel.getExpiryDate();
 
         // Prepare the tunnel to PoP
         try {
@@ -192,6 +194,12 @@ public class RemoteEnd implements NetworkChangeListener {
                 if (!intendedToRun) {
                     break;
                 }
+                // Check if our tunnel is still valid, as this can easily change whilst waiting on connectivity
+                if (new Date().after(expiryDate)) {
+                    endCause = EndCause.EXPIRED;
+                    break;
+                }
+
                 if (isTunnelRoutingRequired() ^ isRouted) {
                     endCause = isRouted ? EndCause.INHIBITS_ROUTING : EndCause.REQUIRES_ROUTIING;
                     break;
@@ -294,7 +302,7 @@ public class RemoteEnd implements NetworkChangeListener {
             endCause = intendedToRun ? EndCause.FD_INVALID : EndCause.ON_REQUEST;
         }
         Log.i(TAG, "refreshRemoteEnd loop terminated - " +
-                endCause.toString());
+                endCause);
         return endCause;
     }
 
@@ -403,9 +411,10 @@ public class RemoteEnd implements NetworkChangeListener {
         transporter.close();
         // no special treatment for inThread required, a dying inThread is immediately noticed
         // by VpnThread.
-        if (diedThread != inThread && diedThread == outThread && inThread != null) {
+        final CopyThread myInThread = inThread; // Race-Conditions vermeiden
+        if (diedThread != inThread && diedThread == outThread && myInThread != null) {
             Log.i(TAG, "outThread notified us of its death, killing inThread as well");
-            inThread.stopCopy();
+            myInThread.stopCopy();
             // inThread is now dying as well, not going unnoticed by monitoredHeartbeatLoop
         }
     }

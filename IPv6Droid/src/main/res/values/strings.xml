@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?><!--
   ~ /*
-  ~  * Copyright (c) 2021 Dr. Andreas Feldner.
+  ~  * Copyright (c) 2024 Dr. Andreas Feldner.
   ~  *
   ~  *     This program is free software; you can redistribute it and/or modify
   ~  *     it under the terms of the GNU General Public License as published by
@@ -47,10 +47,10 @@
     <string name="action_show_statistics">Statistics</string>
     <string name="title_activity_statistics">Statistics</string>
     <string name="statistics_timestamp">Last updated</string>
-    <string name="copythreadexception">Copy thread ran into an exception</string>
+    <string name="copythreadexception">Communication between IPv4 and IPv6 is disturbed</string>
     <string name="unexpected_runtime_exception">Unexpected problem, tunnel aborting</string>
-    <string name="ayiyavpnservice_destroyed">"AyiyaVpnService getting destroyed"</string>
-    <string name="ayiyavpnservice_revoked">"AyiyaVpnService's permission to run a VPN is revoked"</string>
+    <string name="ayiyavpnservice_destroyed">"IPv6 tunnel is now stopped"</string>
+    <string name="ayiyavpnservice_revoked">"IPv6Droid's permission to run a VPN is revoked"</string>
     <string name="statistics_isrouted">Routes set to tunnel</string>
     <string name="statistics_isrouted_yes">yes</string>
     <string name="statistics_isrouted_no">no</string>

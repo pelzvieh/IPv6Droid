@@ -24,8 +24,8 @@
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:versionCode="77"
-    android:versionName="2.12">
+    android:versionCode="78"
+    android:versionName="2.13">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -46,7 +46,8 @@
         android:theme="@style/AppTheme"
         android:fullBackupContent="@xml/backup_descriptor"
         android:dataExtractionRules="@xml/data_extraction_rules"
-        tools:targetApi="S">
+        tools:targetApi="S"
+        android:networkSecurityConfig="@xml/network_security_config">
         <!-- recommended from https://android-developers.googleblog.com/2017/03/update-your-app-to-take-advantage-of.html -->
         <meta-data
             android:name="android.max_aspect"

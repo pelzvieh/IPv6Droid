@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2024 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -177,6 +177,10 @@ public class LocalEnd {
                         break;
                     case REQUIRES_ROUTIING:
                         tunnelRouted = true;
+                        break;
+                    case EXPIRED:
+                        Log.i(TAG, "The tunnel we're using just expired");
+                        intendedToRun = false;
                         break;
                 }
 
