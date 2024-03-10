@@ -12,3 +12,8 @@
 /.idea/vcs.xml
 /.idea/
 /.idea/libraries/
+/.gradle/
+/build/
+/googleplay4ipv6droid/build/
+/IPv6Droid/.gradle/
+/IPv6Droid/build/

@@ -19,3 +19,4 @@
  */
 
 include ':IPv6Droid'
+include ':googleplay4ipv6droid'

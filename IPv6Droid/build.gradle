@@ -27,7 +27,7 @@ buildscript {
         google()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.1.4'
+        classpath 'com.android.tools.build:gradle:8.3.0'
     }
 }
 apply plugin: 'com.android.application'
@@ -59,7 +59,7 @@ android {
         }
     }
 
-    compileSdkVersion 34
+    compileSdk 34
 
     defaultConfig {
         minSdkVersion 23
