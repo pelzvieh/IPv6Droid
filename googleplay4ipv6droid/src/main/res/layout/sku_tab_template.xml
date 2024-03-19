@@ -22,29 +22,9 @@
   ~
   -->
 
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_margin="2dp">
 
-    <application
-        android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.IPv6Droid_git">
-        <activity
-            android:name=".SelectProductActivity"
-            android:exported="true"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.IPv6Droid_git.NoActionBar">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="de.flyingsnail.ipv6droid.REQUEST_TUNNEL"/>
-                <data android:mimeType="application/pkcs10"/>
-            </intent-filter>
-        </activity>
-    </application>
-
-</manifest>
+</TextView>

@@ -22,29 +22,22 @@
   ~
   -->
 
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingBottom="@dimen/activity_vertical_margin">
 
-    <application
-        android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.IPv6Droid_git">
-        <activity
-            android:name=".SelectProductActivity"
-            android:exported="true"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.IPv6Droid_git.NoActionBar">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="de.flyingsnail.ipv6droid.REQUEST_TUNNEL"/>
-                <data android:mimeType="application/pkcs10"/>
-            </intent-filter>
-        </activity>
-    </application>
+        <TextView
+            android:id="@+id/no_tunnel_message"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:drawable/stat_sys_warning"
+            android:backgroundTint="@color/ipv6droid_pink"
+            android:text="No products ready for purchase at the moment"
+            android:textAppearance="@android:style/TextAppearance.Material.Display1" />
 
-</manifest>
+</LinearLayout>

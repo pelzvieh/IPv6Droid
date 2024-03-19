@@ -20,14 +20,19 @@
  *
  *
  */
+repositories {
+    mavenCentral()
+    google()
+}
 
 buildscript {
     repositories {
         mavenCentral()
         google()
     }
+
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.3.0'
+        classpath 'com.android.tools.build:gradle:8.3.1'
     }
 }
 
@@ -54,8 +59,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_1_10
+        targetCompatibility JavaVersion.VERSION_1_10
     }
     buildFeatures {
         viewBinding true
@@ -71,4 +76,9 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    implementation 'com.android.billingclient:billing:6.2.0'
+    implementation 'androidx.annotation:annotation:1.7.1'
+    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+    implementation 'androidx.slidingpanelayout:slidingpanelayout:1.2.0'
 }

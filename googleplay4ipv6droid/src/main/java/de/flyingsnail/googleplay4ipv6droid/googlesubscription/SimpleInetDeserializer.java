@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2024 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
  *
  */
 
-package de.flyingsnail.ipv6droid.android.googlesubscription;
+package de.flyingsnail.googleplay4ipv6droid.googlesubscription;
 
 import android.util.Log;
 

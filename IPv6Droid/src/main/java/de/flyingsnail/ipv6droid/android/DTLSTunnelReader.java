@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2023 Dr. Andreas Feldner.
+ *  * Copyright (c) 2024 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import de.flyingsnail.ipv6droid.android.dtlsrequest.CertificateToTunnel;
 import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 import de.flyingsnail.ipv6droid.transport.dtls.TransporterParams;
@@ -68,23 +69,13 @@ public class DTLSTunnelReader implements TunnelReader {
                 certConfig.add("-----BEGIN CERTIFICATE-----\n" + certString);
             }
         }
-        params = createTunnelspec(keyAlias, certConfig);
+        try {
+            params = CertificateToTunnel.createTunnelspec(keyAlias, certConfig);
+        } catch (IOException e) {
+            throw new ConnectionFailedException("Failure to interpret certificate configuration", e);
+        }
 
         Log.i(TAG, "DTLSTunnelReader initialized");
-    }
-
-    public static TransporterParams createTunnelspec(String keyAlias, List<String> certConfig) throws ConnectionFailedException {
-        final TransporterParams params = new TransporterParams();
-        // build params and perform parsing
-        try {
-            params.setCertChainEncoded(certConfig);
-            params.setPrivateKeyAlias(keyAlias);
-        } catch (IOException | IllegalArgumentException | IllegalStateException illegal) {
-            throw new ConnectionFailedException("Invalid certificate configuration", illegal);
-        }
-        params.setHeartbeatInterval(10*60); // 10 Minutes
-        params.setMtu(1300);
-        return params;
     }
 
     @Override

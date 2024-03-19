@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2024 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -21,33 +21,39 @@
  *
  */
 
-package de.flyingsnail.ipv6droid.android.googlesubscription;
+package de.flyingsnail.ipv6server.svc;
 
-import androidx.annotation.Nullable;
+/**
+ * An exception denoting a definitive falsification of a subscription claim.
+ * @author pelzi
+ *
+ */
+public class SubscriptionRejectedException extends Exception {
 
-import java.util.ArrayList;
-import java.util.List;
+  /**
+   * 
+   */
+  public SubscriptionRejectedException() {
+    super();
+    // TODO Auto-generated constructor stub
+  }
 
-public class SubscriptionBuilder {
-    static final String SKU_TUNNEL_SUBSCRIPTION = "de.flyingsnail.ipv6.tunnelsub";
-    static final String TAG = SubscriptionBuilder.class.getSimpleName();
+  /**
+   * @param message a String describing the problem
+   */
+  public SubscriptionRejectedException(String message) {
+    super(message);
+    // TODO Auto-generated constructor stub
+  }
 
-    public SubscriptionBuilder() {
+  /**
+   * @param cause a Throwable that caused throwing this exception
+   */
+  public SubscriptionRejectedException(Throwable cause) {
+    super(cause);
+    // TODO Auto-generated constructor stub
+  }
 
-    }
-
-    @Nullable
-    public static Subscription create(String sku) {
-        if (SKU_TUNNEL_SUBSCRIPTION.equals(sku))
-            return new Subscription();
-        else
-            return null;
-    }
-
-    public static List<String> getSupportedSku() {
-        ArrayList<String> result = new ArrayList<>(1);
-        result.add(SKU_TUNNEL_SUBSCRIPTION);
-        return result;
-    }
+  private static final long serialVersionUID = 1L;
 
 }

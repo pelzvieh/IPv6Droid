@@ -22,12 +22,10 @@
 
 buildscript {
     repositories {
-
         maven {
             url 'https://maven.google.com/'
-            name 'Google'
+            name 'google'
         }
-
     }
 }
 

@@ -1,0 +1,51 @@
+/*
+ *
+ *  * Copyright (c) 2024 Dr. Andreas Feldner.
+ *  *
+ *  *     This program is free software; you can redistribute it and/or modify
+ *  *     it under the terms of the GNU General Public License as published by
+ *  *     the Free Software Foundation; either version 2 of the License, or
+ *  *     (at your option) any later version.
+ *  *
+ *  *     This program is distributed in the hope that it will be useful,
+ *  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  *     GNU General Public License for more details.
+ *  *
+ *  *     You should have received a copy of the GNU General Public License along
+ *  *     with this program; if not, write to the Free Software Foundation, Inc.,
+ *  *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *  *
+ *  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
+ *
+ *
+ */
+
+package de.flyingsnail.googleplay4ipv6droid.googlesubscription;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class SubscriptionBuilder {
+    static final String PRODUCT_ID_TUNNEL_SUBSCRIPTION = "de.flyingsnail.ipv6.tunnelsub";
+    private static final String PRODUCT_ID_TUNNEL_ONE_HOUR = "de.flyingsnail.ipv6.tunnelonehour";
+    private static final String PRODUCT_ID_TUNNEL_ONE_DAY = "de.flyingsnail.ipv6.tunneloneday";
+    static final String TAG = SubscriptionBuilder.class.getSimpleName();
+
+    private SubscriptionBuilder() {
+
+    }
+
+    public static List<String> getSupportedSubscriptionProductIds() {
+        ArrayList<String> result = new ArrayList<>(1);
+        result.add(PRODUCT_ID_TUNNEL_SUBSCRIPTION);
+        return result;
+    }
+
+    public static List<String> getSupportedPurchasesProductIds() {
+        ArrayList<String> result = new ArrayList<>(2);
+        result.add(PRODUCT_ID_TUNNEL_ONE_HOUR);
+        result.add(PRODUCT_ID_TUNNEL_ONE_DAY);
+        return result;
+    }
+}

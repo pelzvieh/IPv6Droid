@@ -20,7 +20,7 @@
  *
  *
  */
-package de.flyingsnail.ipv6droid.android.googlesubscription;
+package de.flyingsnail.googleplay4ipv6droid.googlesubscription;
 
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
@@ -65,8 +65,8 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
 
     private ScheduledExecutorService executor;
 
-    /** A private instance of SubscriptionManager */
-    private SubscriptionManager subscriptionManager;
+    /** A private instance of PurchaseManagerImpl */
+    private PurchaseManagerImpl purchaseManagerImpl;
 
     /** A TextView showing user-readable information about subscription status */
     private TextView purchasingInfoView;
@@ -134,7 +134,7 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
 
         executor = Executors.newScheduledThreadPool(1);
 
-        // initialise SubscriptionManager and Perferences
+        // initialise PurchaseManagerImpl and Perferences
         startNewSubscriptionManager();
 
         // set standard UI state according current state (might have changed already...)
@@ -145,19 +145,19 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
      * This is used in onCreate as well as in scheduleRetry.
      */
     private void startNewSubscriptionManager() {
-        subscriptionManager = new SubscriptionManager(this, this);
+        purchaseManagerImpl = new PurchaseManagerImpl(this, this);
     }
 
     /**
-     * Destroy this activity. Destroys our SubscriptionManager in turn.
+     * Destroy this activity. Destroys our PurchaseManagerImpl in turn.
      */
     @Override
     public void onDestroy() {
         Log.i(TAG, "SubscribeTunnelActivity gets destroyed.");
         executor.shutdownNow();
         super.onDestroy();
-        subscriptionManager.destroy();
-        subscriptionManager = null;
+        purchaseManagerImpl.destroy();
+        purchaseManagerImpl = null;
     }
 
 
@@ -175,9 +175,9 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
         Handler mainHandler = new Handler(this.getMainLooper());
 
         mainHandler.post(() -> {
-            final SubscriptionManager mySubscriptionManager = subscriptionManager;
+            final PurchaseManagerImpl myPurchaseManagerImpl = purchaseManagerImpl;
 
-            if (mySubscriptionManager != null) { // check if parent object wasn't destroyed
+            if (myPurchaseManagerImpl != null) { // check if parent object wasn't destroyed
                 Log.d(TAG, "Updating display state with current state");
                 // set or hide detail view explaining the current state in detail
                 if (purchasingDebugMessage != null) {
@@ -187,7 +187,7 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
                     purchasingInfoDebug.setVisibility(View.GONE);
                 }
 
-                int nrTunnels = mySubscriptionManager.getTunnels().size();
+                int nrTunnels = myPurchaseManagerImpl.getTunnels().size();
                 switch (purchasingResult) {
                     case HAS_TUNNELS:
                         if (nrTunnels > 0) {
@@ -196,7 +196,7 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
                             );
                             setUiStateManagerYieldsTunnels();
                         } else { // should not happen at all
-                            Log.wtf(TAG, "Process status is HAS_TUNNELS/PURCHASE_COMPLETE, but there are no tunnels in SubscriptionManager!");
+                            Log.wtf(TAG, "Process status is HAS_TUNNELS/PURCHASE_COMPLETE, but there are no tunnels in PurchaseManagerImpl!");
                             purchasingInfoView.setText(R.string.user_has_unparsable_subscription_status);
                             setUiStateManagerReady();
                         }
@@ -278,7 +278,7 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
         purchaseButton.setEnabled(false);
         acceptConditions.setEnabled(false);
         acceptConditions.setChecked(true);
-        Date validUntilDate = subscriptionManager.getTunnels().get(0).getExpiryDate();
+        Date validUntilDate = purchaseManagerImpl.getTunnels().get(0).getExpiryDate();
         validUntil.setText(
                 SimpleDateFormat.getDateInstance(
                         SimpleDateFormat.SHORT
@@ -294,7 +294,7 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
 
     /**
      * The callback method defined by SubscriptionCheckResultListener. This is used by our
-     * SubscriptionManager instance to report failure, success of Google/our server queries and
+     * PurchaseManagerImpl instance to report failure, success of Google/our server queries and
      * their result.
      * @param result a ResultType indicating success, technical difficulties and if tunnels are available.
      * @param debugMessage a String giving details why the given result is achieved
@@ -336,9 +336,9 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
      * Called on certain failure states, this method schedules retrying of subscription check.
      */
     private void scheduleRetry() {
-        SubscriptionManager failedSubscriptionManager = subscriptionManager;
-        if (failedSubscriptionManager != null) { // not already destroyed...
-            failedSubscriptionManager.destroy();
+        PurchaseManagerImpl failedPurchaseManagerImpl = purchaseManagerImpl;
+        if (failedPurchaseManagerImpl != null) { // not already destroyed...
+            failedPurchaseManagerImpl.destroy();
         }
         executor.schedule(()-> {
             if (isDestroyed() ||
@@ -347,7 +347,7 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
             ) {
                 Log.i(TAG, "Scheduled retry is obsolete");
             } else {
-                Log.i(TAG, "Scheduled retry is launching a new instance of SubscriptionManager");
+                Log.i(TAG, "Scheduled retry is launching a new instance of PurchaseManagerImpl");
                 startNewSubscriptionManager();
             }
         }, 30, TimeUnit.SECONDS);
@@ -355,15 +355,15 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
 
     /**
      * This will replace the tunnel list read from persistent cache by the tunnel list
-     * received from SubscriptionManager, plus will write the new list back to cache.
+     * received from PurchaseManagerImpl, plus will write the new list back to cache.
      */
     private void updateCachedTunnelList() {
         List<TunnelSpec> subscribedTunnels;
-        SubscriptionManager mySubscriptionManager = subscriptionManager;
-        if (mySubscriptionManager == null || this.isDestroyed()) {
+        PurchaseManagerImpl myPurchaseManagerImpl = purchaseManagerImpl;
+        if (myPurchaseManagerImpl == null || this.isDestroyed()) {
             return; // this Activity is already destroyed
         } else {
-            subscribedTunnels = mySubscriptionManager.getTunnels();
+            subscribedTunnels = myPurchaseManagerImpl.getTunnels();
         }
         // write tunnel list to cache
         TunnelPersisting tp = new TunnelPersistingFile(this.getApplicationContext());
@@ -397,10 +397,10 @@ public class SubscribeTunnelActivity extends AppCompatActivity implements Subscr
         }
         purchaseButton.setEnabled(false); // gegen ungeduldige Benutzer
         acceptConditions.setEnabled(false); // jetzt ist er gefangen...
-        SubscriptionManager mySubscriptionManager = this.subscriptionManager; // avoid race condition
-        if (mySubscriptionManager != null) {
+        PurchaseManagerImpl myPurchaseManagerImpl = this.purchaseManagerImpl; // avoid race condition
+        if (myPurchaseManagerImpl != null) {
             purchasingInfoView.setText(R.string.user_subscription_starting_wizard);
-            mySubscriptionManager.initiatePurchase();
+            myPurchaseManagerImpl.initiatePurchase();
         }
     }
 

@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2024 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -21,39 +21,25 @@
  *
  */
 
-package de.flyingsnail.ipv6server.svc;
+package de.flyingsnail.ipv6droid.android.signinginterface;
+
+import android.os.IBinder;
+
+import java.util.List;
 
 /**
- * An exception denoting a definitive falsification of a subscription claim.
- * @author pelzi
- *
+ * The interface that a certificate provider for IPv6Droid must implement and
+ * return on service binding.
  */
-public class SubscriptionRejectedException extends Exception {
-
-  /**
-   * 
-   */
-  public SubscriptionRejectedException() {
-    super();
-    // TODO Auto-generated constructor stub
-  }
-
-  /**
-   * @param message a String describing the problem
-   */
-  public SubscriptionRejectedException(String message) {
-    super(message);
-    // TODO Auto-generated constructor stub
-  }
-
-  /**
-   * @param cause a Throwable that caused throwing this exception
-   */
-  public SubscriptionRejectedException(Throwable cause) {
-    super(cause);
-    // TODO Auto-generated constructor stub
-  }
-
-  private static final long serialVersionUID = 1L;
-
+public interface IPv6DroidCertRequest extends IBinder {
+    /** A String used to identify the Intent action when binding to a certificat issuing service */
+    String ACTION = "de.flyingsnail.ipv6droid.REQUEST_TUNNEL";
+    /** A String giving the key of a Bundle, to which the certificate signing request is put. */
+    String REQUEST_KEY="CSR";
+    /**
+     * A String giving the key of a Bundle, where to find the List&lt;String&gt; with the elements of
+     * the cert path.
+     */
+    String CERTPATH_KEY="CERT";
+    List<String> getCertificateChain(String csrPemEncoded);
 }
