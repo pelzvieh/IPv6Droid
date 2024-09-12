@@ -28,9 +28,11 @@ import com.google.gson.GsonBuilder;
 
 import java.net.Inet4Address;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 import de.flyingsnail.ipv6server.restapi.CertificationApi;
 import de.flyingsnail.ipv6server.restapi.SubscriptionsApi;
+import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
@@ -56,9 +58,14 @@ class RestProxyFactory {
                 .registerTypeAdapter(Inet4Address.class, new SimpleInetDeserializer())
                 .registerTypeAdapter(Date.class, new SimpleDateSerializer())
                 .create();
+        // Certification takes quite long, we need relaxed reading timeout
+        OkHttpClient httpClient = new OkHttpClient.Builder()
+                .readTimeout(1, TimeUnit.MINUTES)
+                .build();
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(baseUrl)
                 .addConverterFactory(GsonConverterFactory.create(gson))
+                .client(httpClient)
                 .build();
         return retrofit.create(CertificationApi.class);
     }

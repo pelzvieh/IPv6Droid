@@ -27,7 +27,7 @@ buildscript {
         google()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.1.4'
+        classpath libs.gradle
     }
 }
 apply plugin: 'com.android.application'
@@ -67,8 +67,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        //sourceCompatibility JavaVersion.VERSION_1_8
+        //targetCompatibility JavaVersion.VERSION_1_8
     }
     packagingOptions {
         resources {
@@ -96,20 +96,24 @@ android {
         checkReleaseBuilds true
     }
     namespace 'de.flyingsnail.ipv6droid'
+    buildFeatures {
+        buildConfig true
+    }
 
 }
 
 dependencies {
-    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
-    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
-    implementation 'androidx.annotation:annotation:1.7.1'
-    implementation 'org.jetbrains.trove4j:trove4j:20160824'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    implementation 'androidx.core:core:1.12.0'
-    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
-    implementation 'com.android.billingclient:billing:6.1.0'
-    implementation 'org.bouncycastle:bctls-jdk15to18:1.77'
-    implementation 'org.bouncycastle:bcpkix-jdk15to18:1.77'
-    implementation 'androidx.preference:preference:1.2.1'
-    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation libs.retrofit
+    implementation libs.retrofit.converter.gson
+    implementation libs.androidx.annotation
+    implementation libs.androidx.constraintlayout
+    implementation libs.androidx.localbroadcastmanager
+    implementation libs.billing
+    implementation libs.bctls.jdk15to18
+    implementation libs.bcpkix.jdk15to18
+    implementation libs.androidx.preference
+    // dependencies to resolve indirect dependency mismatches
+    implementation libs.kotlin.stdlib
+    implementation libs.kotlin.stdlib.sdk7
+    implementation libs.kotlin.stdlib.sdk8
 }
