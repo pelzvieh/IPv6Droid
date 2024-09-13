@@ -41,6 +41,8 @@ import de.flyingsnail.ipv6droid.transport.TunnelSpec;
  * A TunnelReader that reads tunnels from a partner app.
  */
 public class IntentTunnelReader implements TunnelReader {
+    /** A String used to identify the Intent action when binding to a certificat issuing service */
+    public static final String ACTION = "de.flyingsnail.ipv6droid.REQUEST_TUNNEL";
     final private static String TAG = IntentTunnelReader.class.getSimpleName();
     private final CertificateToTunnel certHelper;
     private final Context context;
@@ -50,7 +52,7 @@ public class IntentTunnelReader implements TunnelReader {
         this.context = context;
         serviceConnection = new SigningServiceConnection();
         certHelper = new CertificateToTunnel();
-        Intent queryCertificateIntent = new Intent(IPv6DroidCertRequest.ACTION);
+        Intent queryCertificateIntent = new Intent(ACTION);
         if (!context.bindService(queryCertificateIntent, serviceConnection, Context.BIND_AUTO_CREATE)) {
             throw new IllegalStateException("Cannot bind to certificate issuer - companion app seems to be missing");
         }

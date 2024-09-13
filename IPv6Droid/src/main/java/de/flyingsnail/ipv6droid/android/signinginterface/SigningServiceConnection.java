@@ -23,7 +23,7 @@
 
 package de.flyingsnail.ipv6droid.android.signinginterface;
 
-import static de.flyingsnail.ipv6droid.android.signinginterface.IPv6DroidCertRequest.CERTPATH_KEY;
+import static de.flyingsnail.ipv6droid.android.signinginterface.SigningServiceConnection.CERTPATH_KEY;
 
 import android.content.ComponentName;
 import android.content.ServiceConnection;
@@ -63,6 +63,11 @@ class MessageHandler extends Handler {
  * corresponding private key on the local device, can be translated into tunnel specifications.
  */
 class SigningServiceConnection implements ServiceConnection {
+    /**
+     * A String giving the key of a Bundle, where to find the List&lt;String&gt; with the elements of
+     * the cert path.
+     */
+    public static final String CERTPATH_KEY="CERT";
     private static final String TAG = SigningServiceConnection.class.getSimpleName();
     private boolean damaged;
     private Messenger serviceMessenger;

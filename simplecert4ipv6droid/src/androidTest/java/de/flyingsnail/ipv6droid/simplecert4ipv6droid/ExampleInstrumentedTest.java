@@ -21,25 +21,29 @@
  *
  */
 
-package de.flyingsnail.ipv6droid.android.signinginterface;
+package de.flyingsnail.ipv6droid.simplecert4ipv6droid;
 
-import android.os.IBinder;
+import static org.junit.Assert.assertEquals;
 
-import java.util.List;
+import android.content.Context;
+
+import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 /**
- * The interface that a certificate provider for IPv6Droid must implement and
- * return on service binding.
+ * Instrumented test, which will execute on an Android device.
+ *
+ * @see <a href="http://d.android.com/tools/testing">Testing documentation</a>
  */
-public interface IPv6DroidCertRequest extends IBinder {
-    /** A String used to identify the Intent action when binding to a certificat issuing service */
-    String ACTION = "de.flyingsnail.ipv6droid.REQUEST_TUNNEL";
-    /** A String giving the key of a Bundle, to which the certificate signing request is put. */
-    String REQUEST_KEY="CSR";
-    /**
-     * A String giving the key of a Bundle, where to find the List&lt;String&gt; with the elements of
-     * the cert path.
-     */
-    String CERTPATH_KEY="CERT";
-    List<String> getCertificateChain(String csrPemEncoded);
+@RunWith(AndroidJUnit4.class)
+public class ExampleInstrumentedTest {
+    @Test
+    public void useAppContext() {
+        // Context of the app under test.
+        Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        assertEquals("de.flyingsnail.ipv6droid.simplecert4ipv6droid", appContext.getPackageName());
+    }
 }

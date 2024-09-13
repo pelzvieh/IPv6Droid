@@ -282,7 +282,7 @@ public class PurchaseTunnelActivity
     }
 
     private void onCertificationResult (CertificationResultListener.ResultType certificationResult) {
-        final Tunnels tunnels = sharedViewModel.getTunnels().getValue();
+        final Tunnels tunnels = sharedViewModel.get().getValue();
         int nrTunnels = (tunnels == null) ? 0 : tunnels.size();
         switch (certificationResult) {
             case PURCHASE_REJECTED:

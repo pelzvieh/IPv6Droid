@@ -25,6 +25,7 @@
     <string name="app_name">GooglePlay4IPv6Droid</string>
     <string name="tab_text_1">Tab 1</string>
     <string name="tab_text_2">Tab 2</string>
+    <string name="action_settings">Settings</string>
     <string name="subscription">Subscription</string>
     <string name="manage_subscriptions">Here you can launch Google Play to review and manage (e.g. terminate) your tunnel subscription.</string>
     <string name="subscription_status">The following status is determined from the Google account that your device is linked to. Retrieving the status may take a few seconds. If valid until date is reached, subscription will be extended (with the monthly fee), unless you terminated the subscription.</string>
@@ -42,9 +43,9 @@
     <string name="subscriptionPurchaseStarted">Google purchasing initiated</string>
     <string name="user_subscription_no_service">Google subscription service is not available at the moment. We will retry the attempt later.</string>
     <string name="user_subscription_no_service_on_this_device">Google subscription services are not available on this device - please contact support.</string>
+    <string name="certification_default_url_base" translatable="false">https://flyingsnail.de/services/services/</string>
     <string name="pref_header_experimental">Experimental settings</string>
     <string name="ipv6_test_host" translatable="false">2a06:1c40::309</string>
-    <string name="certification_default_url_base" translatable="false">https://flyingsnail.de/services/services/</string>
     <plurals name="user_has_subscription">
         <item quantity="one">You are subscribed to %d tunnel</item>
         <item quantity="other">You are subscribed to %d tunnels</item>
@@ -61,4 +62,10 @@
     <string name="user_subscription_aborted">Subscription not successful, we\'re sorry. Don\'t hesitate to contact us with any question that concern you.</string>
     <string name="user_subscription_management_not_launched">"Could not launch Google Play subscription manager"</string>
     <string name="description_no_billing">Google Play Purchases not available on this device</string>
+    <string name="title_activity_subscribe_tunnel">SubscribeTunnel</string>
+    <string name="manual_setup_label">Self-hosted</string>
+    <string name="purchase_and_use_on_this_device">Purchase and use on this device</string>
+    <string name="consume_purchase_explanation">After purchase, a certificate will be granted to build a tunnel. This can only be used on this device.</string>
+    <string name="consume_purchase_button_label">Consume for this device</string>
+    <string name="subscription_label_renew_active">Renew active subscription</string>
 </resources>

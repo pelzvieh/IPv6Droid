@@ -57,7 +57,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import de.flyingsnail.ipv6droid.R;
-import de.flyingsnail.ipv6droid.android.googlesubscription.SubscribeTunnelActivity;
 import de.flyingsnail.ipv6droid.android.statusdetail.StatisticsActivity;
 import de.flyingsnail.ipv6droid.android.vpnrun.VpnStatusReport;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
@@ -295,9 +294,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void openSubscriptionOverview () {
-        Intent setupIntent = new Intent(this, SubscribeTunnelActivity.class);
-        setupIntent.setPackage(getApplicationContext().getPackageName());
-        startActivity(setupIntent);
+        // todo implement this
+        //Intent setupIntent = new Intent(
+        //startActivity(setupIntent);
     }
 
 

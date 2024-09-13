@@ -44,10 +44,10 @@ public interface PurchaseTunnelViewModel {
 
     /**
      * Query the result status of Certification. This property is guaranteed to update <em>after</em>
-     * the Tunnels property has updated with a changed list of tunnels.
+     * the certChain property has updated with a signed certChain.
      *
-     * @return LiveData&lt;CertificationResultListener.ResultType&gt; that can be observed for changes of the result of the certification
-     *      check.
+     * @return LiveData&lt;CertificationResultListener.ResultType&gt; that can be observed for
+     *      changes of the result of the certification check.
      */
     LiveData<CertificationResultListener.ResultType> getCertificationResult();
 
@@ -65,7 +65,7 @@ public interface PurchaseTunnelViewModel {
     LiveData<String> getPurchasingDebugMessage();
 
     /**
-     * Query the Purchase that is basis for current available tunnels
+     * Query the Purchase that is basis for currently available certChain
      * @return LiveData&lt;Purchase&gt; that can be observed for changes of the active Purchase.
      */
     LiveData<Purchase> getActivePurchase();
@@ -80,8 +80,8 @@ public interface PurchaseTunnelViewModel {
     /**
      * Initiate a purchase with the Google Billing client. The normal flow of this operation
      * is that the user is guided through the purchase by Google, after which the purchased
-     * item is directly consumed into a tunnel for this device, resulting in an observable
-     * change of the Tunnels property.
+     * item is directly consumed into a certificate for this device, resulting in an observable
+     * change of the certChain property.
      *
      * @param productId a String giving the product identifier of the product to purchase.
      * @param offerId a String giving the ID of the offer to use (as set in play console)
@@ -94,7 +94,13 @@ public interface PurchaseTunnelViewModel {
      * operation that would occur only if consumption of a product failed (typically for technical
      * reasons) after its purchase.
      * @param sku a String giving the product identifier of a Purchase that should be consumed
-     *            into a tunnel.
+     *            into a certChain.
      */
     void consumePurchase(String sku);
+
+    /**
+     * Query the certificate chain issued from this purchase
+     * @return a List&lt;String&gt; each String giving one certificate, PEM encoded
+     */
+    LiveData<List<String>> getCertChain();
 }

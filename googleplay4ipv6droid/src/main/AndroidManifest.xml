@@ -23,6 +23,8 @@
   -->
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="com.android.vending.BILLING" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"
@@ -45,6 +47,16 @@
                 <data android:mimeType="application/pkcs10"/>
             </intent-filter>
         </activity>
+        <activity
+            android:name="de.flyingsnail.googleplay4ipv6droid.googlesubscription.SubscribeTunnelActivity"
+            android:label="@string/title_activity_subscribe_tunnel"
+            android:parentActivityName=".SelectProductActivity"
+            android:resizeableActivity="true">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="de.flyingsnail.ipv6droid.android.MainActivity" />
+        </activity>
+
     </application>
 
 </manifest>

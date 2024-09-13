@@ -39,17 +39,13 @@ import com.android.billingclient.api.Purchase;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import de.flyingsnail.ipv6droid.BuildConfig;
-import de.flyingsnail.ipv6droid.R;
-import de.flyingsnail.ipv6droid.android.TunnelPersisting;
-import de.flyingsnail.ipv6droid.android.TunnelPersistingFile;
-import de.flyingsnail.ipv6droid.android.Tunnels;
-import de.flyingsnail.ipv6droid.transport.TunnelSpec;
+import de.flyingsnail.googleplay4ipv6droid.R;
 
 /**
  * Holds data for PurchaseTunnelActivity and its Fragments.
@@ -62,9 +58,9 @@ public class PurchaseTunnelViewModelProd
      */
     private final static String TAG = PurchaseTunnelViewModelProd.class.getSimpleName();
     /**
-     * Observable tunnel data.
+     * Observable certificate chain.
      */
-    private final MutableLiveData<Tunnels> tunnels = new MutableLiveData<>(new Tunnels());
+    private final MutableLiveData<List<String>> certChain;
     /**
      * Observable flag if a certification process is currently running
      */
@@ -109,6 +105,8 @@ public class PurchaseTunnelViewModelProd
      */
     public PurchaseTunnelViewModelProd(final Application application) {
         super(application);
+        List<String> emptyList = Collections.emptyList();
+        certChain = new MutableLiveData<>(emptyList);
         executor = Executors.newScheduledThreadPool(1);
         isDestroyed = false;
 
@@ -196,8 +194,8 @@ public class PurchaseTunnelViewModelProd
     }
 
     @Override
-    public final LiveData<Tunnels> getTunnels() {
-        return tunnels;
+    public final LiveData<List<String>> getCertChain() {
+        return certChain;
     }
 
     @Override
@@ -285,50 +283,6 @@ public class PurchaseTunnelViewModelProd
             certificationRunning.setValue(true);
             helper.certifyTunnelsForPurchase(activePurchase, this);
         }
-    }
-
-
-    /**
-     * Callback to inform about an asynchronous attempt to get tunnels from a purchase.
-     *
-     * @param purchase   the Purchase for which the request was initiated. Guaranteed to be the
-     *                   unaltered object as passed.
-     * @param tunnels    the Tunnels created from the Purchase. May be empty.
-     * @param resultType the ResultType classifying the outcome of the attempt, @see {ResultType}
-     * @param e          an Exception giving details of failure and rejections.
-     */
-    @Override
-    public void onCertificationRequestResult(
-            @NonNull Purchase purchase,
-            @NonNull List<TunnelSpec> tunnels,
-            CertificationResultListener.ResultType resultType,
-            @Nullable Exception e) {
-        switch(resultType) {
-            case OK:
-                Log.i(TAG, "successfully retrieved tunnels from purchase");
-                purchaseManager.consumePurchase(purchase);
-                Log.i(TAG, "Marked purchase as consumed");
-                updateCachedTunnelList(tunnels);
-                break;
-
-            case TECHNICAL_FAILURE:
-                Log.e(TAG, "Failed to retrieve tunnels for purchase", e);
-                scheduleRetry();
-                break;
-
-            case PURCHASE_REJECTED:
-                Log.e(TAG, "A purchase from local billing client seems to have been rejected", e);
-                if (e != null) {
-                    purchasingDebugMessage.setValue(e.toString());
-                    purchaseManager.revalidateCache(purchase, e);
-                } else {
-                    purchasingDebugMessage.setValue("Purchase not verifiable");
-                }
-                break;
-        }
-
-        certificationResult.setValue(resultType);
-        certificationRunning.setValue(false);
     }
 
     /**
@@ -427,5 +381,39 @@ public class PurchaseTunnelViewModelProd
         executor.shutdownNow();
         purchaseManager.destroy();
         purchaseManager = null;
+    }
+
+    @Override
+    public void onCertificationRequestResult(
+            @NonNull Purchase purchase,
+            @NonNull List<String> certificateChain,
+            CertificationResultListener.ResultType resultType,
+            @Nullable Exception e) {
+        switch(resultType) {
+            case OK:
+                Log.i(TAG, "successfully retrieved tunnels from purchase");
+                purchaseManager.consumePurchase(purchase);
+                Log.i(TAG, "Marked purchase as consumed");
+                updateCachedTunnelList(tunnels);
+                break;
+
+            case TECHNICAL_FAILURE:
+                Log.e(TAG, "Failed to retrieve tunnels for purchase", e);
+                scheduleRetry();
+                break;
+
+            case PURCHASE_REJECTED:
+                Log.e(TAG, "A purchase from local billing client seems to have been rejected", e);
+                if (e != null) {
+                    purchasingDebugMessage.setValue(e.toString());
+                    purchaseManager.revalidateCache(purchase, e);
+                } else {
+                    purchasingDebugMessage.setValue("Purchase not verifiable");
+                }
+                break;
+        }
+
+        certificationResult.setValue(resultType);
+        certificationRunning.setValue(false);
     }
 }

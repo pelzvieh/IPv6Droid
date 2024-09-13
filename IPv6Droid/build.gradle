@@ -76,27 +76,24 @@ android {
         }
     }
 
-
     buildTypes {
         release {
-            buildConfigField("java.lang.String", "target_uri", "\"\"")
             signingConfig signingConfigs.release
         }
         debug {
             matchingFallbacks = []
-            buildConfigField("java.lang.String", "target_uri", "\"\"")
-        }
-        debug_internal {
-            initWith debug
-            buildConfigField("java.lang.String", "target_uri", "\"http://ipv6test.internal.flying-snail.de:8080/services/services/\"")
         }
     }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
     lint {
         abortOnError false
         checkReleaseBuilds true
     }
     namespace 'de.flyingsnail.ipv6droid'
-
 }
 
 dependencies {

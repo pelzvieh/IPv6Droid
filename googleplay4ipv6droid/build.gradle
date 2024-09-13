@@ -38,9 +38,26 @@ buildscript {
 
 apply plugin: 'com.android.application'
 
+def keystorePropertiesFile = rootProject.file("keystore.local.properties")
+
+// Initialize a new Properties() object called keystoreProperties.
+def keystoreProperties = new Properties()
+
+// Load your keystore.properties file into the keystoreProperties object.
+keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+
 android {
     namespace 'de.flyingsnail.googleplay4ipv6droid'
     compileSdk 34
+
+    signingConfigs {
+        release {
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+            storeFile file(keystoreProperties['storeFile'])
+            storePassword keystoreProperties['storePassword']
+        }
+    }
 
     defaultConfig {
         applicationId "de.flyingsnail.googleplay4ipv6droid"
@@ -48,22 +65,37 @@ android {
         targetSdk 34
         versionCode 1
         versionName "1.0"
-
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
+            buildConfigField("java.lang.String", "target_uri", "\"\"")
+            signingConfig signingConfigs.release
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            matchingFallbacks = []
+            buildConfigField("java.lang.String", "target_uri", "\"\"")
+        }
+        debug_internal {
+            initWith debug
+            buildConfigField("java.lang.String", "target_uri", "\"http://ipv6test.internal.flying-snail.de:8080/services/services/\"")
         }
     }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds true
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_10
         targetCompatibility JavaVersion.VERSION_1_10
     }
     buildFeatures {
         viewBinding true
+        buildConfig = true
     }
 }
 

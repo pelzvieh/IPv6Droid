@@ -24,16 +24,17 @@
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:versionCode="78"
-    android:versionName="2.13">
+    android:versionCode="81"
+    android:versionName="2.99a">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="com.android.vending.BILLING" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED"/>
+
     <!-- We also work on devices with classic touchpad or mouse -->
     <uses-feature
         android:name="android.hardware.touchscreen"
@@ -70,7 +71,9 @@
         <service
             android:name=".android.IPv6DroidVpnService"
             android:permission="android.permission.BIND_VPN_SERVICE"
-            android:exported="true">
+            android:foregroundServiceType="systemExempted"
+            android:exported="true"
+            tools:ignore="ForegroundServicePermission">
             <intent-filter>
                 <action android:name="android.net.VpnService" />
             </intent-filter>
@@ -114,16 +117,6 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
-
-        <activity
-            android:name="de.flyingsnail.googleplay4ipv6droid.googlesubscription.SubscribeTunnelActivity"
-            android:label="@string/title_activity_subscribe_tunnel"
-            android:parentActivityName=".android.MainActivity"
-            android:resizeableActivity="true">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value="de.flyingsnail.ipv6droid.android.MainActivity" />
-        </activity>
 
     </application>
 

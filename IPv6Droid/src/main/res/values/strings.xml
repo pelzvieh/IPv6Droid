@@ -27,6 +27,7 @@
     <string name="action_settings">Settings</string>
     <string name="action_connect">Connect</string>
     <string name="action_tic_reload">Reload tunnels</string>
+    <string name="action_subscribe">Request tunnels</string>
     <string name="action_help">Help</string>
 
     <string name="password_set">&lt;set&gt;</string>
@@ -66,11 +67,14 @@
     <string name="channel_status_name">IPv6 Status</string>
     <string name="channel_errors_description">Error messages from IPv6 tunnel</string>
     <string name="channel_status_description">Current status of IPv6 tunnel</string>
+    <string name="ipv6_test_host" translatable="false">2a06:1c40::309</string>
 
     <string name="statistics_started_at">Started at</string>
     <string name="statistics_reconnects">Reconnects</string>
     <string name="vpnthread_interrupted">We\'re interrupted</string>
     <string name="pref_header_dtls_key_create">Create DTLS key and certificates</string>
+
+    <string name="pref_header_experimental">Experimental features</string>
 
     <!-- TODO: Remove or change this placeholder text -->
     <string name="key_name">Key name for creation</string>
