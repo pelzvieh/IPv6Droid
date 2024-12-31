@@ -23,7 +23,6 @@
 
 package de.flyingsnail.ipv6droid.simplecert4ipv6droid;
 
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 import android.content.ComponentName;
@@ -32,11 +31,14 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.IBinder;
 
+import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.test.rule.ServiceTestRule;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -46,14 +48,22 @@ import java.util.List;
 @RunWith(AndroidJUnit4.class)
 public class SimpleCertificationServiceTest {
 
+    @Rule
+    public final ServiceTestRule serviceRule = new ServiceTestRule();
+
     private SimpleCertificationService certificationService;
     @Before
     public void setUp() throws Exception {
-        certificationService = new SimpleCertificationService();
+        Context targetContext = ApplicationProvider.getApplicationContext();
+        Intent intent = new Intent(targetContext, SimpleCertificationService.class).
+                setAction(SimpleCertificationService.ACTION_UI);
+        SimpleCertificationService.LocalBinder binder = (SimpleCertificationService.LocalBinder) serviceRule.bindService(intent);
+        certificationService = binder.getService();
     }
 
     @After
     public void tearDown() throws Exception {
+        Context targetContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
     }
 
     @Test
@@ -64,37 +74,31 @@ public class SimpleCertificationServiceTest {
 
     @Test
     public void setCertChain() {
-        List<String> certChain = new LinkedList<String>();
+        List<String> certChain = new LinkedList<>();
         certChain.add("Blubb");
         certChain.add("Gwonz");
         certificationService.setCertChain(certChain);
     }
 
-    @Test
-    public void onBind() {
-        Context targetContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        Intent intent = new Intent(targetContext, SimpleCertificationService.class);
-        targetContext.bindService(intent, connection, Context.BIND_AUTO_CREATE);
-        assertNotNull(boundService);
-    }
-
-    private SimpleCertificationService boundService = null;
 
     private final ServiceConnection connection = new ServiceConnection() {
-        public SimpleCertificationService getCertificationService() {
-            return certificationService;
-        }
         @Override
         public void onServiceConnected(ComponentName className,
                                        IBinder service) {
             // We've bound to LocalService, cast the IBinder and get LocalService instance.
             SimpleCertificationService.LocalBinder binder = (SimpleCertificationService.LocalBinder) service;
-            boundService = binder.getService();
+            certificationService = binder.getService();
+            synchronized (this) {
+                notifyAll();
+            }
         }
 
         @Override
         public void onServiceDisconnected(ComponentName arg0) {
-            boundService = null;
+            certificationService = null;
+            synchronized (this) {
+                notifyAll();
+            }
         }
     };
 

@@ -47,6 +47,7 @@ public class CertificateToTunnel {
                 return new AndroidBackedKeyPair(alias).getCertificationRequest();
             } catch (IOException e) {
                 Log.i(TAG, "Key pair alias " + alias + " did not convert to CSR: " + e);
+                // try the other ones, if none works, generate a new
             }
         }
         // no alias exists or none was convertible to a CSR

@@ -23,10 +23,18 @@
 
 package de.flyingsnail.ipv6droid.simplecert4ipv6droid;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -36,32 +44,68 @@ import de.flyingsnail.ipv6droid.simplecert4ipv6droid.databinding.FragmentFirstBi
 
 public class FirstFragment extends Fragment {
 
-private FragmentFirstBinding binding;
+    private static final String TAG = FirstFragment.class.getSimpleName();
+    private FragmentFirstBinding binding;
+
+    private CertSetup certSetup;
+    private Handler handler;
 
     @Override
     public View onCreateView(
             @NonNull LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState
     ) {
-
-      binding = FragmentFirstBinding.inflate(inflater, container, false);
-      return binding.getRoot();
-
+        Log.i(TAG, "CreateView of FirstFragment");
+        handler = new Handler(Looper.getMainLooper());
+        binding = FragmentFirstBinding.inflate(inflater, container, false);
+        return binding.getRoot();
     }
 
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        binding.buttonFirst.setOnClickListener(v ->
+        binding.buttonNext.setOnClickListener(v ->
                 NavHostFragment.findNavController(FirstFragment.this)
                         .navigate(R.id.action_FirstFragment_to_SecondFragment)
         );
+        certSetup = (CertSetup)getActivity();
+        binding.showCsr.setEnabled(false);
+        binding.buttonNext.setEnabled(false);
+        pollCsr();
     }
 
-@Override
+    /**
+     * Repeats itself as long as no CSR has arrived from our cert service
+     */
+    private void pollCsr() {
+        Log.i(TAG, "Polling for a CSR");
+        String csr = certSetup.getCsr();
+        binding.showCsr.setText(csr != null ? csr : "");
+        if (csr != null) {
+            Log.i(TAG, "CSR is set");
+            binding.showCsr.setEnabled(true);
+            binding.buttonNext.setEnabled(true);
+            binding.showCsr.setOnClickListener(this::copyCsrToClipboard);
+        } else {
+            handler.postDelayed(this::pollCsr, 500L);
+        }
+    }
+
+    public void copyCsrToClipboard(@NonNull View view) {
+        Log.i(TAG, "Copy current CSR to clipboard");
+        final CharSequence csr = binding.showCsr.getText();
+        final ClipboardManager clipboardManager = (ClipboardManager) (requireActivity().getSystemService(Context.CLIPBOARD_SERVICE));
+        final ClipData csrClip = ClipData.newPlainText("CSR", csr);
+        clipboardManager.setPrimaryClip(csrClip);
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2)
+            Toast.makeText(getActivity(), "Copied", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
     public void onDestroyView() {
+        Log.i(TAG, "FirstFragment view destroyed");
         super.onDestroyView();
+        handler.removeCallbacksAndMessages(null);
         binding = null;
     }
-
 }

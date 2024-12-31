@@ -31,7 +31,6 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -40,7 +39,7 @@ import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
-import com.google.android.material.snackbar.Snackbar;
+import java.util.List;
 
 import de.flyingsnail.ipv6droid.simplecert4ipv6droid.databinding.ActivityCertSetupBinding;
 
@@ -71,16 +70,8 @@ public class CertSetup extends AppCompatActivity {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_cert_setup);
         appBarConfiguration = new AppBarConfiguration.Builder(navController.getGraph()).build();
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
-
-        binding.fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAnchorView(R.id.fab)
-                        .setAction("Action", null).show();
-            }
-        });
     }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -92,8 +83,32 @@ public class CertSetup extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         // bind to local SimpleCertificationService
-        Intent intent = new Intent(this, SimpleCertificationService.class);
-        bindService(intent, connection, Context.BIND_AUTO_CREATE);
+        Intent intent = new Intent(this, SimpleCertificationService.class)
+                .setAction(SimpleCertificationService.ACTION_UI);
+        if (!bindService(intent, connection, Context.BIND_AUTO_CREATE))
+            throw new IllegalStateException("Could not bind to SimpleCertificationService");
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unbindService(connection);
+    }
+
+    public String getCsr() {
+        if (certificationService != null)
+            return certificationService.getCsr();
+        else
+            return null;
+    }
+
+    public boolean setCertChain(List<String> certChain) {
+        if (certificationService != null) {
+            certificationService.setCertChain(certChain);
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /** Defines callbacks for service binding, passed to bindService(). */

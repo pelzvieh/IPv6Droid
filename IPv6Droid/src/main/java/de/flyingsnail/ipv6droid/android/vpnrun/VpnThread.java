@@ -301,7 +301,7 @@ public class VpnThread extends Thread {
         }
 
         List<? extends TunnelSpec> availableTunnels = tr.queryTunnels();
-        tr.destroy();
+        tr.close();
 
         boolean activeTunnelValid = false;
         if (tunnels == null)

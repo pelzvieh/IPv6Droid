@@ -64,12 +64,16 @@ public class SimpleCertificationService extends Service {
     /**
      * A String used to identify the Intent action when UI binding to this service's state.
      */
-    private static final String ACTION_UI = Objects.requireNonNull(SimpleCertificationService.class.getPackage()).getName() + "BIND_UI";
+    public static final String ACTION_UI = Objects.requireNonNull(SimpleCertificationService.class.getPackage()).getName() + "BIND_UI";
 
     /**
-     * A Messenger to communicate with a bound service client.
+     * A Messenger to receive messages from a bound service client.
      */
     private final Messenger messenger;
+    /**
+     * A Messenger to send answers to.
+     */
+    private Messenger replyMessenger = null;
 
     private String csr;
 
@@ -83,10 +87,12 @@ public class SimpleCertificationService extends Service {
      * Handle action Foo in the provided background thread with the provided
      * parameters.
      */
-    private void handleActionCertRequest(String csr) {
+    private void handleActionCertRequest(String csr, Messenger replyTo) {
         this.csr = csr;
         this.cert = null;
+        this.replyMessenger = replyTo;
         Intent csrActionIntent = new Intent(this, CertSetup.class);
+        csrActionIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(csrActionIntent);
     }
 
@@ -106,7 +112,9 @@ public class SimpleCertificationService extends Service {
         Log.i(TAG, "Received cert path");
         this.cert = new ArrayList<String>(cert.size());
         this.cert.addAll(cert);
-        postCertificate();
+        if (replyMessenger != null) {
+            postCertificate();
+        }
     }
 
     /**
@@ -118,7 +126,8 @@ public class SimpleCertificationService extends Service {
         Message message = Message.obtain();
         message.setData(certBundle);
         try {
-            messenger.send(message);
+            replyMessenger.send(message);
+            Log.i(TAG, "Sent cert path to bound external services");
         } catch (RemoteException e) {
             Toast.makeText(getApplicationContext(), "Unable to send message with cert path", Toast.LENGTH_LONG);
             Log.e(TAG, "Unable to send message with cert path", e);
@@ -141,15 +150,16 @@ public class SimpleCertificationService extends Service {
             Log.i(TAG, "Received message");
             switch (msg.what) {
                 case MSG_WHAT_CERT_REQUEST:
-                    Object obj = msg.obj;
-                    if (obj instanceof String) {
-                        Log.i(TAG, "Handling received CSR: " + obj);
-                        simpleCertificationService.handleActionCertRequest((String) obj);
+                    String csr = msg.getData().getString("csr");
+                    if (Objects.nonNull(csr)) {
+                        Log.i(TAG, "Handling received CSR: " + csr);
+                        simpleCertificationService.handleActionCertRequest(csr, msg.replyTo);
                     } else {
-                        Log.e(TAG, "Received message with illegal object argument: " + obj);
+                        Log.e(TAG, "Received message with illegal data content");
                     }
                     break;
                 default:
+                    Log.w(TAG, "Message is unkown: " + msg.what);
                     super.handleMessage(msg);
             }
         }

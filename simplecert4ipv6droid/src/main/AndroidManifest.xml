@@ -31,9 +31,6 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.IPv6Droid_git">
-        <service
-            android:name=".CertificationIntentService"
-            android:exported="false"></service>
 
         <activity
             android:name=".CertSetup"
@@ -41,10 +38,21 @@
             android:theme="@style/Theme.IPv6Droid_git">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter>
+                <action android:name=".action.SIGN"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:scheme="signing_request" android:host="flyingsnail.de"/>
+            </intent-filter>
         </activity>
+
+        <service android:name=".SimpleCertificationService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="de.flyingsnail.ipv6droid.REQUEST_TUNNEL"/>
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

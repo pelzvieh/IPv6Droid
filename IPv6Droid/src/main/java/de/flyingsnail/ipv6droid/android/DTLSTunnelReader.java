@@ -86,7 +86,7 @@ public class DTLSTunnelReader implements TunnelReader {
     }
 
     @Override
-    public void destroy() {
+    public void close() {
         // no clean-up required here
     }
 }

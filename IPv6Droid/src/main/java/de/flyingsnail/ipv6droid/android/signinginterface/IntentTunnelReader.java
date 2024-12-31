@@ -26,6 +26,7 @@ package de.flyingsnail.ipv6droid.android.signinginterface;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.ResolveInfo;
 import android.util.Log;
 
 import java.io.IOException;
@@ -41,22 +42,35 @@ import de.flyingsnail.ipv6droid.transport.TunnelSpec;
  * A TunnelReader that reads tunnels from a partner app.
  */
 public class IntentTunnelReader implements TunnelReader {
-    /** A String used to identify the Intent action when binding to a certificat issuing service */
+    /** A String used to identify the Intent action when binding to a certificate issuing service */
     public static final String ACTION = "de.flyingsnail.ipv6droid.REQUEST_TUNNEL";
     final private static String TAG = IntentTunnelReader.class.getSimpleName();
     private final CertificateToTunnel certHelper;
     private final Context context;
     private SigningServiceConnection serviceConnection;
+    private Thread queryThread;
 
-    public IntentTunnelReader(final Context context) {
+    public IntentTunnelReader(final Context context) throws IOException {
         this.context = context;
         serviceConnection = new SigningServiceConnection();
         certHelper = new CertificateToTunnel();
         Intent queryCertificateIntent = new Intent(ACTION);
-        if (!context.bindService(queryCertificateIntent, serviceConnection, Context.BIND_AUTO_CREATE)) {
-            throw new IllegalStateException("Cannot bind to certificate issuer - companion app seems to be missing");
+        // query matching services and explicitly set package name to one of them
+        // todo this needs refactoring into user-selectable list; here using the selected package
+        for (ResolveInfo resolveInfo: context.getPackageManager().queryIntentServices(queryCertificateIntent, 0) ) {
+            Log.i(TAG, "bind candidate " + resolveInfo);
+            if (resolveInfo.serviceInfo != null) {
+                queryCertificateIntent.setPackage(resolveInfo.serviceInfo.packageName);
+            }
         }
+        if (!context.bindService(queryCertificateIntent, serviceConnection, Context.BIND_AUTO_CREATE|Context.BIND_ALLOW_ACTIVITY_STARTS)) {
+            context.unbindService(serviceConnection);
+            throw new IOException("Cannot bind to certificate issuer - companion app seems to be missing");
+        }
+        // send CSR to service
+        serviceConnection.requestCertificate(certHelper.getCsr());
     }
+
 
     /**
      * Query tunnels from external application by intent
@@ -66,29 +80,35 @@ public class IntentTunnelReader implements TunnelReader {
      */
     @Override
     public synchronized List<TunnelSpec> queryTunnels() throws ConnectionFailedException, IOException {
-        serviceConnection.requestCertificate(certHelper.getCsr());
-        List<String> certPath = serviceConnection.getCertPath();
-        if (certPath == null) {
-            Log.d(TAG, "No certificate available yet");
-            try {
-                if (serviceConnection.isDamaged()) {
-                    Log.i(TAG, "First attempt to query certificates lead to broken connection");
-                    serviceConnection = new SigningServiceConnection();
-                    serviceConnection.requestCertificate(certHelper.getCsr());
-                }
-                wait(10000L);
-                certPath = serviceConnection.getCertPath();
-            } catch (InterruptedException e) {
-                throw new IOException (e);
+        List<String> certPath = null;
+        do {
+            SigningServiceConnection localServiceConnection = serviceConnection;
+            if (localServiceConnection == null) {
+                throw new IOException("lost serviceConnection while querying tunnels");
             }
-        }
-        if (certPath == null) {
-            throw new IOException("Timeout, subscription query not finalised after 10 secs.");
-        }
+            if (localServiceConnection.isDamaged()) {
+                Log.i(TAG, "First attempt to query certificates lead to broken connection");
+                serviceConnection = new SigningServiceConnection();
+                serviceConnection.requestCertificate(certHelper.getCsr());
+                localServiceConnection = serviceConnection;
+            }
+            synchronized (localServiceConnection) {
+                certPath = localServiceConnection.getCertPath();
+                if (certPath == null) {
+                    Log.d(TAG, "No certificate available yet");
+                    try {
+                        localServiceConnection.wait();
+                    } catch (InterruptedException e) {
+                        Log.e(TAG, "Wait on service connection interrupted, no longer trying to read tunnels");
+                        return new ArrayList<>(0);
+                    }
+                }
+            }
+        } while (certPath == null);
         if (certPath.isEmpty()) {
-            throw new ConnectionFailedException("No active certificates available for this device", null);
+            // empty array indicates that there's positively no tunnel
+            return new ArrayList<>(0);
         }
-
         TunnelSpec spec = certHelper.createTunnelSpec(certPath);
         Log.d(TAG, "Success creating a tunnel spec: " + spec);
         List<TunnelSpec> retVal = new ArrayList<>(1);
@@ -96,15 +116,19 @@ public class IntentTunnelReader implements TunnelReader {
         return retVal;
     }
 
+
     /**
      * Cleanup connections and resources.
      */
     @Override
-    public void destroy() {
+    public void close() {
         final ServiceConnection toDestroy = serviceConnection;
         if (toDestroy != null) {
-            serviceConnection = null;
-            context.unbindService(toDestroy);
+            synchronized (toDestroy) {
+                serviceConnection = null;
+                context.unbindService(toDestroy);
+                toDestroy.notifyAll();
+            }
         }
     }
 }

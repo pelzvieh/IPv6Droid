@@ -55,10 +55,14 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.List;
+import java.util.Objects;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.signinginterface.IntentTunnelReader;
 import de.flyingsnail.ipv6droid.android.statusdetail.StatisticsActivity;
 import de.flyingsnail.ipv6droid.android.vpnrun.VpnStatusReport;
+import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
 /**
@@ -117,6 +121,7 @@ public class MainActivity extends AppCompatActivity {
      */
     private TunnelPersisting tunnelPersisting;
     private ActivityResultLauncher<String> requestPermissionLauncher;
+    private Thread tunnelQueryThread = null;
 
 
     /**
@@ -194,6 +199,9 @@ public class MainActivity extends AppCompatActivity {
         // switch off ui updates
         LocalBroadcastManager.getInstance(this).unregisterReceiver(statusReceiver);
         statusReceiver = null;
+        if (tunnelQueryThread != null) {
+            tunnelQueryThread.interrupt();
+        }
         super.onDestroy();
     }
 
@@ -245,6 +253,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
+        if (Objects.nonNull(tunnelQueryThread)) {
+            tunnelQueryThread.interrupt();
+        }
         if (!tunnels.isEmpty() && tunnels.isTunnelActive() && statusReceiver.isTunnelProven()) {
             Log.i (TAG, "We have an updated tunnel list and will write it back to cache");
             try {
@@ -297,6 +308,32 @@ public class MainActivity extends AppCompatActivity {
         // todo implement this
         //Intent setupIntent = new Intent(
         //startActivity(setupIntent);
+        if (Objects.nonNull(tunnelQueryThread)) {
+            tunnelQueryThread.interrupt();
+        }
+        tunnelQueryThread = new Thread(() -> {
+            try (IntentTunnelReader tunnelReader = new IntentTunnelReader(this)) {
+                List<TunnelSpec> tunnels = null;
+                try {
+                    tunnels = tunnelReader.queryTunnels();
+                } catch (ConnectionFailedException e) {
+                    Log.e(TAG, "Aborted", e);
+                    return;
+                } catch (IOException e) {
+                    Log.e(TAG, "Aborted", e);
+                    return;
+                }
+                if (tunnels != null) {
+                    this.tunnels.replaceTunnelList(tunnels);
+                    forceTunnelReload(refreshTunnelMenuItem.getActionView());
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Aborted", e);
+            }
+
+        });
+        tunnelQueryThread.setName("Tunnel Query Thread");
+        tunnelQueryThread.start();
     }
 
 

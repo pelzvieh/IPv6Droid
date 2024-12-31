@@ -30,6 +30,7 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
@@ -44,6 +45,13 @@ import java.util.List;
 class MessageHandler extends Handler {
     final static String TAG = MessageHandler.class.getSimpleName();
     List<String> certPath;
+    private final Object notifier;
+
+    public MessageHandler(@NonNull Looper looper, @NonNull Object notifier) {
+        super(looper);
+        this.notifier = notifier;
+    }
+
     @Override
     public void handleMessage(@NonNull Message msg) {
         Log.i(TAG, "Received message from remote");
@@ -53,6 +61,9 @@ class MessageHandler extends Handler {
             Log.e(TAG, "Received message from signing app does not contain key " + CERTPATH_KEY);
         } else {
             Log.d(TAG, "Received cert path: " + certPath);
+        }
+        synchronized (notifier) {
+            notifier.notifyAll();
         }
     }
 }
@@ -72,38 +83,49 @@ class SigningServiceConnection implements ServiceConnection {
     private boolean damaged;
     private Messenger serviceMessenger;
 
-
     private final Messenger myMessenger;
     private final MessageHandler myHandler;
+    private String queuedSigningRequest;
 
     public SigningServiceConnection () {
         serviceMessenger = null;
-        myHandler = new MessageHandler();
+        myHandler = new MessageHandler(Looper.getMainLooper(), this);
         myMessenger = new Messenger(myHandler);
+        queuedSigningRequest = null;
         damaged = false;
     }
 
     @Override
-    public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+    public synchronized void onServiceConnected(ComponentName componentName, IBinder iBinder) {
         Log.i(TAG, "We have a connection, creating Messenger");
         serviceMessenger = new Messenger(iBinder);
+        if (queuedSigningRequest != null) {
+            try {
+                requestCertificate(queuedSigningRequest);
+            } catch (IOException e) {
+                Log.e(TAG, "Failed to post queued CSR", e);
+            }
+        }
     }
 
     @Override
-    public void onServiceDisconnected(ComponentName componentName) {
+    public synchronized void onServiceDisconnected(ComponentName componentName) {
         serviceMessenger = null;
+        this.notifyAll();
         Log.i(TAG, "Lost connection");
     }
 
     @Override
-    public void onBindingDied(ComponentName name) {
+    public synchronized void onBindingDied(ComponentName name) {
         damaged = true;
+        this.notifyAll();
         Log.w(TAG, "Certification app died: " + name);
     }
 
     @Override
-    public void onNullBinding(ComponentName name) {
+    public synchronized void onNullBinding(ComponentName name) {
         damaged = true;
+        this.notifyAll();
         Log.w(TAG, "Certification app refused binding: " + name);
     }
 
@@ -112,12 +134,21 @@ class SigningServiceConnection implements ServiceConnection {
     }
 
     public void requestCertificate(final String signingRequest) throws IOException {
-        final Message message = Message.obtain(null, 1, signingRequest);
+        Messenger localMessenger = serviceMessenger;
+        if (localMessenger == null) {
+            queuedSigningRequest = signingRequest;
+            return;
+        }
+
+        final Message message = Message.obtain(null, 1);
+        final Bundle data = new Bundle();
+        data.putString("csr", signingRequest);
+        message.setData(data);
         message.replyTo = myMessenger;
         myHandler.certPath = null; // we want to know if the answer to _this_ request has arrived
         try {
-            serviceMessenger.send(message);
-        } catch (RemoteException e) {
+            localMessenger.send(message);
+        } catch (RemoteException | RuntimeException e) {
             throw new IOException("Failed to send message to remote app", e);
         }
     }
