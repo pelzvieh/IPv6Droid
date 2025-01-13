@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2024 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -27,7 +27,7 @@ buildscript {
         google()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.6.0'
+        classpath 'com.android.tools.build:gradle:8.8.0'
     }
 }
 apply plugin: 'com.android.application'
@@ -99,10 +99,10 @@ android {
 dependencies {
     implementation 'com.squareup.retrofit2:retrofit:2.11.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.11.0'
-    implementation 'androidx.annotation:annotation:1.8.2'
+    implementation 'androidx.annotation:annotation:1.9.1'
     implementation 'org.jetbrains.trove4j:trove4j:20160824'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    implementation 'androidx.core:core:1.13.1'
+    implementation 'androidx.constraintlayout:constraintlayout:2.2.0'
+    implementation 'androidx.core:core:1.15.0'
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
     implementation 'org.bouncycastle:bctls-jdk15to18:1.77'
     implementation 'org.bouncycastle:bcpkix-jdk15to18:1.77'

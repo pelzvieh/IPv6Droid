@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2024 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -34,15 +34,14 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.fragment.NavHostFragment;
 
-import com.google.android.material.snackbar.Snackbar;
-
 import java.util.Arrays;
 import java.util.List;
 
 import de.flyingsnail.ipv6droid.simplecert4ipv6droid.databinding.FragmentSecondBinding;
 
-public class SecondFragment extends Fragment {
-    private static final String TAG = SecondFragment.class.getSimpleName();
+public class CertificateFragment extends Fragment {
+    // todo make this navigatable to the user
+    private static final String TAG = CertificateFragment.class.getSimpleName();
 
     private FragmentSecondBinding binding;
     private CertSetup certSetup;
@@ -61,17 +60,10 @@ public class SecondFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
         certSetup = (CertSetup)requireActivity();
 
-        binding.fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAnchorView(R.id.fab)
-                        .setAction("Action", (v) -> {postCertChain();}).show();
-            }
-        });
+        binding.fab.setOnClickListener((v) -> postCertChain());
 
         binding.buttonSecond.setOnClickListener(v ->
-                NavHostFragment.findNavController(SecondFragment.this)
+                NavHostFragment.findNavController(CertificateFragment.this)
                         .navigate(R.id.action_SecondFragment_to_FirstFragment)
         );
     }
@@ -84,6 +76,8 @@ public class SecondFragment extends Fragment {
             Toast.makeText(getContext(), "Cannot write back cert chain", Toast.LENGTH_LONG).show();
             Log.e(TAG, "Service not set, unable to write back cert chain");
         } else {
+            Toast.makeText(getContext(), "Written back cert chain", Toast.LENGTH_LONG).show();
+            requireActivity().finishAffinity();
             Log.i(TAG, "Wrote back cert chain");
         }
     }

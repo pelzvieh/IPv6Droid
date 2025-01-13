@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2024 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -110,7 +110,7 @@ public class SimpleCertificationService extends Service {
      */
     public void setCertChain(List<String> cert) {
         Log.i(TAG, "Received cert path");
-        this.cert = new ArrayList<String>(cert.size());
+        this.cert = new ArrayList<>(cert.size());
         this.cert.addAll(cert);
         if (replyMessenger != null) {
             postCertificate();
@@ -129,7 +129,7 @@ public class SimpleCertificationService extends Service {
             replyMessenger.send(message);
             Log.i(TAG, "Sent cert path to bound external services");
         } catch (RemoteException e) {
-            Toast.makeText(getApplicationContext(), "Unable to send message with cert path", Toast.LENGTH_LONG);
+            Toast.makeText(getApplicationContext(), "Unable to send message with cert path", Toast.LENGTH_LONG).show();
             Log.e(TAG, "Unable to send message with cert path", e);
         }
     }

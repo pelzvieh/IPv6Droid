@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2024 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -40,12 +40,12 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.fragment.NavHostFragment;
 
-import de.flyingsnail.ipv6droid.simplecert4ipv6droid.databinding.FragmentFirstBinding;
+import de.flyingsnail.ipv6droid.simplecert4ipv6droid.databinding.FragmentCsrViewBinding;
 
-public class FirstFragment extends Fragment {
+public class CSRViewFragment extends Fragment {
 
-    private static final String TAG = FirstFragment.class.getSimpleName();
-    private FragmentFirstBinding binding;
+    private static final String TAG = CSRViewFragment.class.getSimpleName();
+    private FragmentCsrViewBinding binding;
 
     private CertSetup certSetup;
     private Handler handler;
@@ -55,9 +55,9 @@ public class FirstFragment extends Fragment {
             @NonNull LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState
     ) {
-        Log.i(TAG, "CreateView of FirstFragment");
+        Log.i(TAG, "CreateView of CSRViewFragment");
         handler = new Handler(Looper.getMainLooper());
-        binding = FragmentFirstBinding.inflate(inflater, container, false);
+        binding = FragmentCsrViewBinding.inflate(inflater, container, false);
         return binding.getRoot();
     }
 
@@ -65,7 +65,7 @@ public class FirstFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         binding.buttonNext.setOnClickListener(v ->
-                NavHostFragment.findNavController(FirstFragment.this)
+                NavHostFragment.findNavController(CSRViewFragment.this)
                         .navigate(R.id.action_FirstFragment_to_SecondFragment)
         );
         certSetup = (CertSetup)getActivity();
@@ -86,7 +86,11 @@ public class FirstFragment extends Fragment {
             binding.showCsr.setEnabled(true);
             binding.buttonNext.setEnabled(true);
             binding.showCsr.setOnClickListener(this::copyCsrToClipboard);
+            binding.description.setText(R.string.usage_after_csr_input);
         } else {
+            binding.description.setText(R.string.usage_of_csr_input);
+            binding.showCsr.setEnabled(false);
+            binding.buttonNext.setEnabled(false);
             handler.postDelayed(this::pollCsr, 500L);
         }
     }
@@ -103,7 +107,7 @@ public class FirstFragment extends Fragment {
 
     @Override
     public void onDestroyView() {
-        Log.i(TAG, "FirstFragment view destroyed");
+        Log.i(TAG, "CSRViewFragment view destroyed");
         super.onDestroyView();
         handler.removeCallbacksAndMessages(null);
         binding = null;
