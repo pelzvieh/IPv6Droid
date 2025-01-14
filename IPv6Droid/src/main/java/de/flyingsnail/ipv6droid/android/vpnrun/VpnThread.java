@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2023 Dr. Andreas Feldner.
+ *  * Copyright (c) 2024 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -50,9 +50,9 @@ import de.flyingsnail.ipv6droid.android.DTLSTunnelReader;
 import de.flyingsnail.ipv6droid.android.IPv6DroidVpnService;
 import de.flyingsnail.ipv6droid.android.MainActivity;
 import de.flyingsnail.ipv6droid.android.RoutingConfiguration;
-import de.flyingsnail.ipv6droid.android.SubscriptionTunnelReader;
 import de.flyingsnail.ipv6droid.android.TunnelReader;
 import de.flyingsnail.ipv6droid.android.Tunnels;
+import de.flyingsnail.ipv6droid.android.signinginterface.IntentTunnelReader;
 import de.flyingsnail.ipv6droid.android.statistics.Statistics;
 import de.flyingsnail.ipv6droid.transport.AuthenticationFailedException;
 import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
@@ -297,11 +297,11 @@ public class VpnThread extends Thread {
             Log.i(TAG, "Using DTLS config");
         } catch (ConnectionFailedException e1) {
             Log.i(TAG, "Falling back to subscription tunnels", e1);
-            tr = new SubscriptionTunnelReader(service);
+            tr = new IntentTunnelReader(service);
         }
 
         List<? extends TunnelSpec> availableTunnels = tr.queryTunnels();
-        tr.destroy();
+        tr.close();
 
         boolean activeTunnelValid = false;
         if (tunnels == null)

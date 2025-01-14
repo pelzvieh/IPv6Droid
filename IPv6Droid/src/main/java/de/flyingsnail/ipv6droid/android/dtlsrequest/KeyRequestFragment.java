@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2023 Dr. Andreas Feldner.
+ *  * Copyright (c) 2024 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -104,7 +104,8 @@ public class KeyRequestFragment extends Fragment {
         String newAlias = "IPv6Droid-" + aliases.size();
         createKeyAlias.setText(newAlias);
 
-        spinnerAdapter = new ArrayAdapter<>(requireContext(), androidx.constraintlayout.widget.R.layout.support_simple_spinner_dropdown_item, aliases);
+        spinnerAdapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_item, aliases);
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         existingKeysSpinner.setAdapter(spinnerAdapter);
         existingKeysSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override

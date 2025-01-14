@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2023 Dr. Andreas Feldner.
+ *  * Copyright (c) 2024 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -33,8 +33,8 @@ import de.flyingsnail.ipv6droid.transport.TunnelSpec;
  * Created by pelzi on 18.10.17.
  */
 
-public interface TunnelReader {
+public interface TunnelReader extends AutoCloseable {
     List<? extends TunnelSpec> queryTunnels() throws ConnectionFailedException, IOException;
 
-    void destroy();
+    void close();
 }

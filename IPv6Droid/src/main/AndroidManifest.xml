@@ -24,17 +24,17 @@
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:versionCode="80"
-    android:versionName="2.15">
+    android:versionCode="81"
+    android:versionName="2.99a">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="com.android.vending.BILLING" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED"/>
+
     <!-- We also work on devices with classic touchpad or mouse -->
     <uses-feature
         android:name="android.hardware.touchscreen"
@@ -118,16 +118,12 @@
             </intent-filter>
         </receiver>
 
-        <activity
-            android:name=".android.googlesubscription.SubscribeTunnelActivity"
-            android:label="@string/title_activity_subscribe_tunnel"
-            android:parentActivityName=".android.MainActivity"
-            android:resizeableActivity="true">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value="de.flyingsnail.ipv6droid.android.MainActivity" />
-        </activity>
-
     </application>
+
+    <queries>
+        <intent>
+            <action android:name="de.flyingsnail.ipv6droid.REQUEST_TUNNEL"/>
+        </intent>
+    </queries>
 
 </manifest>

@@ -19,3 +19,5 @@
  */
 
 include ':IPv6Droid'
+//include ':googleplay4ipv6droid'
+include ':simplecert4ipv6droid'

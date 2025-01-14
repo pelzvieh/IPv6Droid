@@ -1,0 +1,35 @@
+<!--
+  ~ /*
+  ~  * Copyright (c) 2025 Dr. Andreas Feldner.
+  ~  *
+  ~  *     This program is free software; you can redistribute it and/or modify
+  ~  *     it under the terms of the GNU General Public License as published by
+  ~  *     the Free Software Foundation; either version 2 of the License, or
+  ~  *     (at your option) any later version.
+  ~  *
+  ~  *     This program is distributed in the hope that it will be useful,
+  ~  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~  *     GNU General Public License for more details.
+  ~  *
+  ~  *     You should have received a copy of the GNU General Public License along
+  ~  *     with this program; if not, write to the Free Software Foundation, Inc.,
+  ~  *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  ~  *
+  ~  * Contact information and current version at http://www.flying-snail.de/IPv6Droid
+  ~  */
+  ~
+  -->
+
+<resources>
+    <string name="app_name">SimpleCert 4 IPv6Droid</string>
+    <string name="action_settings">Settings</string>
+    <!-- Strings used for fragments for navigation -->
+    <string name="first_fragment_label">CSR screen</string>
+    <string name="second_fragment_label">Certificate entry screen</string>
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+    <string name="usage_of_csr_input">When you start IPv6Droid, and a new tunnel certificate is required, the standardised signing request corresponding to its distinct key is displayed in this window, in the field below.</string>
+    <string name="usage_after_csr_input">Just tap on it to manually copy the CSR and paste it as input to your tunnel provider. Please refer to their documentation of the way to submit the CSR to them. Once you receive the ceritificate chain for your tunnel from your tunnel provider, switch to the next screen.</string>
+
+</resources>
