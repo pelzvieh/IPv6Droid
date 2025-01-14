@@ -41,12 +41,12 @@ repositories {
 
 android {
     namespace 'de.flyingsnail.ipv6droid.simplecert4ipv6droid'
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "de.flyingsnail.ipv6droid.simplecert4ipv6droid"
         minSdk 24
-        targetSdk 34
+        targetSdk 35
         versionCode 1
         versionName "1.0"
 

@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2024 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -60,6 +60,7 @@ public class IntentTunnelReader implements TunnelReader {
         for (ResolveInfo resolveInfo: context.getPackageManager().queryIntentServices(queryCertificateIntent, 0) ) {
             Log.i(TAG, "bind candidate " + resolveInfo);
             if (resolveInfo.serviceInfo != null) {
+                Log.i(TAG, " - bind candidate has service info with packageName" + resolveInfo.serviceInfo.packageName);
                 queryCertificateIntent.setPackage(resolveInfo.serviceInfo.packageName);
             }
         }
