@@ -67,14 +67,15 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        //sourceCompatibility JavaVersion.VERSION_1_8
+        //targetCompatibility JavaVersion.VERSION_1_8
     }
     packagingOptions {
         resources {
             pickFirsts += ['META-INF/ASL2.0', 'META-INF/LICENSE', 'META-INF/README', 'META-INF/INDEX.LIST', 'META-INF/DEPENDENCIES']
         }
     }
+
 
     buildTypes {
         release {
