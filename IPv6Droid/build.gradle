@@ -97,10 +97,7 @@ android {
 }
 
 dependencies {
-    implementation 'com.squareup.retrofit2:retrofit:2.11.0'
-    implementation 'com.squareup.retrofit2:converter-gson:2.11.0'
     implementation 'androidx.annotation:annotation:1.9.1'
-    implementation 'org.jetbrains.trove4j:trove4j:20160824'
     implementation 'androidx.constraintlayout:constraintlayout:2.2.0'
     implementation 'androidx.core:core:1.15.0'
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
@@ -108,8 +105,4 @@ dependencies {
     implementation 'org.bouncycastle:bcpkix-jdk15to18:1.77'
     implementation 'androidx.preference:preference:1.2.1'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    // dependencies to resolve indirect dependency mismatches
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22'
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'
 }

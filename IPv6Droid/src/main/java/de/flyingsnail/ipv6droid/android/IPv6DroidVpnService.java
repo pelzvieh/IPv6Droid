@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2023 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@ package de.flyingsnail.ipv6droid.android;
 
 import static android.app.Notification.PRIORITY_LOW;
 import static android.app.PendingIntent.FLAG_IMMUTABLE;
+import static android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED;
 
 import android.Manifest;
 import android.app.NotificationChannel;
@@ -391,7 +392,11 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
             ongoingNotificationBuilder.setContentText(getResources().getString(statusReport.getActivity()));
         else
             ongoingNotificationBuilder.setContentText(getResources().getString(R.string.vpnservice_activity_wait));
-        startForeground(ongoingNotificationId, ongoingNotificationBuilder.build());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(ongoingNotificationId, ongoingNotificationBuilder.build(), FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED);
+        } else {
+            startForeground(ongoingNotificationId, ongoingNotificationBuilder.build());
+        }
     }
 
     /**
