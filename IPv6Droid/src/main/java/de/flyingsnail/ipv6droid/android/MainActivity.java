@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2024 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -304,10 +304,7 @@ public class MainActivity extends AppCompatActivity {
         startActivity(settingsIntent);
     }
 
-    private void openSubscriptionOverview () {
-        // todo implement this
-        //Intent setupIntent = new Intent(
-        //startActivity(setupIntent);
+    private synchronized void openSubscriptionOverview () {
         if (Objects.nonNull(tunnelQueryThread)) {
             tunnelQueryThread.interrupt();
         }
@@ -316,10 +313,7 @@ public class MainActivity extends AppCompatActivity {
                 List<TunnelSpec> tunnels = null;
                 try {
                     tunnels = tunnelReader.queryTunnels();
-                } catch (ConnectionFailedException e) {
-                    Log.e(TAG, "Aborted", e);
-                    return;
-                } catch (IOException e) {
+                } catch (ConnectionFailedException | IOException e) {
                     Log.e(TAG, "Aborted", e);
                     return;
                 }
