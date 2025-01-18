@@ -1,0 +1,27 @@
+<p>To actually use this app, a tunnel service is required. You can run your own tunnel service on
+suitable infrastructure. See <a href="https://github.com/pelzvieh/ipv6server/">IPv6Server</a>
+for more details.</p>
+
+<p>Notes:</p>
+<ol>
+  <li>This approach towards IPv6 has subtle implications on your privacy: for IPv6 connections,
+      you have a fixed IP and you - as a person! - are easily identifyable by all IPv6 communication
+      partners. Also, your mobile device suddenly has an IP on which it is reachable from the
+      outside.
+  </li>
+  <li>This app cannot be used when another VPN is active.</li>
+  <li>It is not required to have a rooted device.</li>
+</ol>
+
+<p>About license:<p>
+<p>You can opt for the convenience package, and install IPv6Droid right from here. It will download,
+ install, guide you to the setup of your account details and update from time to time as new
+ features or bugfixes are implemented.</p>
+
+<p>But I am looking for supporters! So, I'd like to promote the approach that you set up a build
+environment (e.g. Android Studio), download the sources (see web site) and build it by yourself.
+That's it. You may use the tool, modify and even redistribute the sources under the terms of the
+General Public License. No obligations, but in this case you have the tools, you have the sources
+and you have the engagement that drives me to hope that you're going to play a more active part in
+bringing forward this client. E.g. by submitting detailed error reports, by submitting patches, by
+providing better artwork, writing better documentation, designing a better user experience, ...</p>
