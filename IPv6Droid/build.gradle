@@ -88,6 +88,8 @@ android {
 
     buildFeatures {
         buildConfig = true
+        dataBinding = true
+        viewBinding = true
     }
 
     lint {
@@ -105,5 +107,7 @@ dependencies {
     implementation libs.bctls.jdk15to18
     implementation libs.bcpkix.jdk15to18
     implementation libs.androidx.preference
+    implementation libs.androidx.databinding.common
+    implementation libs.androidx.databinding.runtime
     //implementation 'androidx.legacy:legacy-support-v4:1.0.0'
 }

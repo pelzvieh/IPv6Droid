@@ -23,6 +23,8 @@
 
 package de.flyingsnail.ipv6droid.android;
 
+import static android.view.View.VISIBLE;
+
 import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -45,24 +47,27 @@ import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.databinding.ObservableArrayList;
+import androidx.databinding.ObservableField;
+import androidx.databinding.ObservableList;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.List;
-import java.util.Objects;
 
 import de.flyingsnail.ipv6droid.R;
-import de.flyingsnail.ipv6droid.android.signinginterface.IntentTunnelReader;
+import de.flyingsnail.ipv6droid.android.signinginterface.CSRIntentManager;
+import de.flyingsnail.ipv6droid.android.signinginterface.CertPathChangedCallback;
+import de.flyingsnail.ipv6droid.android.signinginterface.SupplierChangedCallback;
 import de.flyingsnail.ipv6droid.android.statusdetail.StatisticsActivity;
 import de.flyingsnail.ipv6droid.android.vpnrun.VpnStatusReport;
-import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
+import de.flyingsnail.ipv6droid.databinding.ActivityMainBinding;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
 /**
@@ -70,6 +75,7 @@ import de.flyingsnail.ipv6droid.transport.TunnelSpec;
  */
 public class MainActivity extends AppCompatActivity {
 
+    private ActivityMainBinding binding;
     /**
      * The tag to use for logging
      */
@@ -77,12 +83,10 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_START_VPN = 1;
     // private static final int REQUEST_SETTINGS = 2;
     private static final int REQUEST_STATISTICS = 3;
-    public static final String DTLS_CERTS = "dtls_certs";
-    public static final String DTLS_KEY_ALIAS = "dtls_key_alias";
     public static final String SHOW_NOTIFICATIONS = "show-notifications";
 
     /** A TextView that presents in natural language, what is going on */
-    private TextView activity;
+    private TextView statusText;
     /** A ProgressBar that visualizes the progress of building the tunnel */
     private ProgressBar progress;
     /** An ImageView that visualizes the current status of the tunnel */
@@ -90,11 +94,13 @@ public class MainActivity extends AppCompatActivity {
     /** An additional start button that is shown if we're just waiting for the user to start */
     private Button redundantStartButton;
     /** The ListView that is going to list all available tunnels */
-    private ListView tunnelListView;
+    private ListView providerListView;
     /** A TextView that presents the reason for the current status, if this represents a fault */
     private TextView causeView;
-    /** The Tunnels object that holds the list of available tunnels plus the currently selected one */
-    private Tunnels tunnels;
+    /** An observable tunnelspec. This is dealt with by CertPathChangedCallback. */
+    private final ObservableField<TunnelSpec> tunnelSpec = new ObservableField<>();
+    /** the list of apps (packages) available as suppliers of certification paths. */
+    private final ObservableList<String> certPathSuppliers = new ObservableArrayList<>();
 
     /**
      * The Action name for a vpn stop broadcast intent.
@@ -112,17 +118,11 @@ public class MainActivity extends AppCompatActivity {
     private StatusReceiver statusReceiver;
 
     /**
-     * The menuitem for refreshing the tunnel list. This will be enabled or disabled depending on
-     * the VPN status.
-     */
-    private MenuItem refreshTunnelMenuItem;
-    /**
      * An object implementing TunnelPersisting, i.e. a Binder-based DAO to persistent tunnel storage.
      */
     private TunnelPersisting tunnelPersisting;
     private ActivityResultLauncher<String> requestPermissionLauncher;
-    private Thread tunnelQueryThread = null;
-
+    private CSRIntentManager csrIntentManager;
 
     /**
      * Overridden method from activity, initialises the activity and restores any previously saved
@@ -132,7 +132,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        binding = ActivityMainBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
         PreferenceManager.setDefaultValues(getApplicationContext(), R.xml.preferences, false);
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
@@ -147,26 +148,26 @@ public class MainActivity extends AppCompatActivity {
                 });
 
 
-        Toolbar myToolbar = findViewById(R.id.mainToolbar);
-        setSupportActionBar(myToolbar);
-        myToolbar.setLogo(R.drawable.ic_launcher);
+        setSupportActionBar(binding.mainToolbar);
+        binding.mainToolbar.setLogo(R.drawable.ic_launcher);
 
         // init handles to GUI elements
-        activity = findViewById(R.id.statusText);
-        progress = findViewById(R.id.progressBar);
-        status = findViewById(R.id.statusImage);
-        redundantStartButton = findViewById(R.id.redundant_start_button);
-        tunnelListView = findViewById(R.id.tunnelList);
-        causeView = findViewById(R.id.cause);
-        tunnels = new Tunnels();
-        ArrayAdapter<TunnelSpec> adapter = new ArrayAdapter<>(MainActivity.this,
+        statusText = binding.statusText;
+        progress = binding.progressBar;
+        status = binding.statusImage;
+        redundantStartButton = binding.redundantStartButton;
+        providerListView = binding.providerList;
+        causeView = binding.cause;
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(MainActivity.this,
                 R.layout.tunnellist_template);
-        adapter.addAll(tunnels);
-        tunnelListView.setAdapter(adapter);
+        adapter.addAll(certPathSuppliers);
+        certPathSuppliers.addOnListChangedCallback(new SupplierChangedCallback(adapter));
+        providerListView.setAdapter(adapter);
+        providerListView.setOnItemClickListener(this::onSupplierEntryClicked);
+        csrIntentManager = new CSRIntentManager(this, certPathSuppliers);
+
         if (statusReceiver == null)
             statusReceiver = new StatusReceiver();
-        //if (lastEvents == null)
-        //    lastEvents = new LinkedBlockingDeque<>(EVENT_LENGTH);
 
         // setup the intent filter for status broadcasts
         IntentFilter statusIntentFilter = new IntentFilter(VpnStatusReport.BC_STATUS);
@@ -178,7 +179,11 @@ public class MainActivity extends AppCompatActivity {
         // load tunnels list persisted from last session
         tunnelPersisting = new TunnelPersistingFile(getApplicationContext());
         try {
-            tunnels.setAll(tunnelPersisting.readTunnels());
+            Tunnels tunnels = tunnelPersisting.readTunnels();
+            TunnelSpec active = tunnels.getActiveTunnel();
+            if (active != null) {
+                tunnelSpec.set(active);
+            }
         } catch (FileNotFoundException e) {
             Log.i(TAG, "Could not load persisted tunnels - probably first invocation", e);
         } catch (IOException e) {
@@ -186,22 +191,27 @@ public class MainActivity extends AppCompatActivity {
         }
         statusReceiver.updateUi();
 
-        redirectIfRequired();
+        try {
+            if (isCertificateRequestRequired()) {
+                requestCertificate();
+            }
+        } catch (IOException e) {
+            showExceptionAsCause(e);
+        }
 
         requestStatus();
     }
 
     /**
-     * This overriden method is called before the instance gets destroyed.
+     * This overridden method is called before the instance gets destroyed.
      */
     @Override
     protected void onDestroy() {
         // switch off ui updates
         LocalBroadcastManager.getInstance(this).unregisterReceiver(statusReceiver);
         statusReceiver = null;
-        if (tunnelQueryThread != null) {
-            tunnelQueryThread.interrupt();
-        }
+        csrIntentManager.close();
+        csrIntentManager = null;
         super.onDestroy();
     }
 
@@ -214,7 +224,6 @@ public class MainActivity extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
-        refreshTunnelMenuItem = menu.findItem(R.id.action_tic_reload);
         return true;
     }
 
@@ -224,12 +233,6 @@ public class MainActivity extends AppCompatActivity {
      * @param clickedView is the View where the click occurred. This parameter is not used.
      */
     public void startVPN(View clickedView) {
-        // update selected tunnel
-        int checkedItem = tunnelListView.getCheckedItemPosition();
-        if (checkedItem != AdapterView.INVALID_POSITION) {
-            tunnels.setActiveTunnel((TunnelSpec) tunnelListView.getItemAtPosition(checkedItem));
-        }
-
         // Start system-managed intent for VPN
         Intent systemVpnIntent = VpnService.prepare(clickedView == null ?
                 this : clickedView.getContext());
@@ -241,7 +244,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * This overriden method restores its state from a Bundle.
+     * This overridden method restores its state from a Bundle.
      * @param savedInstanceState the Bundle containing the saved state.
      */
     @Override
@@ -253,11 +256,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        if (Objects.nonNull(tunnelQueryThread)) {
-            tunnelQueryThread.interrupt();
-        }
-        if (!tunnels.isEmpty() && tunnels.isTunnelActive() && statusReceiver.isTunnelProven()) {
+        TunnelSpec currentSpec = tunnelSpec.get();
+        if (currentSpec != null && statusReceiver.isTunnelProven()) {
             Log.i (TAG, "We have an updated tunnel list and will write it back to cache");
+            final Tunnels tunnels = convertToTunnels(currentSpec);
             try {
                 tunnelPersisting.writeTunnels(tunnels);
             } catch (Exception e) {
@@ -266,33 +268,61 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Callback to inform that user clicked onto one of the suppliers in the list.
+     * @param adapterView the View of the list itself
+     * @param view the View of the item in the list, that was clicked
+     * @param position an int giving the position in the list
+     * @param id a long giving the ID of the row clicked
+     */
+    public void onSupplierEntryClicked(AdapterView<?> adapterView, View view, int position, long id) {
+        if (isCertificateRequestRequired()) {
+            try {
+                requestCertificate(certPathSuppliers.get(position));
+            } catch (IOException e) {
+                showExceptionAsCause(e);
+            }
+        }
+    }
+
+    /**
+     * Displays exception information in the "cause" text field.
+     * @param cause the Throwable giving the reason (hopefully)
+     */
+    private void showExceptionAsCause(final Throwable cause) {
+        final String message = cause.getLocalizedMessage();
+        final Throwable cause2 = cause.getCause();
+        final String rootCause = cause2 == null ? null : cause2.getLocalizedMessage();
+        causeView.setText(
+                String.format("%s (%s) [%s (%s)]",
+                        message == null ? "--" : message,
+                        cause.getClass().getSimpleName(),
+                        rootCause == null ? "--" : rootCause,
+                        cause2 == null ? "--" : cause2.getClass().getSimpleName())
+        );
+        causeView.setVisibility(VISIBLE);
+    }
+
+    private static Tunnels convertToTunnels(TunnelSpec currentSpec) {
+        Tunnels tunnels = new Tunnels();
+        if (currentSpec != null) {
+            tunnels.add(currentSpec);
+        }
+        tunnels.setActiveTunnel(currentSpec);
+        return tunnels;
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
-        redirectIfRequired();
 
         // update status
         requestStatus();
     }
 
-    /**
-     * Launches the subscription/setup intent if current setup is not operationable.
-     */
-    private void redirectIfRequired() {
-        if (isConfigurationRequired(this, tunnels.checkCachedTunnelAvailability()) ) {
-            openSubscriptionOverview();
-        }
-    }
-
-    public static boolean isConfigurationRequired(Context context, boolean cachedTunnelsAvailable) {
-        // check login configuration and start first time setup activity if not yet set.
-        SharedPreferences myPreferences = PreferenceManager.getDefaultSharedPreferences(context);
-
-        return (
-                (       (myPreferences.getString(DTLS_KEY_ALIAS, "").isEmpty() ||
-                         myPreferences.getString(DTLS_CERTS, "").isEmpty())
-                ) &&
-                (!cachedTunnelsAvailable) ) ;
+    public boolean isCertificateRequestRequired() {
+        TunnelSpec currentSpec = tunnelSpec.get();
+        return (currentSpec == null || !currentSpec.isEnabled());
     }
 
     /**
@@ -304,32 +334,42 @@ public class MainActivity extends AppCompatActivity {
         startActivity(settingsIntent);
     }
 
-    private synchronized void openSubscriptionOverview () {
-        if (Objects.nonNull(tunnelQueryThread)) {
-            tunnelQueryThread.interrupt();
-        }
-        tunnelQueryThread = new Thread(() -> {
-            try (IntentTunnelReader tunnelReader = new IntentTunnelReader(this)) {
-                List<TunnelSpec> tunnels = null;
-                try {
-                    tunnels = tunnelReader.queryTunnels();
-                } catch (ConnectionFailedException | IOException e) {
-                    Log.e(TAG, "Aborted", e);
-                    return;
-                }
-                if (tunnels != null) {
-                    this.tunnels.replaceTunnelList(tunnels);
-                    forceTunnelReload(refreshTunnelMenuItem.getActionView());
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "Aborted", e);
+    /**
+     * Try to request a certificate with the current configuration.
+     * Might result in the user being flagged to make a selection.
+     * @throws IOException in case the CSR could not be sent to a supplier app.
+     */
+    private void requestCertificate() throws IOException {
+        // do we have exactly one supplier? Then, let's use that one without further ado!
+        if (certPathSuppliers.size() == 1) {
+            requestCertificate(certPathSuppliers.get(0));
+        } else {
+            // is a supplier selected in the list view?
+            Object selectedThing = providerListView.getSelectedItem();
+            if (selectedThing instanceof String) {
+                requestCertificate((String) selectedThing);
+            } else {
+                providerListView.setElevation(0.5f);
+                Toast.makeText(this, R.string.provider_required , Toast.LENGTH_SHORT)
+                        .show();
             }
-
-        });
-        tunnelQueryThread.setName("Tunnel Query Thread");
-        tunnelQueryThread.start();
+        }
     }
 
+    /**
+     * Request certificate from the given service provider (determining the app).
+     * @param supplier a String giving the package name of the provider to ask.
+     */
+    private void requestCertificate(String supplier) throws IOException {
+        assert(certPathSuppliers.contains(supplier));
+        CertPathChangedCallback callback = new CertPathChangedCallback(tunnelSpec,
+                csrIntentManager.getCertHelper(), this);
+        ObservableList<String> certPath = new ObservableArrayList<>();
+        certPath.addOnListChangedCallback(callback);
+        if (!certPathSuppliers.isEmpty()) {
+            csrIntentManager.requestCertificate(certPathSuppliers.get(0), certPath);
+        }
+    }
 
 
     /**
@@ -378,6 +418,7 @@ public class MainActivity extends AppCompatActivity {
             checkAndRequestNotificationPermission();
 
             Intent intent = new Intent(this, IPv6DroidVpnService.class).setAction("android.net.VpnService");
+            Tunnels tunnels = convertToTunnels(tunnelSpec.get());
             if (tunnels.isTunnelActive()) {
                 // Android's Parcel system doesn't handle subclasses well, so...
                 intent.putExtra(IPv6DroidVpnService.EXTRA_CACHED_TUNNELS, tunnels.getAndroidSerializable());
@@ -420,13 +461,12 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
 
-        if (item.getItemId() == R.id.action_tic_reload) {
-            forceTunnelReload(item.getActionView());
-            return true;
-        }
-
         if (item.getItemId() == R.id.action_subscribe) {
-            openSubscriptionOverview();
+            try {
+                requestCertificate();
+            } catch (IOException e) {
+                showExceptionAsCause(e);
+            }
             return true;
         }
 
@@ -443,20 +483,6 @@ public class MainActivity extends AppCompatActivity {
         helpIntent.setDataAndType(Uri.parse("https://github.com/pelzvieh/IPv6Droid/wiki"), "text/html");
         helpIntent.addCategory(Intent.CATEGORY_BROWSABLE);
         startActivity(helpIntent);
-    }
-
-    private void forceTunnelReload(View clickedView) {
-        int checked = tunnelListView.getCheckedItemPosition();
-        if (checked != AdapterView.INVALID_POSITION)
-            tunnelListView.setItemChecked(checked, false);
-        tunnels.clear();
-        ((ArrayAdapter<TunnelSpec>)(tunnelListView.getAdapter())).notifyDataSetChanged();
-        try {
-            tunnelPersisting.writeTunnels(tunnels);
-        } catch (IOException e) {
-            Log.wtf(TAG, "Could not write empty tunnel list to persistent configuration", e);
-        }
-        startVPN(clickedView);
     }
 
     /** Inner class to handle status updates */
@@ -495,58 +521,34 @@ public class MainActivity extends AppCompatActivity {
                 MainActivity.this.progress.setIndeterminate(true);
 
             if (status == VpnStatusReport.Status.Idle) {
-                redundantStartButton.setVisibility(View.VISIBLE);
+                redundantStartButton.setVisibility(VISIBLE);
                 MainActivity.this.progress.setVisibility(View.INVISIBLE);
-                MainActivity.this.activity.setVisibility(View.INVISIBLE);
+                MainActivity.this.statusText.setVisibility(View.INVISIBLE);
             } else {
                 redundantStartButton.setVisibility(View.INVISIBLE);
-                MainActivity.this.progress.setVisibility(View.VISIBLE);
-                MainActivity.this.activity.setVisibility(View.VISIBLE);
+                MainActivity.this.progress.setVisibility(VISIBLE);
+                MainActivity.this.statusText.setVisibility(VISIBLE);
             }
-            tunnelListView.setEnabled(status == VpnStatusReport.Status.Idle);
-            if (refreshTunnelMenuItem != null)
-                refreshTunnelMenuItem.setEnabled(status == VpnStatusReport.Status.Idle);
+            providerListView.setEnabled(status == VpnStatusReport.Status.Idle);
 
             // show activity text
             if (statusReport.getActivity() != 0)
-                MainActivity.this.activity.setText(getResources().getString(statusReport.getActivity()));
-
-            // read tunnel information, if updated
-            if (statusReport.getTunnels() != null) {
-                tunnels.setAll(statusReport.getTunnels());
-            }
+                MainActivity.this.statusText.setText(getResources().getString(statusReport.getActivity()));
 
             // show tunnel information
-            if (!tunnels.isEmpty()) {
-                Log.d(TAG, "Tunnels are set");
-
-                ArrayAdapter<TunnelSpec> tunnelAdapter = (ArrayAdapter<TunnelSpec>)(tunnelListView.getAdapter());
-                tunnelAdapter.clear();
-                tunnelAdapter.addAll(tunnels);
-                tunnelAdapter.notifyDataSetChanged();
-
-                int position = tunnels.indexOf(tunnels.getActiveTunnel());
-                if (position >= 0)
-                  tunnelListView.setItemChecked(position, true);
-
-                tunnelListView.setVisibility(View.VISIBLE);
+            TunnelSpec currentSpec = tunnelSpec.get();
+            if (currentSpec != null) {
+                Log.d(TAG, "Tunnel is set");
+                binding.tunnelTitle.setText(currentSpec.getTunnelName());
+                binding.tunnelDetail.setText(currentSpec.getIpv6Endpoint().getHostAddress());
             } else {
                 Log.d(TAG, "No tunnels are set");
-                tunnelListView.setVisibility(View.INVISIBLE);
+                binding.tunnelTitle.setText("--");
+                binding.tunnelDetail.setText("-/-");
             }
             Throwable cause = statusReport.getCause();
             if (cause != null) {
-                final String message = cause.getLocalizedMessage();
-                final Throwable cause2 = cause.getCause();
-                final String rootCause = cause2 == null ? null : cause2.getLocalizedMessage();
-                causeView.setText(
-                        String.format("%s (%s) [%s (%s)]",
-                                message == null ? "--" : message,
-                                cause.getClass().getSimpleName(),
-                                rootCause == null ? "--" : rootCause,
-                                cause2 == null ? "--" : cause2.getClass().getSimpleName())
-                );
-                causeView.setVisibility(View.VISIBLE);
+                showExceptionAsCause(cause);
             } else
                 causeView.setVisibility(View.INVISIBLE);
         }

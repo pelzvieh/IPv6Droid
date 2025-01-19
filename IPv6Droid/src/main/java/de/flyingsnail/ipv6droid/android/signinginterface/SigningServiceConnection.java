@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2024 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -37,33 +37,31 @@ import android.os.RemoteException;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import androidx.databinding.ObservableList;
 
 import java.io.IOException;
 import java.util.List;
 
 class MessageHandler extends Handler {
     final static String TAG = MessageHandler.class.getSimpleName();
-    List<String> certPath;
-    private final Object notifier;
+    final ObservableList<String> certPathReceiver;
 
-    public MessageHandler(@NonNull Looper looper, @NonNull Object notifier) {
+    public MessageHandler(@NonNull Looper looper, @NonNull ObservableList<String> receiver) {
         super(looper);
-        this.notifier = notifier;
+        this.certPathReceiver = receiver;
     }
 
     @Override
     public void handleMessage(@NonNull Message msg) {
         Log.i(TAG, "Received message from remote");
         Bundle answer = msg.getData();
-        certPath = answer.getStringArrayList(CERTPATH_KEY);
+        final List<String> certPath = answer.getStringArrayList(CERTPATH_KEY);
         if (certPath == null) {
             Log.e(TAG, "Received message from signing app does not contain key " + CERTPATH_KEY);
         } else {
             Log.d(TAG, "Received cert path: " + certPath);
-        }
-        synchronized (notifier) {
-            notifier.notifyAll();
+            certPathReceiver.clear();
+            certPathReceiver.addAll(certPath);
         }
     }
 }
@@ -87,9 +85,14 @@ class SigningServiceConnection implements ServiceConnection {
     private final MessageHandler myHandler;
     private String queuedSigningRequest;
 
-    public SigningServiceConnection () {
+    /**
+     *
+     * @param certPathReceiver an ObservableList&lt;String&gt; that will be set to the
+     *                         cert path when it is received from the supplier app.
+     */
+    public SigningServiceConnection (@NonNull ObservableList<String> certPathReceiver) {
         serviceMessenger = null;
-        myHandler = new MessageHandler(Looper.getMainLooper(), this);
+        myHandler = new MessageHandler(Looper.getMainLooper(), certPathReceiver);
         myMessenger = new Messenger(myHandler);
         queuedSigningRequest = null;
         damaged = false;
@@ -129,10 +132,6 @@ class SigningServiceConnection implements ServiceConnection {
         Log.w(TAG, "Certification app refused binding: " + name);
     }
 
-    public boolean isFinished() {
-        return serviceMessenger != null || damaged;
-    }
-
     public void requestCertificate(final String signingRequest) throws IOException {
         Messenger localMessenger = serviceMessenger;
         if (localMessenger == null) {
@@ -145,7 +144,6 @@ class SigningServiceConnection implements ServiceConnection {
         data.putString("csr", signingRequest);
         message.setData(data);
         message.replyTo = myMessenger;
-        myHandler.certPath = null; // we want to know if the answer to _this_ request has arrived
         try {
             localMessenger.send(message);
         } catch (RemoteException | RuntimeException e) {
@@ -160,16 +158,5 @@ class SigningServiceConnection implements ServiceConnection {
      */
     public boolean isDamaged() {
         return damaged;
-    }
-
-    /**
-     * Get the certificate chain as received from the provider app. May be null, if the provider
-     * app did not yet send a message back. May be empty, if the provider app does not have
-     * an active "usage right" for this device.
-     * @return a List&lt;String&gt; representing the PEM encoded certificates forming this
-     * device's certificate chain; or null.
-     */
-    @Nullable public List<String> getCertPath() {
-        return myHandler.certPath;
     }
 }
