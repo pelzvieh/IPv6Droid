@@ -84,4 +84,6 @@
     <string name="copy_to_clipboard">Copy to Clipboard</string>
     <string name="vpnservice_activity_connecting">Establish session</string>
     <string name="provider_required">You need to select an app that provides certificate services for IPv6Droid.</string>
+    <string name="confirmRequestNewCertificate">Force requesting new certificate from this provider?</string>
+    <string name="request">Request</string>
 </resources>

@@ -8,6 +8,7 @@ androidx-preference = "1.2.1"
 androidx-annotation = "1.9.1"
 databinding-common = "8.8.0"
 databinding-runtime = "8.8.0"
+material = "1.12.0"
 
 [libraries]
 androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "constraintlayout" }
@@ -20,4 +21,5 @@ gradle = { module = "com.android.tools.build:gradle", version.ref = "gradle" }
 androidx-annotation = { group = "androidx.annotation", name = "annotation", version.ref = "androidx-annotation"}
 androidx-databinding-common = { group = "androidx.databinding", name = "databinding-common", version.ref = "databinding-common" }
 androidx-databinding-runtime = { group = "androidx.databinding", name = "databinding-runtime", version.ref = "databinding-runtime" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 [plugins]

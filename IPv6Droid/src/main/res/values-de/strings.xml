@@ -22,7 +22,7 @@
   ~
   -->
 
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
 
     <string name="app_name">IPv6Droid</string>
     <string name="action_settings">Einstellungen</string>
@@ -54,7 +54,6 @@
     <string name="ayiyavpnservice_destroyed">"Der IPv6-Tunnel ist jetzt geschlossen"</string>
     <string name="ayiyavpnservice_revoked">"IPv6Droid ist nicht für VPN-Aufbau berechtigt"</string>
     <string name="manual_setup_label">Selbst betrieben</string>
-    <plurals name="user_has_subscription" tools:ignore="MissingQuantity"><item quantity="other">Sie haben %d Tunnel abonniert</item></plurals>
     <string name="action_subscribe">Abonnieren</string>
     <string name="statistics_isrouted">Geroutet</string>
     <string name="statistics_isrouted_yes">ja</string>
@@ -81,4 +80,6 @@
     <string name="copy_to_clipboard">Kopieren</string>
     <string name="vpnservice_activity_connecting">Baue Sitzung auf</string>
     <string name="provider_required">Bitte wählen Sie aus der Liste eine App aus, um ein Tunnelzertifikat anzufordern.</string>
+    <string name="confirmRequestNewCertificate">Force requesting new certificate from this provider?</string>
+    <string name="request">Request</string>
 </resources>

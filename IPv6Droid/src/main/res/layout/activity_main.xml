@@ -147,6 +147,8 @@
         android:layout_marginTop="20dp"
         android:layout_marginBottom="20dp"
         android:choiceMode="singleChoice"
+        android:clickable="true"
+        android:focusable="true"
         android:listSelector="@color/ipv6droid_green"
         tools:listitem="@android:layout/simple_list_item_1" />
 

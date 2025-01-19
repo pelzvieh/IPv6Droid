@@ -58,13 +58,15 @@ import androidx.databinding.ObservableField;
 import androidx.databinding.ObservableList;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import com.google.android.material.snackbar.Snackbar;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.signinginterface.CSRIntentManager;
 import de.flyingsnail.ipv6droid.android.signinginterface.CertPathChangedCallback;
-import de.flyingsnail.ipv6droid.android.signinginterface.SupplierChangedCallback;
+import de.flyingsnail.ipv6droid.android.signinginterface.CertSupplierArrayAdapter;
 import de.flyingsnail.ipv6droid.android.statusdetail.StatisticsActivity;
 import de.flyingsnail.ipv6droid.android.vpnrun.VpnStatusReport;
 import de.flyingsnail.ipv6droid.databinding.ActivityMainBinding;
@@ -158,10 +160,9 @@ public class MainActivity extends AppCompatActivity {
         redundantStartButton = binding.redundantStartButton;
         providerListView = binding.providerList;
         causeView = binding.cause;
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(MainActivity.this,
-                R.layout.tunnellist_template);
-        adapter.addAll(certPathSuppliers);
-        certPathSuppliers.addOnListChangedCallback(new SupplierChangedCallback(adapter));
+        ArrayAdapter<String> adapter = new CertSupplierArrayAdapter(MainActivity.this,
+                R.layout.providerlist_template, certPathSuppliers);
+        // not required, ArrayAdapter is monitoring its list! certPathSuppliers.addOnListChangedCallback(new SupplierChangedCallback(adapter));
         providerListView.setAdapter(adapter);
         providerListView.setOnItemClickListener(this::onSupplierEntryClicked);
         csrIntentManager = new CSRIntentManager(this, certPathSuppliers);
@@ -276,12 +277,24 @@ public class MainActivity extends AppCompatActivity {
      * @param id a long giving the ID of the row clicked
      */
     public void onSupplierEntryClicked(AdapterView<?> adapterView, View view, int position, long id) {
+        final String clickedSupplier = certPathSuppliers.get(position);
         if (isCertificateRequestRequired()) {
             try {
-                requestCertificate(certPathSuppliers.get(position));
+                requestCertificate(clickedSupplier);
             } catch (IOException e) {
                 showExceptionAsCause(e);
             }
+        } else {
+            Snackbar.make(view, getString(R.string.confirmRequestNewCertificate), Snackbar.LENGTH_LONG)
+                    .setAnchorView(view)
+                    .setAction(R.string.request, (v) -> {
+                        try {
+                            requestCertificate(clickedSupplier);
+                        } catch (IOException e) {
+                            showExceptionAsCause(e);
+                        }
+                    })
+                    .show();
         }
     }
 
@@ -343,6 +356,7 @@ public class MainActivity extends AppCompatActivity {
         // do we have exactly one supplier? Then, let's use that one without further ado!
         if (certPathSuppliers.size() == 1) {
             requestCertificate(certPathSuppliers.get(0));
+            providerListView.setSelection(0);
         } else {
             // is a supplier selected in the list view?
             Object selectedThing = providerListView.getSelectedItem();

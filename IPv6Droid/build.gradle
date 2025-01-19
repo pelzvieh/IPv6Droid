@@ -109,5 +109,6 @@ dependencies {
     implementation libs.androidx.preference
     implementation libs.androidx.databinding.common
     implementation libs.androidx.databinding.runtime
+    implementation libs.material
     //implementation 'androidx.legacy:legacy-support-v4:1.0.0'
 }
