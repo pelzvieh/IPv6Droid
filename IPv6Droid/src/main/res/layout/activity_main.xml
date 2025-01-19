@@ -1,6 +1,6 @@
 <!--
   ~ /*
-  ~  * Copyright (c) 2020 Dr. Andreas Feldner.
+  ~  * Copyright (c) 2025 Dr. Andreas Feldner.
   ~  *
   ~  *     This program is free software; you can redistribute it and/or modify
   ~  *     it under the terms of the GNU General Public License as published by
@@ -63,16 +63,34 @@
             style="@android:style/Widget.ProgressBar.Horizontal"
             android:visibility="invisible"/>
 
+    <TextView
+        android:id="@+id/tunnelTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/providerList"
+        android:layout_margin="8dp"
+        android:text="@{tunnelspec.tunnelName}"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tunnelDetail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/tunnelTitle"
+        android:layout_alignParentBottom="true"
+        android:layout_margin="8dp"
+        android:text="tunnel details" />
+
     <LinearLayout
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/progressBar"
-            android:layout_centerHorizontal="true"
-            android:layout_alignParentEnd="false"
-            android:layout_alignParentRight="false"
-            android:orientation="horizontal"
-            android:gravity="center_vertical|center_horizontal"
-            android:layout_marginTop="25dp"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/progressBar"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentEnd="false"
+        android:orientation="horizontal"
+        android:gravity="center_vertical|center_horizontal"
+        android:layout_marginTop="25dp"
         android:id="@+id/linearLayout">
 
         <ImageView
@@ -120,15 +138,27 @@
     />
 
     <ListView
+        android:id="@+id/providerList"
         android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/tunnelList"
+        android:layout_height="170dp"
         android:layout_below="@id/cause"
+        android:layout_alignParentBottom="false"
         android:layout_centerHorizontal="true"
-        android:choiceMode="singleChoice"
-        tools:listitem="@android:layout/simple_list_item_2"
         android:layout_marginTop="20dp"
+        android:layout_marginBottom="20dp"
+        android:choiceMode="singleChoice"
         android:listSelector="@color/ipv6droid_green"
-        />
+        tools:listitem="@android:layout/simple_list_item_1" />
 
+    <!--
+    <androidx.fragment.app.FragmentContainerView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:id="@+id/statistics"
+        android:background="?android:attr/detailsElementBackground"
+        class="de.flyingsnail.ipv6droid.android.statusdetail.StatisticsFragment"
+        tools:layout="@layout/fragment_statistics"
+        android:layout_gravity="center_horizontal" />
+        -->
 </RelativeLayout>

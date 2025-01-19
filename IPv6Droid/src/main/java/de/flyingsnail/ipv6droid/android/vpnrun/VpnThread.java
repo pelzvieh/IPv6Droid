@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2024 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -52,7 +52,6 @@ import de.flyingsnail.ipv6droid.android.MainActivity;
 import de.flyingsnail.ipv6droid.android.RoutingConfiguration;
 import de.flyingsnail.ipv6droid.android.TunnelReader;
 import de.flyingsnail.ipv6droid.android.Tunnels;
-import de.flyingsnail.ipv6droid.android.signinginterface.IntentTunnelReader;
 import de.flyingsnail.ipv6droid.android.statistics.Statistics;
 import de.flyingsnail.ipv6droid.transport.AuthenticationFailedException;
 import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
@@ -285,20 +284,14 @@ public class VpnThread extends Thread {
      * Read tunnel information via the TIC protocol. Return true if anything changed on the current
      * tunnel.
      * @return true if something changed
-     * @throws ConnectionFailedException if some permanent problem exists with TIC and the current config
+     * @throws ConnectionFailedException if some permanent problem exists with the currently
+     *            available tunnel configs
      * @throws IOException if some (hopefully transient) technical problem came up.
      */
     boolean readTunnels() throws ConnectionFailedException, IOException {
         boolean tunnelChanged = false;
 
-        TunnelReader tr;
-        try {
-            tr = new DTLSTunnelReader(service);
-            Log.i(TAG, "Using DTLS config");
-        } catch (ConnectionFailedException e1) {
-            Log.i(TAG, "Falling back to subscription tunnels", e1);
-            tr = new IntentTunnelReader(service);
-        }
+        TunnelReader tr = new DTLSTunnelReader(service);
 
         List<? extends TunnelSpec> availableTunnels = tr.queryTunnels();
         tr.close();
