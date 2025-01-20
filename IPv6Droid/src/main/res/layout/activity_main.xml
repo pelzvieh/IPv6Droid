@@ -35,21 +35,23 @@
         android:id="@+id/mainToolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="@dimen/activity_vertical_margin"
         android:background="?attr/colorPrimary"
         android:elevation="4dp"
-        android:layout_alignParentTop="true"
-        android:theme="@style/ThemeOverlay.AppCompat.ActionBar"
-        android:popupTheme="@style/ThemeOverlay.AppCompat.Light"/>
+        android:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+        android:theme="@style/ThemeOverlay.AppCompat.ActionBar" />
 
     <TextView
+        android:id="@+id/statusText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceSmall"
-        android:id="@+id/statusText"
-        android:layout_below="@id/mainToolbar"
+        android:layout_below="@+id/redundant_start_button"
         android:layout_centerHorizontal="true"
+        android:layout_marginTop="24dp"
         android:text="@string/main_activity_please_start"
-        android:visibility="invisible"/>
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:visibility="invisible" />
 
     <ProgressBar
             android:layout_width="fill_parent"
@@ -80,7 +82,8 @@
         android:layout_below="@id/tunnelTitle"
         android:layout_alignParentBottom="true"
         android:layout_margin="8dp"
-        android:text="tunnel details" />
+        android:text="tunnel details"
+        android:textIsSelectable="true" />
 
     <LinearLayout
         android:layout_width="fill_parent"
@@ -127,15 +130,16 @@
         android:visibility="invisible" />
 
     <Button
+        android:id="@+id/redundant_start_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/main_activity_please_start"
-        android:id="@+id/redundant_start_button"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true"
-        android:onClick="startVPN"
+        android:layout_below="@id/mainToolbar"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="@dimen/activity_vertical_margin"
         android:backgroundTint="@color/ipv6droid_green"
-    />
+        android:onClick="startVPN"
+        android:text="@string/main_activity_please_start" />
 
     <ListView
         android:id="@+id/providerList"
@@ -144,7 +148,7 @@
         android:layout_below="@id/cause"
         android:layout_alignParentBottom="false"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="@dimen/activity_vertical_margin"
         android:layout_marginBottom="20dp"
         android:choiceMode="singleChoice"
         android:clickable="true"

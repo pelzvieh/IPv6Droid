@@ -554,7 +554,12 @@ public class MainActivity extends AppCompatActivity {
             if (currentSpec != null) {
                 Log.d(TAG, "Tunnel is set");
                 binding.tunnelTitle.setText(currentSpec.getTunnelName());
-                binding.tunnelDetail.setText(currentSpec.getIpv6Endpoint().getHostAddress());
+                binding.tunnelDetail.setText(
+                        String.format("%s ➡️ %s\n🗓️ %tF",
+                                currentSpec.getIpv6Endpoint().getHostAddress(),
+                                currentSpec.getIPv4Pop().getHostName(),
+                                currentSpec.getExpiryDate())
+                        );
             } else {
                 Log.d(TAG, "No tunnels are set");
                 binding.tunnelTitle.setText("--");
