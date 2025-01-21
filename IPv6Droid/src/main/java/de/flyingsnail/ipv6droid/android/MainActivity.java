@@ -556,8 +556,12 @@ public class MainActivity extends AppCompatActivity {
                 binding.tunnelTitle.setText(currentSpec.getTunnelName());
                 binding.tunnelDetail.setText(
                         String.format("%s ➡️ %s\n🗓️ %tF",
-                                currentSpec.getIpv6Endpoint().getHostAddress(),
-                                currentSpec.getIPv4Pop().getHostName(),
+                                currentSpec.getIpv6Endpoint() != null
+                                        ? currentSpec.getIpv6Endpoint().getHostAddress()
+                                        : "--",
+                                currentSpec.getIPv4Pop() != null
+                                        ? currentSpec.getIPv4Pop().getHostName()
+                                        : "--",
                                 currentSpec.getExpiryDate())
                         );
             } else {

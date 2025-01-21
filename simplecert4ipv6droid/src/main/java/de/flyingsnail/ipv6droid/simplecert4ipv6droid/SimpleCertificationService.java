@@ -29,6 +29,7 @@ import android.os.Binder;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
@@ -142,6 +143,7 @@ public class SimpleCertificationService extends Service {
         private final SimpleCertificationService simpleCertificationService;
 
         IncomingHandler(SimpleCertificationService context) {
+            super(Looper.getMainLooper());
             simpleCertificationService = context;
         }
 
