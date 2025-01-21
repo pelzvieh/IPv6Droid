@@ -44,11 +44,11 @@ android {
     compileSdk 35
 
     defaultConfig {
+        versionCode 2
+        versionName "1.02"
         applicationId "de.flyingsnail.ipv6droid.simplecert4ipv6droid"
         minSdk 24
         targetSdk 35
-        versionCode 1
-        versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -70,16 +70,16 @@ android {
 
 dependencies {
 
-    implementation 'androidx.appcompat:appcompat:1.7.0'
-    implementation 'com.google.android.material:material:1.12.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.2.0'
-    implementation 'androidx.navigation:navigation-fragment:2.8.5'
-    implementation 'androidx.navigation:navigation-ui:2.8.5'
+    implementation libs.androidx.appcompat
+    implementation libs.material
+    implementation libs.androidx.constraintlayout
+    implementation libs.androidx.navigation.fragment
+    implementation libs.androidx.navigation.ui
     implementation libs.androidx.databinding.common
     implementation libs.androidx.databinding.runtime
-    testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
-    androidTestImplementation "androidx.test:runner:1.6.2"
-    androidTestImplementation "androidx.test:rules:1.6.1"
+    testImplementation libs.junit
+    androidTestImplementation libs.androidx.junit
+    androidTestImplementation libs.androidx.espresso.core
+    androidTestImplementation libs.androidx.runner
+    androidTestImplementation libs.androidx.rules
 }
