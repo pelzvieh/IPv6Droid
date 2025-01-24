@@ -63,8 +63,8 @@ android {
 
     defaultConfig {
 
-        versionCode 83
-        versionName "2.99c"
+        versionCode 84
+        versionName "2.99d"
         minSdkVersion 23
         targetSdkVersion 35
     }
@@ -88,6 +88,14 @@ android {
             matchingFallbacks = []
         }
     }
+
+    dependenciesInfo {
+        // Disables dependency metadata when building APKs.
+        includeInApk = false
+        // Disables dependency metadata when building Android App Bundles.
+        includeInBundle = false
+    }
+
 
     buildFeatures {
         buildConfig = true
