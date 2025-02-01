@@ -42,6 +42,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.android.datalayer.network.event.Event;
@@ -142,6 +143,7 @@ public class NetworksRepository {
      */
     NetworksRepository (final NetworkLocalDataSource networkLocalDataSource,
                         final ConnectivityLocalDataSource connectivityLocalDataSource) {
+        logger.setLevel(Level.FINEST);
         this.networkLocalDataSource = networkLocalDataSource;
         this.connectivityLocalDataSource = connectivityLocalDataSource;
         startConnectivityListening();
@@ -159,17 +161,17 @@ public class NetworksRepository {
             @NonNull NetworksInformationContainer networks,
             @NonNull Event e) {
         Long id = e.getAffectedNetwork().getNetworkHandle();
-        logger.info(String.format(Locale.ENGLISH, "event for network %d", id));
+        logger.fine(String.format(Locale.ENGLISH, "event for network %d", id));
         Map<Long, NetworkProperty> nextMap = new HashMap<>(networks.networkProperties);
         if (!nextMap.containsKey(id)) {
-            logger.info("New network handle reported - creating entry");
+            logger.fine("New network handle reported - creating entry");
             nextMap.put(
                     id,
                     applyNetworkEvent(
                             new NetworkProperty(e.getAffectedNetwork()),
                             e));
         } else {
-            logger.info("This network is not actually new, but it's newly available");
+            logger.fine("Update for existing network");
             nextMap.put(
                     id,
                     applyNetworkEvent(Objects.requireNonNull(nextMap.get(id)), e));
@@ -186,12 +188,12 @@ public class NetworksRepository {
             retval = new NetworkProperty(event.getAffectedNetwork());
         }
         boolean handled
-                 = applyAvailableEvent(networkProperty, event)
-                || applyBlockingEvent(networkProperty, event)
-                || applyCapabilitiesEvent(networkProperty, event)
-                || applyDisconnectingEvent(networkProperty, event)
-                || applyDisconnectedEvent(networkProperty, event)
-                || applyLinkPropertiesEvent(networkProperty, event);
+                 = applyAvailableEvent(retval, event)
+                || applyBlockingEvent(retval, event)
+                || applyCapabilitiesEvent(retval, event)
+                || applyDisconnectingEvent(retval, event)
+                || applyDisconnectedEvent(retval, event)
+                || applyLinkPropertiesEvent(retval, event);
         if (!handled)
             logger.warning(String.format(
                     "Received event %s that was not handled by any apply function",
@@ -264,11 +266,11 @@ public class NetworksRepository {
         logger.info("Building the Observable functional chains");
         /*
         Connectivity	  -acbp--g-l-ab----acpb--l
-		                    1111  1 1 33    1111  3
+		                     1111  1 1 33    1111  3
         CurrentNetwork?	 1         3     1
         NetProp	    	  -0123--4-5-02----0132--5
 		                     1111  1 1 33    1111  3
-        OnlineNet	      ----1---------------1---
+        OnlineNet	      ----1--1------------1---
         OnlineDev	      -0--1----0----------1---
         CloseRemote	    -------1----------------
         StartRemote	    ----1---------------1---
@@ -277,7 +279,7 @@ public class NetworksRepository {
                 connectivityLocalDataSource.getConnectivityEventObservable()
                         .scan(new NetworksInformationContainer(), this::applyNetworksEvent)
                         .filter((nic)-> nic.id != NetworksInformationContainer.NONE)
-                        .replay(10);
+                        .replay(25);
         this.onlineNetwork =
                 networksProperties
                         .filter((nic) -> {
@@ -287,29 +289,35 @@ public class NetworksRepository {
                                     && networkProperty.getProperties() != null
                                     && capabilityMeansOnline(networkProperty.getCapabilities())
                                     && (networkProperty.getInvalidAfter() == null
-                                    || networkProperty.getInvalidAfter().before(new Date()));
+                                    || networkProperty.getInvalidAfter().after(new Date()));
                         })
                         .map((nic)->nic.id)
                         .replay(1)
-                        .autoConnect(0);
+                        .autoConnect(1);
         this.deviceOnline =
                 onlineNetwork
-                        .map((e)->TRUE)
+                        .map((e)-> {
+                            logger.info("Device is online with network " + e);
+                            return TRUE;
+                        })
                         .mergeWith(
                                 networksProperties
                                         .filter(this::isAllNetworksOffline)
                                         .map((e) -> FALSE)
                         )
                         .startWithItem(FALSE)
+                        .distinctUntilChanged()
+                        .doOnNext((e) -> logger.info("Device online: " + e))
                         .replay(1)
-                        .autoConnect(0);
+                        .autoConnect(1);
+
         this.currentNetworkObservable =
                 connectivityLocalDataSource.getConnectivityEventObservable()
                         .filter(e->e instanceof EventAvailable)
                         .cast(EventAvailable.class)
                         .map(EventAvailable::getAffectedNetwork)
                         .replay(1)
-                        .autoConnect(0);
+                        .autoConnect(1);
         // let's start
         networksProperties.connect();
     }
@@ -325,6 +333,8 @@ public class NetworksRepository {
 
     private boolean isNetworkOffline(NetworkProperty property) {
         if (property.isBlocked())
+            return true;
+        if (property.getProperties() == null)
             return true;
         NetworkCapabilities capas = property.getCapabilities();
         if (capas == null)

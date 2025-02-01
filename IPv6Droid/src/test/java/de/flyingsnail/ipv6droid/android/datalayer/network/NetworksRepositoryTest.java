@@ -23,8 +23,13 @@
 
 package de.flyingsnail.ipv6droid.android.datalayer.network;
 
+import static android.net.NetworkCapabilities.NET_CAPABILITY_FOREGROUND;
+import static android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET;
 import static org.junit.Assert.assertNotNull;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.when;
+import static java.lang.Boolean.FALSE;
+import static java.lang.Boolean.TRUE;
 
 import android.net.LinkProperties;
 import android.net.Network;
@@ -37,15 +42,23 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.android.datalayer.network.event.Event;
 import de.flyingsnail.ipv6droid.android.datalayer.network.event.EventAvailable;
+import de.flyingsnail.ipv6droid.android.datalayer.network.event.EventBlockingChanged;
+import de.flyingsnail.ipv6droid.android.datalayer.network.event.EventCapabilitiesChanged;
+import de.flyingsnail.ipv6droid.android.datalayer.network.event.EventDisconnected;
+import de.flyingsnail.ipv6droid.android.datalayer.network.event.EventDisconnecting;
+import de.flyingsnail.ipv6droid.android.datalayer.network.event.EventLinkPropertiesChanged;
 import io.reactivex.rxjava3.annotations.NonNull;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.observers.TestObserver;
 
 @RunWith(MockitoJUnitRunner.class)
 public class NetworksRepositoryTest {
+    private static final Logger logger = Logger.getLogger(NetworksRepositoryTest.class.getName());
 
     private NetworksRepository repository;
 
@@ -53,17 +66,62 @@ public class NetworksRepositoryTest {
     private Network testNetwork1;
 
     @Mock
+    private Network testNetwork3;
+
+    @Mock
     private ConnectivityLocalDataSource mockLocalDataSource;
 
     @Mock
     private NetworkLocalDataSource mockNetworkLocalDataSource;
 
+    @Mock
+    private NetworkCapabilities networkCapabilities_noInternet;
+
+    @Mock
+    private NetworkCapabilities networkCapabilities_connected;
+
+    private final LinkProperties linkProperties1 = new LinkProperties();
+    private final LinkProperties linkProperties3 = new LinkProperties();
+
+    private Event[] emittedTestEvents;
+
     @Before
     public void setUp() {
-        Event expectedEvent = new EventAvailable(testNetwork1);
-        Observable<Event> connectivityEvents = Observable.just(expectedEvent);
+        Logger parent = logger;
+        while (parent != null) {
+            parent.setLevel(Level.FINEST);
+            parent = parent.getParent();
+        }
+        logger.info("Setting up");
+        // Given
+        /*
+          Connectivity	  -acbpc--g-l-ab----acpb--l
+                           11111  1 1 33    1111  3
+        */
+        emittedTestEvents = new Event[] {
+                new EventAvailable(testNetwork1),
+                new EventCapabilitiesChanged(testNetwork1, networkCapabilities_noInternet),
+                new EventBlockingChanged(testNetwork1, FALSE),
+                new EventLinkPropertiesChanged(testNetwork1, linkProperties1),
+                new EventCapabilitiesChanged(testNetwork1, networkCapabilities_connected),
+                new EventDisconnecting(testNetwork1, 100),
+                new EventDisconnected(testNetwork1),
+                new EventAvailable(testNetwork3),
+                new EventBlockingChanged(testNetwork1, FALSE),
+                new EventAvailable(testNetwork1),
+                new EventCapabilitiesChanged(testNetwork1, networkCapabilities_connected),
+                new EventLinkPropertiesChanged(testNetwork1, linkProperties3),
+                new EventBlockingChanged(testNetwork1, FALSE),
+                new EventDisconnected(testNetwork3),
+        };
+        Observable<Event> connectivityEvents = Observable.fromArray(emittedTestEvents);
 
         when(testNetwork1.getNetworkHandle()).thenReturn(1L);
+        when(testNetwork3.getNetworkHandle()).thenReturn(3L);
+        when(networkCapabilities_noInternet.hasCapability(NET_CAPABILITY_INTERNET))
+                .thenReturn(false);
+        when(networkCapabilities_connected.hasCapability(anyInt()))
+                .thenReturn(true);
         when(mockLocalDataSource.getConnectivityEventObservable()).thenReturn(connectivityEvents);
 
         repository = new NetworksRepository(mockNetworkLocalDataSource, mockLocalDataSource);
@@ -75,10 +133,7 @@ public class NetworksRepositoryTest {
     }
 
     @Test
-    public void getConnectivityEvents_returnsEventsFromLocalDataSource() {
-        // Given
-        LinkProperties linkProperties = new LinkProperties();
-        NetworkCapabilities networkCapabilities = new NetworkCapabilities();
+    public void getConnectivityEvents_returnsNetworksProperties() {
 
         // When
         Observable<NetworksRepository.NetworksInformationContainer> resultObservable = repository.getNetworksProperties();
@@ -86,10 +141,19 @@ public class NetworksRepositoryTest {
         // Then
         @NonNull TestObserver<NetworksRepository.NetworksInformationContainer> testObserver = resultObservable.test();
         testObserver.assertNoErrors();
-        testObserver.assertValue((nic) -> nic.getId() == 1L);
-        testObserver.assertValue((nic) -> nic.getNetworkProperties() != null);
-        testObserver.assertValue((nic) -> Objects.requireNonNull(nic.getNetworkProperties().get(1L)).getProperties() == null);
-        testObserver.assertValue((nic) -> Objects.requireNonNull(nic.getNetworkProperties().get(1L)).getCapabilities() == null);
+        testObserver.assertValueCount(emittedTestEvents.length);
+        testObserver.assertValueAt(0, (nic) -> nic.getId() == 1L);
+        testObserver.assertValueAt(0, (nic) -> nic.getNetworkProperties() != null);
+        testObserver.assertValueAt(0, (nic) -> Objects.requireNonNull(nic.getNetworkProperties().get(1L)).getProperties() == null);
+        testObserver.assertValueAt(0, (nic) -> Objects.requireNonNull(nic.getNetworkProperties().get(1L)).getCapabilities() == null);
+        testObserver.assertValueAt(4, (nic) ->
+                Objects.requireNonNull(
+                        Objects.requireNonNull(nic.getNetworkProperties().get(1L))
+                                .getCapabilities()).hasCapability(NET_CAPABILITY_INTERNET));
+        testObserver.assertValueAt(4, (nic) ->
+                Objects.requireNonNull(
+                        Objects.requireNonNull(nic.getNetworkProperties().get(1L))
+                                .getCapabilities()).hasCapability(NET_CAPABILITY_FOREGROUND));
     }
 
     @Test
@@ -97,7 +161,12 @@ public class NetworksRepositoryTest {
         Observable<Long> resultObservable = repository.getOnlineNetwork();
         @NonNull TestObserver<Long> testObserver = resultObservable.test();
         testObserver.assertNoErrors();
-        testObserver.assertNoValues();
+        /*
+        Connectivity	  -acbpc--g-l-ab----acpb--l
+		                     11111  1 1 33    1111  3
+        OnlineNet	      -----1--1------------1---
+         */
+        testObserver.assertValues(1L, 1L, 1L);
     }
 
     @Test
@@ -105,7 +174,13 @@ public class NetworksRepositoryTest {
         Observable<Boolean> resultObservable = repository.getDeviceOnline();
         @NonNull TestObserver<Boolean> testObserver = resultObservable.test();
         testObserver.assertNoErrors();
-        testObserver.assertValue(Boolean.FALSE);
+        /*
+        Connectivity	  -acbp--g-l-ab----acpb--l
+		                     1111  1 1 33    1111  3
+        OnlineDev	      -0--1----0----------1---
+
+         */
+        testObserver.assertValues(FALSE, TRUE, FALSE);
     }
 
     @Test
@@ -113,6 +188,15 @@ public class NetworksRepositoryTest {
         Observable<Network> resultObservable = repository.getCurrentNetworkObservable();
         @NonNull TestObserver<Network> testObserver = resultObservable.test();
         testObserver.assertNoErrors();
-        testObserver.assertValue((n)->n.getNetworkHandle()==1L);
+        /*
+        Connectivity	  -acbp--g-l-ab----acpb--l
+		                     1111  1 1 33    1111  3
+        CurrentNetwork?	 1         3     1
+         */
+        testObserver.assertValues(
+                testNetwork1,
+                testNetwork3,
+                testNetwork1
+        );
     }
 }
