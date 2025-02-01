@@ -23,5 +23,5 @@
 
 package de.flyingsnail.ipv6droid.android.datalayer.network;
 
-class NetworkLocalDataSource {
+public class NetworkLocalDataSource {
 }

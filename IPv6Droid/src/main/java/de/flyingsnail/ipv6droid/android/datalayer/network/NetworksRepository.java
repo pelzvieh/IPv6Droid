@@ -141,8 +141,8 @@ public class NetworksRepository {
      * @param networkLocalDataSource the NetworkLocalDataSource to use.
      * @param connectivityLocalDataSource the ConnectivityLocalDataSource to use.
      */
-    NetworksRepository (final NetworkLocalDataSource networkLocalDataSource,
-                        final ConnectivityLocalDataSource connectivityLocalDataSource) {
+    public NetworksRepository(final NetworkLocalDataSource networkLocalDataSource,
+                              final ConnectivityLocalDataSource connectivityLocalDataSource) {
         logger.setLevel(Level.FINEST);
         this.networkLocalDataSource = networkLocalDataSource;
         this.connectivityLocalDataSource = connectivityLocalDataSource;

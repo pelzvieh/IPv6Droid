@@ -47,7 +47,7 @@ import io.reactivex.rxjava3.core.ObservableEmitter;
 /**
  * The data source for network information from the Android connectivity manager system service.
  */
-class ConnectivityLocalDataSource  {
+public class ConnectivityLocalDataSource  {
     final static Logger logger = Logger.getLogger(ConnectivityLocalDataSource.class.getName());
 
     private final Observable<Event> connectivityEvent;
@@ -118,7 +118,7 @@ class ConnectivityLocalDataSource  {
 
     private final ConnectivityManager connectivityManager;
 
-    ConnectivityLocalDataSource (final ConnectivityManager connectivityManager) {
+    public ConnectivityLocalDataSource(final ConnectivityManager connectivityManager) {
         this.connectivityManager = connectivityManager;
         //this.networkCallback = new DataSourceNetworkCallback();
         connectivityEvent = Observable.create(emitter -> {
