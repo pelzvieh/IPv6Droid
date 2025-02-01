@@ -63,8 +63,8 @@ android {
 
     defaultConfig {
 
-        versionCode 84
-        versionName "2.99d"
+        versionCode 85
+        versionName "2.99e"
         minSdkVersion 23
         targetSdkVersion 35
     }
@@ -121,5 +121,8 @@ dependencies {
     implementation libs.androidx.databinding.common
     implementation libs.androidx.databinding.runtime
     implementation libs.material
+    implementation libs.rxjava
     //implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    testImplementation libs.junit
+    testImplementation libs.mockito.core
 }

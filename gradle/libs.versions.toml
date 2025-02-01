@@ -13,9 +13,12 @@ androidx-annotation = "1.9.1"
 databinding-common = "8.8.0"
 databinding-runtime = "8.8.0"
 material = "1.12.0"
-navigation-fragment = "2.8.5"
+mockito-core = "3.12.4"
+navigation-fragment = "2.8.6"
+robolectric = "4.11.1"
 rules = "1.6.1"
 runner = "1.6.2"
+rxjava = "3.1.10"
 
 [libraries]
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
@@ -37,4 +40,6 @@ androidx-databinding-common = { group = "androidx.databinding", name = "databind
 androidx-databinding-runtime = { group = "androidx.databinding", name = "databinding-runtime", version.ref = "databinding-runtime" }
 junit = { module = "junit:junit", version.ref = "junit" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito-core" }
+rxjava = { module = "io.reactivex.rxjava3:rxjava", version.ref = "rxjava" }
 [plugins]
