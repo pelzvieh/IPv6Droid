@@ -36,15 +36,13 @@ public class IPv6Droid extends Application {
     static final Logger logger = Logger.getLogger(IPv6Droid.class.getName());
 
     private NetworksRepository networksRepository;
-    private ConnectivityLocalDataSource connectivityLocalDataSource;
-    private NetworkLocalDataSource networkLocalDataSource;
 
     @Override
     public void onCreate() {
         super.onCreate();
         logger.fine("Application starting up");
-        connectivityLocalDataSource = new ConnectivityLocalDataSource(getSystemService(ConnectivityManager.class));
-        networkLocalDataSource = new NetworkLocalDataSource();
+        ConnectivityLocalDataSource connectivityLocalDataSource = new ConnectivityLocalDataSource(getSystemService(ConnectivityManager.class));
+        NetworkLocalDataSource networkLocalDataSource = new NetworkLocalDataSource();
         networksRepository = new NetworksRepository(networkLocalDataSource, connectivityLocalDataSource);
     }
 

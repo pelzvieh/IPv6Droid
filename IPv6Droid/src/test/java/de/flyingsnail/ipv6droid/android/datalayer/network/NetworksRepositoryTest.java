@@ -54,6 +54,7 @@ import de.flyingsnail.ipv6droid.android.datalayer.network.event.EventDisconnecti
 import de.flyingsnail.ipv6droid.android.datalayer.network.event.EventLinkPropertiesChanged;
 import io.reactivex.rxjava3.annotations.NonNull;
 import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.ObservableSource;
 import io.reactivex.rxjava3.observers.TestObserver;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -136,10 +137,11 @@ public class NetworksRepositoryTest {
     public void getConnectivityEvents_returnsNetworksProperties() {
 
         // When
-        Observable<NetworksRepository.NetworksInformationContainer> resultObservable = repository.getNetworksProperties();
+        ObservableSource<NetworksRepository.NetworksInformationContainer> resultObservableSource = repository.getNetworksProperties();
 
         // Then
-        @NonNull TestObserver<NetworksRepository.NetworksInformationContainer> testObserver = resultObservable.test();
+        @NonNull TestObserver<NetworksRepository.NetworksInformationContainer> testObserver = TestObserver.create();
+        resultObservableSource.subscribe(testObserver);
         testObserver.assertNoErrors();
         testObserver.assertValueCount(emittedTestEvents.length);
         testObserver.assertValueAt(0, (nic) -> nic.getId() == 1L);
@@ -158,15 +160,17 @@ public class NetworksRepositoryTest {
 
     @Test
     public void getConnectivityEvents_returnsOnlineNetwork() {
-        Observable<Long> resultObservable = repository.getOnlineNetwork();
-        @NonNull TestObserver<Long> testObserver = resultObservable.test();
+        Observable<NetworkProperty> resultObservable = repository.getOnlineNetworkProperty();
+        @NonNull TestObserver<NetworkProperty> testObserver = resultObservable.test();
         testObserver.assertNoErrors();
         /*
         Connectivity	  -acbpc--g-l-ab----acpb--l
 		                     11111  1 1 33    1111  3
         OnlineNet	      -----1--1------------1---
          */
-        testObserver.assertValues(1L, 1L, 1L);
+        testObserver.assertValueAt(0, (np) -> np.getNetwork().getNetworkHandle() == 1L);
+        testObserver.assertValueAt(1, (np) -> np.getNetwork().getNetworkHandle() == 1L);
+        testObserver.assertValueAt(2, (np) -> np.getNetwork().getNetworkHandle() == 1L);
     }
 
     @Test
@@ -185,18 +189,17 @@ public class NetworksRepositoryTest {
 
     @Test
     public void getConnectivityEvents_returnsCurrentNetwork() {
-        Observable<Network> resultObservable = repository.getCurrentNetworkObservable();
-        @NonNull TestObserver<Network> testObserver = resultObservable.test();
+        ObservableSource<NetworkProperty> resultObservableSource = repository.getCurrentNetworkObservable();
+        @NonNull TestObserver<NetworkProperty> testObserver = TestObserver.create();
+        resultObservableSource.subscribe(testObserver);
         testObserver.assertNoErrors();
         /*
         Connectivity	  -acbp--g-l-ab----acpb--l
 		                     1111  1 1 33    1111  3
         CurrentNetwork?	 1         3     1
          */
-        testObserver.assertValues(
-                testNetwork1,
-                testNetwork3,
-                testNetwork1
-        );
+        testObserver.assertValueAt(0, (np) -> np.getNetwork() == testNetwork1);
+        testObserver.assertValueAt(1, (np) -> np.getNetwork() == testNetwork3);
+        testObserver.assertValueAt(2, (np) -> np.getNetwork() == testNetwork1);
     }
 }

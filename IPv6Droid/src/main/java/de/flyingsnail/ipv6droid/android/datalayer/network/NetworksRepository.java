@@ -30,7 +30,6 @@ import static android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED;
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 
-import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.os.Build;
 
@@ -53,7 +52,10 @@ import de.flyingsnail.ipv6droid.android.datalayer.network.event.EventDisconnecte
 import de.flyingsnail.ipv6droid.android.datalayer.network.event.EventDisconnecting;
 import de.flyingsnail.ipv6droid.android.datalayer.network.event.EventLinkPropertiesChanged;
 import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.core.ObservableSource;
 import io.reactivex.rxjava3.observables.ConnectableObservable;
+import io.reactivex.rxjava3.subjects.ReplaySubject;
+import io.reactivex.rxjava3.subjects.Subject;
 
 /**
  * This class provides the single source of truth concerning the device's
@@ -66,27 +68,41 @@ import io.reactivex.rxjava3.observables.ConnectableObservable;
  */
 public class NetworksRepository {
     private static final Logger logger = Logger.getLogger(NetworksRepository.class.getName());
-    private @NonNull ConnectableObservable<NetworksInformationContainer> networksProperties;
-    private @NonNull Observable<Network> currentNetworkObservable;
-    private @NonNull Observable<Long> onlineNetwork;
-    private @NonNull Observable<Boolean> deviceOnline;
+    private final @NonNull ConnectableObservable<NetworksInformationContainer> networksProperties;
+    private final @NonNull Observable<NetworkProperty> currentNetworkObservable;
+    private final @NonNull Observable<NetworkProperty> onlineNetworkProperty;
+    private final @NonNull Observable<Boolean> deviceOnline;
+    private final Subject<NetworkProperty> currentNetworkSource;
 
+    /**
+     * Get an ObservableSource streaming the networks properties evolving over time.
+     * Each emitted NetworksInformationContainer aggregates the latest connectivity event as an
+     * update to the affected network's NetworkProperty. The current NetworkProperty for each
+     * known network is contained, along with the id of the network that changed with the emitted
+     * instance.
+     * @return an ObservableSource&lt;NetworksInformationContainer&gt;
+     */
     @NonNull
-    public Observable<NetworksInformationContainer> getNetworksProperties() {
+    public ObservableSource<NetworksInformationContainer> getNetworksProperties() {
         logger.fine("Returning networksProperties observable");
         return networksProperties;
     }
 
+    /**
+     * Get an ObservableSource streaming the NetworkProperty of the network that <em>changed</em>
+     * last with a connectivity event.
+     * @return an ObservableSource&lt;NetworkProperty&gt;
+     */
     @NonNull
-    public Observable<Network> getCurrentNetworkObservable() {
-        logger.fine("Returning currentNetworkObservable observable");
+    public ObservableSource<NetworkProperty> getCurrentNetworkObservable() {
+        logger.fine("Returning currentNetworkObservable");
         return currentNetworkObservable;
     }
 
     @NonNull
-    public Observable<Long> getOnlineNetwork() {
+    public Observable<NetworkProperty> getOnlineNetworkProperty() {
         logger.fine("Returning onlineNetwork observable");
-        return onlineNetwork;
+        return onlineNetworkProperty;
     }
 
     @NonNull
@@ -146,7 +162,57 @@ public class NetworksRepository {
         logger.setLevel(Level.FINEST);
         this.networkLocalDataSource = networkLocalDataSource;
         this.connectivityLocalDataSource = connectivityLocalDataSource;
-        startConnectivityListening();
+        logger.info("Building the Observable functional chains");
+        /*
+        Connectivity	  -acbp--g-l-ab----acpb--l
+		                     1111  1 1 33    1111  3
+        CurrentNetwork?	 1         3     1
+        NetProp	    	  -0123--4-5-02----0132--5
+		                     1111  1 1 33    1111  3
+        OnlineNet	      ----1--1------------1---
+        OnlineDev	      -0--1----0----------1---
+        CloseRemote	    -------1----------------
+        StartRemote	    ----1---------------1---
+         */
+        currentNetworkSource = ReplaySubject.createWithSize(5); // todo this gets filled by applyEventAvailable; looks dirty
+        this.networksProperties =
+                connectivityLocalDataSource.getConnectivityEventObservable()
+                        .scan(new NetworksInformationContainer(), this::applyNetworksEvent)
+                        .filter((nic)-> nic.id != NetworksInformationContainer.NONE)
+                        .doOnComplete(currentNetworkSource::onComplete)
+                        .replay(25);
+        this.onlineNetworkProperty =
+                networksProperties
+                        .map((nic)->nic.getNetworkProperties().get(nic.id))
+                        .filter((networkProperty) -> !networkProperty.isBlocked()
+                                && networkProperty.getProperties() != null
+                                && capabilityMeansOnline(networkProperty.getCapabilities())
+                                && (networkProperty.getInvalidAfter() == null
+                                || networkProperty.getInvalidAfter().after(new Date())))
+                        .replay(1)
+                        .autoConnect(1);
+        this.deviceOnline =
+                onlineNetworkProperty
+                        .map((e)-> {
+                            logger.info("Device is online with network " + e);
+                            return TRUE;
+                        })
+                        .mergeWith(
+                                networksProperties
+                                        .filter(this::isAllNetworksOffline)
+                                        .map((e) -> FALSE)
+                        )
+                        .startWithItem(FALSE)
+                        .distinctUntilChanged()
+                        .doOnNext((e) -> logger.info("Device online: " + e))
+                        .replay(1)
+                        .autoConnect(1);
+        this.currentNetworkObservable = currentNetworkSource
+                .replay(1)
+                .autoConnect(1);
+
+        // let's start
+        networksProperties.connect();
         logger.info("Constructed");
     }
 
@@ -208,6 +274,8 @@ public class NetworksRepository {
             networkProperty.capabilities = null;
             networkProperty.blocked = null;
             networkProperty.invalidAfter = null;
+            logger.info("Writing networkProperty to currentNetworkSource: " + networkProperty);
+            currentNetworkSource.onNext(networkProperty);
             return true;
         } else {
             return false;
@@ -260,66 +328,6 @@ public class NetworksRepository {
         } else {
             return false;
         }
-    }
-
-    private void startConnectivityListening() {
-        logger.info("Building the Observable functional chains");
-        /*
-        Connectivity	  -acbp--g-l-ab----acpb--l
-		                     1111  1 1 33    1111  3
-        CurrentNetwork?	 1         3     1
-        NetProp	    	  -0123--4-5-02----0132--5
-		                     1111  1 1 33    1111  3
-        OnlineNet	      ----1--1------------1---
-        OnlineDev	      -0--1----0----------1---
-        CloseRemote	    -------1----------------
-        StartRemote	    ----1---------------1---
-         */
-        this.networksProperties =
-                connectivityLocalDataSource.getConnectivityEventObservable()
-                        .scan(new NetworksInformationContainer(), this::applyNetworksEvent)
-                        .filter((nic)-> nic.id != NetworksInformationContainer.NONE)
-                        .replay(25);
-        this.onlineNetwork =
-                networksProperties
-                        .filter((nic) -> {
-                            NetworkProperty networkProperty = Objects.requireNonNull(
-                                    nic.getNetworkProperties().get(nic.id));
-                            return !networkProperty.isBlocked()
-                                    && networkProperty.getProperties() != null
-                                    && capabilityMeansOnline(networkProperty.getCapabilities())
-                                    && (networkProperty.getInvalidAfter() == null
-                                    || networkProperty.getInvalidAfter().after(new Date()));
-                        })
-                        .map((nic)->nic.id)
-                        .replay(1)
-                        .autoConnect(1);
-        this.deviceOnline =
-                onlineNetwork
-                        .map((e)-> {
-                            logger.info("Device is online with network " + e);
-                            return TRUE;
-                        })
-                        .mergeWith(
-                                networksProperties
-                                        .filter(this::isAllNetworksOffline)
-                                        .map((e) -> FALSE)
-                        )
-                        .startWithItem(FALSE)
-                        .distinctUntilChanged()
-                        .doOnNext((e) -> logger.info("Device online: " + e))
-                        .replay(1)
-                        .autoConnect(1);
-
-        this.currentNetworkObservable =
-                connectivityLocalDataSource.getConnectivityEventObservable()
-                        .filter(e->e instanceof EventAvailable)
-                        .cast(EventAvailable.class)
-                        .map(EventAvailable::getAffectedNetwork)
-                        .replay(1)
-                        .autoConnect(1);
-        // let's start
-        networksProperties.connect();
     }
 
     private boolean isAllNetworksOffline(NetworksInformationContainer networksInformationContainer) {
