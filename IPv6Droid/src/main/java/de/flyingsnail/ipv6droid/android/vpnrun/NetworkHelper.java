@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -31,7 +31,6 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
 import android.net.NetworkRequest;
 import android.net.RouteInfo;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -39,12 +38,14 @@ import androidx.annotation.Nullable;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class NetworkHelper  {
     /**
      * The tag for logging.
      */
-    private static final String TAG = NetworkHelper.class.getName();
+    private static final Logger logger = Logger.getLogger(NetworkHelper.class.getName());
 
     /**
      * The object to call back on new or lost connectivity.
@@ -150,7 +151,7 @@ public class NetworkHelper  {
                 connectivityManager.unregisterNetworkCallback(networkCallback);
             }
         } catch (IllegalArgumentException e) {
-            Log.e(TAG, "Unable to unregister network callback", e);
+            logger.log(Level.WARNING, "Unable to unregister network callback", e);
         } finally {
             networkCallback = null;
         }
@@ -175,7 +176,7 @@ public class NetworkHelper  {
      *                          change callback.
      */
     void updateNetworkDetails(@NonNull final Network network, @Nullable final LinkProperties newLinkProperties) {
-        Log.i(TAG, "Updating cached network details");
+        logger.info("Updating cached network details");
         // force-set native link properties to supplied information
         networkDetails.setNativeProperties(network, newLinkProperties);
         for (Network n : connectivityManager.getAllNetworks()) {
@@ -201,27 +202,27 @@ public class NetworkHelper  {
     boolean isCurrentSocketAdressStillValid(DatagramSocket socket) {
         boolean addressValid = false;
         final LinkProperties myNativeProperties = networkDetails.getNativeProperties();
-        Log.i(TAG, "Explicit address validity check requested");
+        logger.info("Explicit address validity check requested");
         if (myNativeProperties != null) {
             if (socket != null) {
                 InetAddress currentLocalAddress = socket.getLocalAddress();
-                Log.d(TAG, "Comparing current socket local address " + currentLocalAddress);
+                logger.fine("Comparing current socket local address " + currentLocalAddress);
                 for (LinkAddress linkAdress : myNativeProperties.getLinkAddresses()) {
                     InetAddress newAdress = linkAdress.getAddress();
-                    Log.d(TAG, "- with link address " + newAdress);
+                    logger.fine("- with link address " + newAdress);
                     if (newAdress.equals(currentLocalAddress)) {
-                        Log.d(TAG, "--> old socket address matches new link local address");
+                        logger.fine("--> old socket address matches new link local address");
                         addressValid = true;
                     } else {
-                        Log.d(TAG, "--- No match");
+                        logger.fine("--- No match");
                     }
                 }
             }
         }
         if (addressValid)
-            Log.i(TAG, "Current socket address still matches the new native local address");
+            logger.info("Current socket address still matches the new native local address");
         else
-            Log.i(TAG, "Current socket address cannot be verified to be valid");
+            logger.info("Current socket address cannot be verified to be valid");
         return addressValid;
     }
 

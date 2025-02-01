@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -23,8 +23,6 @@
 
 package de.flyingsnail.ipv6droid.android;
 
-import android.util.Log;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -33,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
@@ -45,7 +44,7 @@ public class Tunnels extends ArrayList<TunnelSpec> implements Cloneable {
     static final long serialVersionUID =-9178679015599058965L;
     // the TicTunnel that is currently active/selected for activation
     private @Nullable TunnelSpec activeTunnel;
-    static final String TAG = Tunnels.class.getSimpleName();
+    static final Logger logger = Logger.getLogger(Tunnels.class.getName());
 
     /**
      * A Serializable for the whole purpose to have a Serializable for which Android didn't implement
@@ -180,16 +179,16 @@ public class Tunnels extends ArrayList<TunnelSpec> implements Cloneable {
      */
     public boolean checkCachedTunnelAvailability() {
         if (size() == 0) {
-            Log.i(TAG, "No tunnels are cached");
+            logger.info("No tunnels are cached");
             return false;
         }
         for (TunnelSpec tunnel: this) {
             if (!tunnel.isEnabled()) {
-                Log.i(TAG, String.format("Tunnel %s (%s) is expired", tunnel.getTunnelName(), tunnel.getTunnelId()));
+                logger.info(String.format("Tunnel %s (%s) is expired", tunnel.getTunnelName(), tunnel.getTunnelId()));
                 return false; // one tunnel is expired or disabled
             }
         }
-        Log.i(TAG, "All tunnels in cache are valid");
+        logger.info("All tunnels in cache are valid");
         return true; // all tunnels are enabled
     }
 

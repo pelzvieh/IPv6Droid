@@ -31,7 +31,6 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -41,6 +40,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.databinding.ProviderlistTemplateBinding;
 
@@ -50,7 +51,7 @@ import de.flyingsnail.ipv6droid.databinding.ProviderlistTemplateBinding;
  */
 public class CertSupplierArrayAdapter extends ArrayAdapter<String> {
 
-    private final static String TAG = CertSupplierArrayAdapter.class.getSimpleName();
+    private final static Logger logger = Logger.getLogger(CertSupplierArrayAdapter.class.getName());
     private final int viewResource;
 
     /**
@@ -76,14 +77,14 @@ public class CertSupplierArrayAdapter extends ArrayAdapter<String> {
             try {
                 appInfo = pm.getApplicationInfo(packageName, PackageManager.ApplicationInfoFlags.of(PackageManager.GET_META_DATA));
             } catch (PackageManager.NameNotFoundException e) {
-                Log.e(TAG, "Could not query info on supplier package", e);
+                logger.log(Level.WARNING, "Could not query info on supplier package", e);
             }
         }
         Drawable icon = null;
         try {
             icon = pm.getApplicationIcon(packageName);
         } catch (PackageManager.NameNotFoundException e) {
-            Log.e(TAG, "Could not query icon on supplier package", e);
+            logger.log(Level.WARNING, "Could not query icon on supplier package", e);
         }
         // ensure we have a view
         ProviderlistTemplateBinding binding;

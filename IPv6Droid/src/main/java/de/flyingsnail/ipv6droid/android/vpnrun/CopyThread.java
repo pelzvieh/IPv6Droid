@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -23,7 +23,6 @@
 package de.flyingsnail.ipv6droid.android.vpnrun;
 
 import android.net.TrafficStats;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -34,6 +33,8 @@ import java.io.OutputStream;
 import java.util.Date;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.UserNotificationCallback;
@@ -44,7 +45,7 @@ import de.flyingsnail.ipv6droid.android.statistics.TransmissionStatistics;
  * to an output stream.
  */
 class CopyThread extends Thread {
-    private static final String TAG = CopyThread.class.getName();
+    private static final Logger logger = Logger.getLogger(CopyThread.class.getName());
     // the stream to read from
     private InputStream in;
     // the stream to write to
@@ -115,7 +116,7 @@ class CopyThread extends Thread {
      */
     public void stopCopy() {
         if (!stopCopy) {
-            Log.i(TAG, "Stopping copy thread " + getName());
+            logger.info("Stopping copy thread " + getName());
             stopCopy = true;
             if (this.isAlive())
                 this.interrupt();
@@ -128,12 +129,12 @@ class CopyThread extends Thread {
      * Close all sockets, null all fields
      */
     synchronized private void cleanAll() {
-        Log.i(TAG, "Cleanup of " + getName());
+        logger.info("Cleanup of " + getName());
         if (in != null) {
             try {
                 in.close();
             } catch (IOException e) {
-                Log.e(TAG, "Copy thread could not gracefully close input", e);
+                logger.log(Level.WARNING, "Copy thread could not gracefully close input", e);
             }
             in = null;
         }
@@ -141,26 +142,26 @@ class CopyThread extends Thread {
             try {
                 out.flush();
             } catch (IOException e) {
-                Log.e(TAG, "Copy thread could not gracefully flush output", e);
+                logger.log(Level.WARNING, "Copy thread could not gracefully flush output", e);
             }
             try {
                 out.close();
             } catch (IOException e) {
-                Log.e(TAG, "Copy thread could not gracefully close output", e);
+                logger.log(Level.WARNING, "Copy thread could not gracefully close output", e);
             }
             out = null;
         }
         bufferPool.clear();
         packetQueue.clear();
         deathCause = null;
-        Log.i(TAG, "Cleanup of " + getName() + " finished");
+        logger.info("Cleanup of " + getName() + " finished");
     }
 
     @Override
     public void run() {
         try {
             TrafficStats.setThreadStatsTag(networkTag);
-            Log.i(TAG, "Copy thread started");
+            logger.info("Copy thread started");
 
             int recvZero = 0;
             long lastWrite = new Date().getTime();
@@ -196,12 +197,12 @@ class CopyThread extends Thread {
                 }
                 bufferPool.add(packet);
             }
-            Log.i(TAG, "Copy thread " + getName() + " ordinarily stopped");
+            logger.info("Copy thread " + getName() + " ordinarily stopped");
         } catch (InterruptedException | IOException e) {
-            Log.i(TAG, "Copy thread " + getName() + " ran into expected Exception, will end gracefully", e);
+            logger.log(Level.INFO, "Copy thread " + getName() + " ran into expected Exception, will end gracefully", e);
         } catch (Exception e) {
             deathCause = e;
-            Log.e(TAG, "Copy thread " + getName() + " got exception", e);
+            logger.log(Level.WARNING, "Copy thread " + getName() + " got exception", e);
             service.notifyUserOfError(R.string.copythreadexception, e);
         } finally {
             cleanAll();

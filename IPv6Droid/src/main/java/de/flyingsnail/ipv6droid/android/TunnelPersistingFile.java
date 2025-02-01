@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -34,6 +34,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.util.List;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
@@ -53,7 +54,7 @@ public class TunnelPersistingFile implements TunnelPersisting  {
     /**
      * The tag to use for logging
      */
-    private static final String TAG = TunnelPersistingFile.class.getName();
+    private static final Logger logger = Logger.getLogger(TunnelPersistingFile.class.getName());
 
     /**
      * Constructor. Takes a Context object (required).

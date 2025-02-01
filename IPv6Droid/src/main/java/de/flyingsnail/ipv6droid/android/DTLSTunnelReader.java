@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2024 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -26,11 +26,11 @@ package de.flyingsnail.ipv6droid.android;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
-import android.util.Log;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.android.dtlsrequest.CertificateToTunnel;
 import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
@@ -42,7 +42,7 @@ import de.flyingsnail.ipv6droid.transport.dtls.TransporterParams;
  */
 public class DTLSTunnelReader implements TunnelReader {
 
-    private final static String TAG = DTLSTunnelReader.class.getSimpleName();
+    private final static Logger logger = Logger.getLogger(DTLSTunnelReader.class.getName());
 
     private final TransporterParams params;
 
@@ -75,7 +75,7 @@ public class DTLSTunnelReader implements TunnelReader {
             throw new ConnectionFailedException("Failure to interpret certificate configuration", e);
         }
 
-        Log.i(TAG, "DTLSTunnelReader initialized");
+        logger.info("DTLSTunnelReader initialized");
     }
 
     @Override

@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -22,8 +22,6 @@
  */
 
 package de.flyingsnail.ipv6droid.transport.dtls;
-
-import android.util.Log;
 
 import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -49,6 +47,8 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * This is a collection of static methods to help loading standard PEM resources into the somewhat
@@ -59,7 +59,7 @@ import java.util.List;
  * Refer to the @link{https://github.com/bcgit/bc-java/blob/master/tls/src/test/java/org/bouncycastle/tls/test/TlsTestUtils.java} BC implementation.
  */
 class DTLSUtils {
-    private static final String TAG = DTLSUtils.class.getName();
+    private static final Logger logger = Logger.getLogger(DTLSUtils.class.getName());
 
     private DTLSUtils() {}
 
@@ -115,7 +115,7 @@ class DTLSUtils {
         try {
             Extensions extensions = org.bouncycastle.asn1.x509.Certificate.getInstance(cert.getEncoded()).getTBSCertificate().getExtensions();
             if (extensions == null) {
-                Log.i(TAG, "No certificate extensions presented");
+                logger.info("No certificate extensions presented");
                 return null;
             }
             GeneralNames generalNames = GeneralNames.fromExtensions(extensions, Extension.subjectAlternativeName);
@@ -124,18 +124,18 @@ class DTLSUtils {
                     InetAddress inetAddress = InetAddress.getByAddress(
                             new BigInteger(generalName.getName().toString().substring(1), 16).toByteArray());
                     if (inetAddress instanceof Inet6Address) {
-                        Log.i(TAG, "Supplied cert contains IPv6 subject alternative name: " + inetAddress);
+                        logger.info("Supplied cert contains IPv6 subject alternative name: " + inetAddress);
                         return (Inet6Address) inetAddress;
                     } else {
-                        Log.d(TAG, "Found subject alternative name IP address, but not IPv6: " + inetAddress);
+                        logger.fine("Found subject alternative name IP address, but not IPv6: " + inetAddress);
                     }
                 } else {
-                    Log.d(TAG, "Found subject alternative name which is not IP: " + generalName.getName());
+                    logger.fine("Found subject alternative name which is not IP: " + generalName.getName());
                 }
             }
-            Log.d(TAG, "Supplied cert did not contain an IPv6 subject alternative name");
+            logger.fine("Supplied cert did not contain an IPv6 subject alternative name");
         } catch (Throwable t) {
-            Log.e(TAG, "severe problem occurred", t);
+            logger.log(Level.WARNING, "severe problem occurred", t);
         }
         return null;
     }
@@ -173,7 +173,7 @@ class DTLSUtils {
     static URL getIssuerUrl(TlsCertificate cert) throws IOException {
         Extensions extensions = org.bouncycastle.asn1.x509.Certificate.getInstance(cert.getEncoded()).getTBSCertificate().getExtensions();
         if (extensions == null) {
-            Log.i(TAG, "No certificate extensions presented");
+            logger.info("No certificate extensions presented");
             return null;
         }
         GeneralNames generalNames = GeneralNames.fromExtensions(extensions, Extension.issuerAlternativeName);
@@ -181,10 +181,10 @@ class DTLSUtils {
             if (generalName.getTagNo() == GeneralName.uniformResourceIdentifier) {
                 return new URL(generalName.getName().toString());
             } else {
-                Log.d(TAG, "Found issuer alternative name which is not otherName: "+ generalName.getName());
+                logger.fine("Found issuer alternative name which is not otherName: "+ generalName.getName());
             }
         }
-        Log.d(TAG, "Supplied cert did not contain an otherName issuer alternative name");
+        logger.fine("Supplied cert did not contain an otherName issuer alternative name");
         return null;
     }
 

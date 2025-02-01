@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -23,10 +23,9 @@
 
 package de.flyingsnail.ipv6droid.android.vpnrun;
 
-import android.util.Log;
-
 import java.io.IOException;
 import java.util.Date;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
 import de.flyingsnail.ipv6droid.transport.Transporter;
@@ -42,7 +41,7 @@ import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
  *
  */
 class HeartbeatMonitor implements Monitor {
-    private final String TAG = HeartbeatMonitor.class.getName();
+    private final Logger logger = Logger.getLogger(HeartbeatMonitor.class.getName());
     /**
      * Time that we must wait before contacting TIC again. This applies to cached tunnels even!
      */
@@ -74,7 +73,7 @@ class HeartbeatMonitor implements Monitor {
         TunnelSpec activeTunnel = transporter.getTunnelSpec();
         long heartbeatInterval = activeTunnel.getHeartbeatInterval() * 1000L;
         if (heartbeatInterval < 300000L && remoteEnd.isNetworkMobile()) {
-            Log.i(TAG, "Lifting heartbeat interval to 300 secs");
+            logger.info("Lifting heartbeat interval to 300 secs");
             heartbeatInterval = 300000L;
         }
         while (remoteEnd.isIntendedToRun() && (inThread != null && inThread.isAlive()) && (outThread != null && outThread.isAlive())) {
@@ -96,7 +95,7 @@ class HeartbeatMonitor implements Monitor {
             if (inThread.isAlive() && outThread.isAlive() &&
                     lastPacketDelta >= heartbeatInterval - 100) {
                 try {
-                    Log.i(TAG, "Sending heartbeat");
+                    logger.info("Sending heartbeat");
                     transporter.beat();
                     lastPacketDelta = 0L;
                 } catch (TunnelBrokenException e) {
@@ -122,10 +121,10 @@ class HeartbeatMonitor implements Monitor {
                     timeoutSuspected = false;
                 }
 
-                Log.i(TAG, "Sent heartbeat.");
+                logger.info("Sent heartbeat.");
             }
         }
-        Log.i(TAG, "Terminated loop of current transporter object (interrupt or end of a copy thread)");
+        logger.info("Terminated loop of current transporter object (interrupt or end of a copy thread)");
         Throwable deathCause = null;
         final CopyThread myInThread = inThread;
         final CopyThread myOutThread = outThread;

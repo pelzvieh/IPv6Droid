@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -32,7 +32,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -46,6 +45,8 @@ import java.text.NumberFormat;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.IPv6DroidVpnService;
@@ -59,7 +60,7 @@ import de.flyingsnail.ipv6droid.android.statistics.Statistics;
 //@TargetApi(18)
 public class StatisticsFragment extends Fragment implements ServiceConnection {
     private static final String ARG_STATISTICS_BINDER = "StatisticsBinder";
-    private static final String TAG = StatisticsFragment.class.getName();
+    private static final Logger logger = Logger.getLogger(StatisticsFragment.class.getName());
 
 
     private IPv6DroidVpnService.StatisticsBinder statisticsBinder;
@@ -110,14 +111,14 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        Log.d(TAG, "onCreate started");
+        logger.fine("onCreate started");
         super.onCreate(savedInstanceState);
         // create scheduled executor
         executor = new ScheduledThreadPoolExecutor(1);
         // bind to IPv6DroidVpnService for statistics
         bindToStatistics();
         timestampFormatter = android.text.format.DateFormat.getTimeFormat(getActivity());
-        Log.i(TAG, "Creation successful");
+        logger.info("Creation successful");
     }
 
     /**
@@ -129,13 +130,13 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
             Intent intent = new Intent(getActivity(), IPv6DroidVpnService.class);
             intent.setAction(IPv6DroidVpnService.STATISTICS_INTERFACE);
             if (!myActivity.bindService(intent, this, 0))
-                Log.e(StatisticsFragment.TAG, "Bind request to statistics interface failed");
+                logger.warning("Bind request to statistics interface failed");
         }
     }
 
     @Override
     public void onDestroy() {
-        Log.d(TAG, "onDestroy started");
+        logger.fine("onDestroy started");
         Activity myActivity = getActivity();
         if (myActivity != null) {
             myActivity.unbindService(this);
@@ -147,13 +148,13 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
         executor.shutdownNow();
         executor = null;
         super.onDestroy();
-        Log.i(TAG, "Destroyed");
+        logger.info("Destroyed");
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        Log.d(TAG, "onCreateView started");
+        logger.fine("onCreateView started");
         // Inflate the layout for this fragment
         View myView = inflater.inflate(R.layout.fragment_statistics, container, false);
 
@@ -182,13 +183,13 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
         vpnDnsView = myView.findViewById(R.id.statistics_vpn_dns);
         isRoutedView = myView.findViewById(R.id.statistics_isrouted);
         timestampView = myView.findViewById(R.id.statistics_timestamp);
-        Log.i(TAG, "Successfully created view");
+        logger.info("Successfully created view");
         return myView;
     }
 
     @Override
     public void onStart() {
-        Log.d(TAG, "onStart started");
+        logger.fine("onStart started");
 
         super.onStart();
         // create the UI Handler
@@ -196,43 +197,43 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
 
         // cancel an existing updater, should not happen
         if (updaterFuture != null) {
-            Log.e(StatisticsFragment.TAG, "updaterFuture existing in onStart method, should never happen. Trying to cancel");
+            logger.warning("updaterFuture existing in onStart method, should never happen. Trying to cancel");
             if (updaterFuture.cancel(true))
-                Log.i(StatisticsFragment.TAG, "succeeded to cancel previous updater");
+                logger.info("succeeded to cancel previous updater");
         }
         updaterFuture = null;
         // schedule an updater for execution, keeping the "Future" object returned (needed for cancellation)
         try {
-            updaterFuture = executor.scheduleWithFixedDelay(new Updater(handler), 0, 1l, TimeUnit.SECONDS);
+            updaterFuture = executor.scheduleWithFixedDelay(new Updater(handler), 0, 1L, TimeUnit.SECONDS);
         } catch (Exception e) {
-            Log.e(TAG, "Could not schedule statistics updates");
+            logger.log(Level.WARNING, "Could not schedule statistics updates");
             View myView = getView();
             if (myView != null)
                 myView.setVisibility(View.INVISIBLE);
         }
-        Log.i(TAG, "Successfully started");
+        logger.info("Successfully started");
     }
 
     @Override
     public void onStop() {
-        Log.d(TAG, "onStop");
+        logger.fine("onStop");
         if (updaterFuture != null) {
             if (!updaterFuture.cancel(true))
-                Log.e(StatisticsFragment.TAG, "Failed to cancel updater job");
+                logger.warning("Failed to cancel updater job");
         }
         super.onStop();
-        Log.i(TAG, "Gracefully stopped");
+        logger.info("Gracefully stopped");
     }
 
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
-        Log.d(TAG, "Bound to statistics service of IPv6DroidVpnService");
+        logger.fine("Bound to statistics service of IPv6DroidVpnService");
         statisticsBinder = (IPv6DroidVpnService.StatisticsBinder)service;
     }
 
     @Override
     public void onServiceDisconnected(ComponentName name) {
-        Log.i(TAG, "Connection to statistics service of IPv6DroidVpnService lost");
+        logger.info("Connection to statistics service of IPv6DroidVpnService lost");
         statisticsBinder = null;
     }
 
@@ -250,7 +251,7 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
         @Override
         public void run() {
             try {
-                Log.d(TAG, "Statistics refresh");
+                logger.fine("Statistics refresh");
                 Statistics stats = null;
                 if (statisticsBinder != null) {
                     stats = statisticsBinder.getStatistics();
@@ -265,7 +266,7 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
                     redrawMessage.sendToTarget();
                 }
             } catch (Exception e) {
-                Log.e(TAG, "Updating statistics failed", e);
+                logger.log(Level.WARNING, "Updating statistics failed", e);
             }
         }
     }
@@ -288,7 +289,7 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
             View myView = getView();
             if (myView == null)
                 return; // happens during reconstruction of view hierarchy, e.g. when device orientation changed
-            Log.d(TAG, "Redrawing Statistics");
+            logger.fine("Redrawing Statistics");
 
             Statistics stats = (Statistics)inputMessage.obj;
             if (stats == null) {

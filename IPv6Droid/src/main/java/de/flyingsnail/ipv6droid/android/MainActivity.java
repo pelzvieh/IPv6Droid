@@ -36,7 +36,6 @@ import android.net.VpnService;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -62,6 +61,8 @@ import com.google.android.material.snackbar.Snackbar;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.signinginterface.CSRIntentManager;
@@ -81,7 +82,7 @@ public class MainActivity extends AppCompatActivity {
     /**
      * The tag to use for logging
      */
-    private static final String TAG = MainActivity.class.getName();
+    private static final Logger logger = Logger.getLogger(MainActivity.class.getName());
     private static final int REQUEST_START_VPN = 1;
     // private static final int REQUEST_SETTINGS = 2;
     private static final int REQUEST_STATISTICS = 3;
@@ -186,9 +187,9 @@ public class MainActivity extends AppCompatActivity {
                 tunnelSpec.set(active);
             }
         } catch (FileNotFoundException e) {
-            Log.i(TAG, "Could not load persisted tunnels - probably first invocation", e);
+            logger.log(Level.INFO, "Could not load persisted tunnels - probably first invocation", e);
         } catch (IOException e) {
-            Log.e(TAG, "Could not load persisted tunnels", e);
+            logger.log(Level.WARNING, "Could not load persisted tunnels", e);
         }
         statusReceiver.updateUi();
 
@@ -259,12 +260,12 @@ public class MainActivity extends AppCompatActivity {
         super.onPause();
         TunnelSpec currentSpec = tunnelSpec.get();
         if (currentSpec != null && statusReceiver.isTunnelProven()) {
-            Log.i (TAG, "We have an updated tunnel list and will write it back to cache");
+            logger.info("We have an updated tunnel list and will write it back to cache");
             final Tunnels tunnels = convertToTunnels(currentSpec);
             try {
                 tunnelPersisting.writeTunnels(tunnels);
             } catch (Exception e) {
-                Log.e(TAG, "Could not write tunnel information to private file", e);
+                logger.log(Level.WARNING, "Could not write tunnel information to private file", e);
             }
         }
     }
@@ -511,7 +512,7 @@ public class MainActivity extends AppCompatActivity {
         private void updateUi () {
             int imageRes = R.drawable.off;
             VpnStatusReport.Status status = statusReport.getStatus();
-            Log.i(TAG, "received status update: " + statusReport);
+            logger.info("received status update: " + statusReport);
 
             switch (status) {
                 case Connected:
@@ -552,7 +553,7 @@ public class MainActivity extends AppCompatActivity {
             // show tunnel information
             TunnelSpec currentSpec = tunnelSpec.get();
             if (currentSpec != null) {
-                Log.d(TAG, "Tunnel is set");
+                logger.fine("Tunnel is set");
                 binding.tunnelTitle.setText(currentSpec.getTunnelName());
                 binding.tunnelDetail.setText(
                         String.format("%s ➡️ %s\n🗓️ %tF",
@@ -565,7 +566,7 @@ public class MainActivity extends AppCompatActivity {
                                 currentSpec.getExpiryDate())
                         );
             } else {
-                Log.d(TAG, "No tunnels are set");
+                logger.fine("No tunnels are set");
                 binding.tunnelTitle.setText("--");
                 binding.tunnelDetail.setText("-/-");
             }

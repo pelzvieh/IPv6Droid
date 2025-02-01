@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -24,14 +24,12 @@
 package de.flyingsnail.ipv6droid.transport.ayiya;
 
 import android.annotation.SuppressLint;
-import android.util.Log;
 
 import androidx.annotation.Nullable;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.math.BigInteger;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.Inet4Address;
@@ -45,6 +43,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
 import de.flyingsnail.ipv6droid.transport.Transporter;
@@ -75,7 +75,7 @@ public class Ayiya implements Transporter {
     public static final long MAX_TIME_OFFSET = 120;
 
     /** Tag for Logger */
-    private static final String TAG = Ayiya.class.getName();
+    private static final Logger logger = Logger.getLogger(Ayiya.class.getName());
 
     /** The TicTunnel type supported by this Transporter */
     public static final String TUNNEL_TYPE = "ayiya";
@@ -310,7 +310,7 @@ public class Ayiya implements Transporter {
             throw new ConnectionFailedException("Tunnel broken right from scratch", e);
         }
 
-        Log.i(TAG, "Ayiya tunnel to POP IP " + ipv4Pop + " created.");
+        logger.info("Ayiya tunnel to POP IP " + ipv4Pop + " created.");
     }
 
     /**
@@ -369,7 +369,7 @@ public class Ayiya implements Transporter {
         try {
             ayiyaPacket = buildAyiyaStruct(ByteBuffer.wrap(new byte[0]), OpCode.NOOP,  IPPROTO_NONE);
         } catch (NoSuchAlgorithmException e) {
-            Log.wtf(TAG, "SHA1 no longer available???", e);
+            logger.log(Level.SEVERE, "SHA1 no longer available???", e);
             throw new TunnelBrokenException("Cannot build ayiya struct", e);
         }
         DatagramPacket dgPacket = new DatagramPacket(ayiyaPacket, ayiyaPacket.length, new InetSocketAddress(ipv4Pop, port));
@@ -457,7 +457,7 @@ public class Ayiya implements Transporter {
             if (bytecount < 0)
                 throw new TunnelBrokenException("Input stream disrupted", null);
             else if (bytecount == 0) {
-                Log.e(TAG, "Received 0 bytes from blocking read..?");
+                logger.log(Level.WARNING, "Received 0 bytes from blocking read..?");
                 try {
                     Thread.sleep(100L);
                 } catch (InterruptedException e) {
@@ -465,7 +465,7 @@ public class Ayiya implements Transporter {
                 }
                 continue;
             } else if (bytecount == bb.capacity()) {
-                Log.e(TAG, "WARNING: maximum size of buffer reached - indication of a MTU problem");
+                logger.log(Level.WARNING, "WARNING: maximum size of buffer reached - indication of a MTU problem");
             }
 
             // update timestamp of last packet received
@@ -481,13 +481,13 @@ public class Ayiya implements Transporter {
                 validResult =
                         (opCode == OpCode.FORWARD) || (opCode == OpCode.ECHO_REQUEST_FORWARD);
                 if (opCode == OpCode.ECHO_RESPONSE) {
-                    Log.i(TAG, "Received valid echo response");
+                    logger.info("Received valid echo response");
                 }
                 if (opCode == OpCode.FORWARD_RESPONSE) {
-                    Log.w(TAG, "Received high level error code from peer");
+                    logger.warning("Received high level error code from peer");
                     ErrorCode error = getErrorCode(bb.array(), bb.arrayOffset(), bb.limit());
                     if (error == null) {
-                        Log.w(TAG, "Unknown error code");
+                        logger.warning("Unknown error code");
                         invalidPacketCounter++;
                     } else {
                         switch (error) {
@@ -503,7 +503,7 @@ public class Ayiya implements Transporter {
             } else {
                 ErrorCode errorCode = checkErrorPacket(bb.array(), bb.arrayOffset(), bb.limit());
                 if (errorCode != null) {
-                    Log.i(TAG, "Received low-level error packet, aborting tunnel");
+                    logger.info("Received low-level error packet, aborting tunnel");
                     throw new TunnelBrokenException(
                             errorCode == ErrorCode.TIMELAPSE
                                     ? "Please check clock and timezone setting"
@@ -518,7 +518,7 @@ public class Ayiya implements Transporter {
 
     private OpCode getSupportedOpCode (byte[] packet, int offset, int bytecount) {
         if (bytecount < 3) {
-            Log.e(TAG, "Received too short package");
+            logger.log(Level.WARNING, "Received too short package");
             return null;
         }
 
@@ -532,7 +532,7 @@ public class Ayiya implements Transporter {
 
     private ErrorCode getErrorCode (byte[] packet, int offset, int bytecount) {
         if (bytecount < 3) {
-            Log.e(TAG, "Received too short package");
+            logger.log(Level.WARNING, "Received too short package");
             return null;
         }
 
@@ -549,7 +549,7 @@ public class Ayiya implements Transporter {
         // @todo never tested with offset > 0, if this part is ever going to be a library, you have to.
         // check if the size includes at least a full ayiya header
         if (bytecount < OVERHEAD) {
-            Log.e(TAG, "Received too short package, skipping");
+            logger.log(Level.WARNING, "Received too short package, skipping");
             return false;
         }
 
@@ -560,7 +560,7 @@ public class Ayiya implements Transporter {
                 (getSupportedOpCode(packet, offset, bytecount) == null) ||
                 ((packet[3+offset] != IPPROTO_IPv6) && (packet[3+offset] != IPPROTO_NONE))
                 ) {
-            Log.e(TAG, "Received packet with invalid ayiya header, skipping");
+            logger.log(Level.WARNING, "Received packet with invalid ayiya header, skipping");
             return false;
         }
 
@@ -570,7 +570,7 @@ public class Ayiya implements Transporter {
         Inet6Address sender = (Inet6Address)Inet6Address.getByAddress(
                 Arrays.copyOfRange(packet, 8+offset, 24+offset));
         if (!sender.equals(ipv6Pop) && !sender.equals(ipv6Local)) {
-            Log.e(TAG, "Received packet from invalid sender id " + sender);
+            logger.log(Level.WARNING, "Received packet from invalid sender id " + sender);
             return false;
         }
 
@@ -579,7 +579,7 @@ public class Ayiya implements Transporter {
         int epochTimeRemote = bb.getInt();
         int epochTimeLocal = (int) (new Date().getTime() / 1000);
         if (Math.abs(epochTimeLocal - epochTimeRemote) > MAX_TIME_OFFSET) {
-            Log.e(TAG, "Received packet from " + (epochTimeLocal-epochTimeRemote) + " in the past");
+            logger.log(Level.WARNING, "Received packet from " + (epochTimeLocal-epochTimeRemote) + " in the past");
             return false;
         }
 
@@ -597,18 +597,15 @@ public class Ayiya implements Transporter {
         sha1.update(packet, 44+offset, bytecount-44);
         byte[] myHash = sha1.digest();
         if (!Arrays.equals(myHash, theirHash)) {
-            Log.e(TAG, "Received packet with failed hash comparison");
+            logger.log(Level.WARNING, "Received packet with failed hash comparison");
             return false;
         }
 
         // check ipv6
         if (packet[3+offset] == IPPROTO_IPv6 && (packet[OVERHEAD +offset] >> 4) != 6) {
-            Log.e(TAG, "Payload should be an IPv6 packet, but isn't");
+            logger.log(Level.WARNING, "Payload should be an IPv6 packet, but isn't");
             return false;
         }
-
-        // print packet to android log
-        Log.v(TAG, "Valid packet: " + new BigInteger(1, packet).toString(16));
 
         // this packet appears to be valid!
         return true;
@@ -625,7 +622,7 @@ public class Ayiya implements Transporter {
     private @Nullable ErrorCode checkErrorPacket(byte[] packet, int offset, int bytecount) {
         // check if the size includes at least a full ayiya header
         if (bytecount != 4) {
-            Log.w(TAG, "Received strange packet, not a low-level error packet (wrong length)");
+            logger.warning("Received strange packet, not a low-level error packet (wrong length)");
             return null;
         }
 
@@ -633,14 +630,14 @@ public class Ayiya implements Transporter {
         if (packet[offset] == 0 && packet[offset + 2] == 0 && packet [offset + 3] == 0) {
             ErrorCode errorCode = getErrorCode(packet, offset + 1, 3);
             if (errorCode == null) {
-                Log.w(TAG, "Received strange packet, correct length and magic bytes, but unkown error code");
+                logger.warning("Received strange packet, correct length and magic bytes, but unkown error code");
                 return null;
             } else {
-                Log.e(TAG, "Received low-level error message from server, error code is " + errorCode);
+                logger.log(Level.WARNING, "Received low-level error message from server, error code is " + errorCode);
                 return errorCode;
             }
         } else {
-            Log.w(TAG, "Received strange packet, correct length but no magic bytes");
+            logger.warning("Received strange packet, correct length but no magic bytes");
             return null;
         }
     }
@@ -662,7 +659,7 @@ public class Ayiya implements Transporter {
         try {
             ayiyaPacket = buildAyiyaStruct(payload, OpCode.FORWARD, IPPROTO_IPv6);
         } catch (NoSuchAlgorithmException e) {
-            Log.wtf(TAG, "SHA1 no longer available???", e);
+            logger.log(Level.SEVERE, "SHA1 no longer available???", e);
             throw new TunnelBrokenException("Cannot build ayiya struct", e);
         }
         if (!checkValidity(ayiyaPacket, 0, ayiyaPacket.length)) {
@@ -707,7 +704,7 @@ public class Ayiya implements Transporter {
             socket.close();
         }
         socket = null; // it's useless anyway
-        Log.i(TAG, "Ayiya tunnel closed");
+        logger.info("Ayiya tunnel closed");
     }
 
     /**

@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2024 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -28,7 +28,6 @@ import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkInfo;
 import android.net.RouteInfo;
-import android.util.Log;
 
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
@@ -42,6 +41,8 @@ import java.net.Inet6Address;
 import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.concurrent.ExecutorService;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.UserNotificationCallback;
@@ -60,7 +61,7 @@ import de.flyingsnail.ipv6droid.transport.ayiya.Ayiya;
  * @author pelzi
  */
 public class RemoteEnd implements NetworkChangeListener {
-    static final String TAG = RemoteEnd.class.getName();
+    static final Logger logger = Logger.getLogger(RemoteEnd.class.getName());
     private final LocalEnd localEnd;
     private final VpnStatusReport vpnStatus;
     private final Date expiryDate;
@@ -217,7 +218,7 @@ public class RemoteEnd implements NetworkChangeListener {
                 lastStartAttempt = new Date();
 
                 // setup tunnel to PoP
-                Log.i(TAG, "Connecting transporter object");
+                logger.info("Connecting transporter object");
                 vpnStatus.setStatus(VpnStatusReport.Status.Connecting);
                 vpnStatus.setActivity(R.string.vpnservice_activity_connecting);
 
@@ -230,10 +231,10 @@ public class RemoteEnd implements NetworkChangeListener {
                 localEnd.getVpnThread().getService().protect(popSocket); // do not redirect to VPN
                  */
 
-                Log.i(TAG, "Connecting transporter");
+                logger.info("Connecting transporter");
                 transporter.connect();
 
-                Log.i(TAG, "Transporter connected");
+                logger.info("Transporter connected");
                 vpnStatus.setProgressPerCent(75);
                 vpnStatus.setStatus(VpnStatusReport.Status.Connected);
                 vpnStatus.setCause(null);
@@ -246,12 +247,12 @@ public class RemoteEnd implements NetworkChangeListener {
                 try {
                     localIp = (Inet4Address) popSocket.getLocalAddress();
                 } catch (ClassCastException e) {
-                    Log.e(TAG, "local address is not Inet4Address", e);
+                    logger.log(Level.WARNING, "local address is not Inet4Address", e);
                     // affects only statistics display
                 }
 
                 // start the copying threads
-                Log.i (TAG, "Starting copy threads");
+                logger.info("Starting copy threads");
                 synchronized (this) {
                     outThread = new CopyThread(localIn, popOut, service, this, "Transport from local to POP", TAG_OUTGOING_THREAD, 0, outgoingStatistics);
                     inThread = new CopyThread(popIn, localOut, service, this, "Transport from POP to local", TAG_INCOMING_THREAD, 0, ingoingStatistics);
@@ -271,25 +272,25 @@ public class RemoteEnd implements NetworkChangeListener {
 
                 // now do a ping on IPv6 level. This should involve receiving one packet
                 if (!Inet6Address.getByName(localEnd.getApplicationContext().getString(R.string.ipv6_test_host)).isReachable(10000)) {
-                    Log.e(TAG, "Warning: couldn't ping pop via ipv6!");
+                    logger.log(Level.WARNING, "Warning: couldn't ping pop via ipv6!");
                 }
 
                 vpnStatus.setActivity(R.string.vpnservice_activity_online);
 
                 // loop until interrupted or tunnel defective
                 vpnMonitor.loop();
-                Log.i(TAG, "monitored heartbeat loop ended");
+                logger.info("monitored heartbeat loop ended");
             } catch (IOException e) {
-                Log.i(TAG, "Tunnel connection broke down, closing and reconnecting transporter (remote end)", e);
+                logger.log(Level.INFO, "Tunnel connection broke down, closing and reconnecting transporter (remote end)", e);
                 vpnStatus.setProgressPerCent(50);
                 vpnStatus.setCause(e);
                 vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
             } catch (InterruptedException e) {
                 networkHelper.stop();
-                Log.i(TAG, "refresh remote end loop received interrupt");
+                logger.info("refresh remote end loop received interrupt");
                 throw e;
             } catch (RuntimeException | ConnectionFailedException e) {
-                Log.w(TAG, "refresh remote end loop received unexpected exception");
+                logger.warning("refresh remote end loop received unexpected exception");
                 stop();
                 throw e;
             } finally {
@@ -301,7 +302,7 @@ public class RemoteEnd implements NetworkChangeListener {
         if (endCause == null) {
             endCause = intendedToRun ? EndCause.FD_INVALID : EndCause.ON_REQUEST;
         }
-        Log.i(TAG, "refreshRemoteEnd loop terminated - " +
+        logger.info("refreshRemoteEnd loop terminated - " +
                 endCause);
         return endCause;
     }
@@ -318,7 +319,7 @@ public class RemoteEnd implements NetworkChangeListener {
      */
     private void waitOnConnectivity() throws InterruptedException {
         while (!isDeviceConnected()) {
-            Log.i(TAG, "Waiting for device to connect to a network");
+            logger.info("Waiting for device to connect to a network");
             vpnStatus.setProgressPerCent(45);
             vpnStatus.setStatus(VpnStatusReport.Status.NoNetwork);
             vpnStatus.setActivity(R.string.vpnservice_activity_connectivity);
@@ -327,7 +328,7 @@ public class RemoteEnd implements NetworkChangeListener {
             }
         }
         currentNetwork = networkHelper.getNativeNetwork();
-        Log.i(TAG, "We're connected to network " + currentNetwork.toString());
+        logger.info("We're connected to network " + currentNetwork.toString());
     }
 
     /**
@@ -349,7 +350,7 @@ public class RemoteEnd implements NetworkChangeListener {
             return;
         // check if our routing is still valid, otherwise invalidate vpnFD
         if (isTunnelRoutingRequired() ^ isRouted) {
-            Log.i(TAG, "tunnel routing requirement changed, forcing re-build of local vpn socket");
+            logger.info("tunnel routing requirement changed, forcing re-build of local vpn socket");
             stop();
         } else {
             // check if our sockets are still valid
@@ -362,12 +363,12 @@ public class RemoteEnd implements NetworkChangeListener {
                    time period.
                  */
                 if (!(myTransporter.isAlive() && isCurrentSocketStillValid())) {
-                    Log.i(TAG, "transporter object no longer functional after connectivity change - reconnecting");
+                    logger.info("transporter object no longer functional after connectivity change - reconnecting");
                     executor.submit(() -> {
                         try {
                             cleanCopyThreads();
                         } catch (Throwable t) {
-                            Log.e(TAG, "stopping copy threads failed", t);
+                            logger.log(Level.WARNING, "stopping copy threads failed", t);
                         }
                         return null;
                     });
@@ -393,7 +394,7 @@ public class RemoteEnd implements NetworkChangeListener {
 
         currentNetwork = networkHelper.getNativeNetwork(); // usually null at this point...
 
-        Log.i(TAG, "We're no longer connected.");
+        logger.info("We're no longer connected.");
         vpnStatus.setProgressPerCent(45);
         vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
         vpnStatus.setActivity(R.string.vpnservice_activity_connectivity);
@@ -407,13 +408,13 @@ public class RemoteEnd implements NetworkChangeListener {
      */
     protected void copyThreadDied(CopyThread diedThread) {
         // if one copy thread died, the transporter is useless anyway.
-        Log.i(TAG, "A copy thread died, closing transporter out-of-sync");
+        logger.info("A copy thread died, closing transporter out-of-sync");
         transporter.close();
         // no special treatment for inThread required, a dying inThread is immediately noticed
         // by VpnThread.
         final CopyThread myInThread = inThread; // Race-Conditions vermeiden
         if (diedThread != inThread && diedThread == outThread && myInThread != null) {
-            Log.i(TAG, "outThread notified us of its death, killing inThread as well");
+            logger.info("outThread notified us of its death, killing inThread as well");
             myInThread.stopCopy();
             // inThread is now dying as well, not going unnoticed by monitoredHeartbeatLoop
         }
@@ -462,7 +463,7 @@ public class RemoteEnd implements NetworkChangeListener {
             try {
                 myTransporter.close();
             } catch (Exception e) {
-                Log.e(TAG, "Cannot close transporter object", e);
+                logger.log(Level.WARNING, "Cannot close transporter object", e);
             }
         }
         // by closing the transporter, we were shooting the copy threads in their feet anyway
@@ -489,13 +490,13 @@ public class RemoteEnd implements NetworkChangeListener {
      * @return true if there's existing IPv6 connectivity
      */
     private boolean ipv6DefaultExists() {
-        Log.d(TAG, "Checking if we have an IPv6 default route on current network");
+        logger.fine("Checking if we have an IPv6 default route on current network");
         for (RouteInfo routeInfo : networkHelper.getNativeRouteInfos()) {
             // isLoggable would be useful here, but checks for an (outdated?) convention of TAG shorter than 23 chars
-            Log.d(TAG, "Checking if route is an IPv6 default route: " + routeInfo);
+            logger.fine("Checking if route is an IPv6 default route: " + routeInfo);
             // @todo strictly speaking, we shouldn't check for default route, but for the configured route of the tunnel
             if (routeInfo.isDefaultRoute() && routeInfo.getGateway() instanceof Inet6Address) {
-                Log.i(TAG, "Identified a valid IPv6 default route existing: " + routeInfo);
+                logger.info("Identified a valid IPv6 default route existing: " + routeInfo);
                 return true;
             }
         }

@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -23,8 +23,6 @@
 
 package de.flyingsnail.ipv6droid.transport;
 
-import android.util.Log;
-
 import androidx.annotation.NonNull;
 
 import java.io.IOException;
@@ -32,11 +30,12 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Objects;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.transport.ayiya.Ayiya;
 
 public class TransporterInputStream extends InputStream {
-  private final static String TAG = TransporterInputStream.class.getName();
+  private final static Logger logger = Logger.getLogger(TransporterInputStream.class.getName());
   private final Transporter transporter;
   private final ThreadLocal<ByteBuffer> streamBuffer = new ThreadLocal<>();
 
@@ -82,7 +81,7 @@ public class TransporterInputStream extends InputStream {
         int byteCount = Math.min(byteBuffer.remaining(), length);
         byteBuffer.get(buffer, offset, byteCount);
         if (byteBuffer.hasRemaining())
-            Log.e(TAG, "Warning: InputStream.read supplied with a buffer too small to read a full Datagram");
+            logger.warning("Warning: InputStream.read supplied with a buffer too small to read a full Datagram");
         return byteCount;
     }
 

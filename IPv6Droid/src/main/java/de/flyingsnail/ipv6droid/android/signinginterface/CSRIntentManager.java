@@ -27,13 +27,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.ResolveInfo;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.databinding.ObservableList;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.android.dtlsrequest.CertificateToTunnel;
 
@@ -46,7 +46,7 @@ import de.flyingsnail.ipv6droid.android.dtlsrequest.CertificateToTunnel;
 public class CSRIntentManager implements AutoCloseable {
     /** A String used to identify the Intent action when binding to a certificate issuing service */
     public static final String ACTION = "de.flyingsnail.ipv6droid.REQUEST_TUNNEL";
-    final private static String TAG = CSRIntentManager.class.getSimpleName();
+    final private static Logger logger = Logger.getLogger(CSRIntentManager.class.getName());
     private final CertificateToTunnel certHelper;
     private final Context context;
     private final ObservableList<String> supplierPackageReceiver;
@@ -72,9 +72,9 @@ public class CSRIntentManager implements AutoCloseable {
         // query matching services and explicitly set package name to one of them
         final Intent queryCertificateIntent = new Intent(ACTION);
         for (ResolveInfo resolveInfo: context.getPackageManager().queryIntentServices(queryCertificateIntent, 0) ) {
-            Log.i(TAG, "bind candidate " + resolveInfo);
+            logger.info("bind candidate " + resolveInfo);
             if (resolveInfo.serviceInfo != null) {
-                Log.d(TAG, " - bind candidate has service info with packageName" + resolveInfo.serviceInfo.packageName);
+                logger.fine(" - bind candidate has service info with packageName" + resolveInfo.serviceInfo.packageName);
                 supplierPackageReceiver.add(resolveInfo.serviceInfo.packageName);
             }
         }

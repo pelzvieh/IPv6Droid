@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2024 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -26,7 +26,6 @@ package de.flyingsnail.ipv6droid.android.vpnrun;
 import android.content.Context;
 import android.net.VpnService;
 import android.os.ParcelFileDescriptor;
-import android.util.Log;
 import android.widget.Toast;
 
 import java.io.FileDescriptor;
@@ -34,6 +33,8 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.UserNotificationCallback;
@@ -49,7 +50,7 @@ import de.flyingsnail.ipv6droid.transport.TunnelSpec;
  */
 public class LocalEnd {
 
-    static private final String TAG = LocalEnd.class.getName();
+    static private final Logger logger = Logger.getLogger(LocalEnd.class.getName());
 
     private final VpnThread vpnThread;
     private final VpnService.Builder builder;
@@ -124,7 +125,7 @@ public class LocalEnd {
                 lastStartAttempt = new Date();
 
                 // loop over IPv4 network changes
-                Log.i(TAG, "Constructing remote end");
+                logger.info("Constructing remote end");
                 remoteEnd = new RemoteEnd(this,
                         vpnStatus,
                         forcedRoute,
@@ -135,18 +136,18 @@ public class LocalEnd {
 
                 // check current nativeRouting information for existing IPv6 default route
                 // then setup local tun and nativeRouting
-                Log.i(TAG, "Building new local TUN  object");
+                logger.info("Building new local TUN  object");
                 try { // catching NPE to circumvent rare Android bug, see https://github.com/pelzvieh/IPv6Droid/issues/44
                     if (tunnelRouted) {
-                        Log.i(TAG, "No native IPv6 to use, setting routes to tunnel");
+                        logger.info("No native IPv6 to use, setting routes to tunnel");
                         vpnFD = builder.establish();
                     } else {
-                        Log.i(TAG, "Detected existing IPv6, not setting routes to tunnel");
+                        logger.info("Detected existing IPv6, not setting routes to tunnel");
                         vpnFD = builderNotRouted.establish();
                     }
                 } catch (NullPointerException npe) {
                     vpnFD = null;
-                    Log.e (TAG, "NullPointerException from VpnService.Builder call", npe);
+                    logger.log(Level.WARNING, "NullPointerException from VpnService.Builder call", npe);
                     vpnStatus.setActivity(R.string.vpnservice_activity_reconnect);
                     vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
                     vpnStatus.setCause(npe);
@@ -162,14 +163,14 @@ public class LocalEnd {
                 try {
                     localFD = extractFD();
                 } catch (IOException e) {
-                    Log.e(TAG, "TUN device defective before connection up", e);
+                    logger.log(Level.WARNING, "TUN device defective before connection up", e);
                     vpnStatus.setCause(e);
                     vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
                     return;
                 }
                 RemoteEnd.EndCause endCause = remoteEnd.refreshRemoteEnd(localFD);
 
-                Log.i(TAG, "Refreshing remote VPN end stopped: " + endCause.toString());
+                logger.info("Refreshing remote VPN end stopped: " + endCause.toString());
 
                 switch (endCause) {
                     case INHIBITS_ROUTING:
@@ -179,19 +180,19 @@ public class LocalEnd {
                         tunnelRouted = true;
                         break;
                     case EXPIRED:
-                        Log.i(TAG, "The tunnel we're using just expired");
+                        logger.info("The tunnel we're using just expired");
                         intendedToRun = false;
                         break;
                 }
 
             } catch (InterruptedException e) {
                 userNotificationCallback.notifyUserOfError(R.string.vpnthread_interrupted, e);
-                Log.i(TAG, "Tunnel terminated by interrupt", e);
+                logger.log(Level.INFO, "Tunnel terminated by interrupt", e);
             } catch (ConnectionFailedException e) {
                 throw e;
             } catch (Throwable t) {
                 userNotificationCallback.notifyUserOfError(R.string.unexpected_runtime_exception, t);
-                Log.e(TAG, "Caught unexpected throwable", t);
+                logger.log(Level.WARNING, "Caught unexpected throwable", t);
             } finally {
                 if (remoteEnd != null)
                     remoteEnd.stop();
@@ -200,14 +201,14 @@ public class LocalEnd {
                     try {
                         myVpnFD.close();
                     } catch (IOException e) {
-                        Log.e(TAG, "Cannot close vpn socket", e);
+                        logger.log(Level.WARNING, "Cannot close vpn socket", e);
                     }
                 }
 
                 userNotificationCallback.postToast(R.string.vpnservice_tunnel_down, Toast.LENGTH_SHORT);
             }
         }
-        Log.i(TAG, "Tunnel thread gracefully shut down");
+        logger.info("Tunnel thread gracefully shut down");
     }
 
     /**
@@ -228,9 +229,9 @@ public class LocalEnd {
                 try {
                     myVpnFD.close();
                 } catch (Exception e) {
-                    Log.e(TAG, "Cannot close local socket", e);
+                    logger.log(Level.WARNING, "Cannot close local socket", e);
                 }
-                Log.i(TAG, "VPN closed");
+                logger.info("VPN closed");
             });
         }
         vpnFD = null;

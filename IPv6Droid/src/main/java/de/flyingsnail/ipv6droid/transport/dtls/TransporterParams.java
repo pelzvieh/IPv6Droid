@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -51,12 +51,14 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.android.dtlsrequest.AndroidBackedKeyPair;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
 public class TransporterParams implements TunnelSpec, Serializable {
-    private static final String TAG = TransporterParams.class.getName();
+    private static final Logger logger = Logger.getLogger(TransporterParams.class.getName());
     private static final ExecutorService resolverPool = Executors.newCachedThreadPool();
     static final String TUNNEL_TYPE = "DTLSTunnel";
     private TlsCrypto crypto;
@@ -82,7 +84,7 @@ public class TransporterParams implements TunnelSpec, Serializable {
 
     private void writeObject(ObjectOutputStream out)
             throws IOException {
-        Log.i (TAG, "Serializing");
+        logger.info("Serializing");
         out.writeObject(ipv4Pop);
         out.writeInt(mtu);
         out.writeInt(heartbeat);
@@ -93,7 +95,7 @@ public class TransporterParams implements TunnelSpec, Serializable {
     // Deserialization
     private void readObject(ObjectInputStream in)
             throws IOException, ClassNotFoundException {
-        Log.i(TAG, "Deserializing");
+        logger.info("Deserializing");
         crypto = new BcTlsCrypto(new SecureRandom());
         ipv4Pop = (Inet4Address)in.readObject();
         mtu = in.readInt();
@@ -114,7 +116,7 @@ public class TransporterParams implements TunnelSpec, Serializable {
 
 
     public TransporterParams() {
-        Log.i (TAG, "Constructing");
+        logger.info("Constructing");
         crypto = new BcTlsCrypto(new SecureRandom());
     }
 
@@ -127,15 +129,15 @@ public class TransporterParams implements TunnelSpec, Serializable {
         // address set and the resolver did not finish, we can use the old one (de-serialization).
         if (resolvedIp != null &&
                 (ipv4Pop == null || resolvedIp.isDone())) {
-            Log.i (TAG, "Reading IPv4 address from async resolver");
+            logger.info("Reading IPv4 address from async resolver");
             synchronized (this) {
                 try {
                     ipv4Pop = resolvedIp.get();
                     resolvedIp = null;
                 } catch (ExecutionException| CancellationException e) {
-                    Log.i (TAG, "Async resolver didn't resolve", e);
+                    logger.log(Level.INFO, "Async resolver didn't resolve", e);
                 } catch (InterruptedException e) {
-                    Log.w(TAG, "Interrupted while reading resolved address");
+                    logger.warning("Interrupted while reading resolved address");
                 }
             }
         }
@@ -274,7 +276,7 @@ public class TransporterParams implements TunnelSpec, Serializable {
      *                  client. The client's cert at position 0, the CA at the end.
      */
     public void setCertChainEncoded(List<String> certChainEncoded) throws IllegalArgumentException {
-        Log.i(TAG, "Setting encoded certificate and reading data from it");
+        logger.info("Setting encoded certificate and reading data from it");
         this.certChainEncoded = certChainEncoded;
         try {
             this.certChain = DTLSUtils.parseCertificateChain(crypto, certChainEncoded);

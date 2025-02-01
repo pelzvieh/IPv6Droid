@@ -24,7 +24,6 @@
 package de.flyingsnail.ipv6droid.simplecert4ipv6droid;
 
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -36,12 +35,14 @@ import androidx.navigation.fragment.NavHostFragment;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.simplecert4ipv6droid.databinding.FragmentSecondBinding;
 
 public class CertificateFragment extends Fragment {
     // todo make this navigatable to the user
-    private static final String TAG = CertificateFragment.class.getSimpleName();
+    private static final Logger logger = Logger.getLogger(CertificateFragment.class.getName());
 
     private FragmentSecondBinding binding;
     private CertSetup certSetup;
@@ -51,7 +52,7 @@ public class CertificateFragment extends Fragment {
             @NonNull LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState
     ) {
-        Log.i(TAG, "View creating");
+        logger.info("View creating");
         binding = FragmentSecondBinding.inflate(inflater, container, false);
         return binding.getRoot();
     }
@@ -74,17 +75,17 @@ public class CertificateFragment extends Fragment {
                 binding.edittextCaCert.getText().toString());
         if (!certSetup.setCertChain(certChain)) {
             Toast.makeText(getContext(), "Cannot write back cert chain", Toast.LENGTH_LONG).show();
-            Log.e(TAG, "Service not set, unable to write back cert chain");
+            logger.log(Level.WARNING, "Service not set, unable to write back cert chain");
         } else {
             Toast.makeText(getContext(), "Written back cert chain", Toast.LENGTH_LONG).show();
             requireActivity().finishAffinity();
-            Log.i(TAG, "Wrote back cert chain");
+            logger.info("Wrote back cert chain");
         }
     }
 
     @Override
     public void onDestroyView() {
-        Log.i(TAG, "destroying view");
+        logger.info("destroying view");
         super.onDestroyView();
         binding = null;
     }

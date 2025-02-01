@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2024 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -27,7 +27,6 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -44,6 +43,8 @@ import androidx.fragment.app.Fragment;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.R;
 
@@ -53,7 +54,7 @@ import de.flyingsnail.ipv6droid.R;
  * create an instance of this fragment.
  */
 public class KeyRequestFragment extends Fragment {
-    private static final String TAG = KeyRequestFragment.class.getName();
+    private static final Logger logger = Logger.getLogger(KeyRequestFragment.class.getName());
     private EditText createKeyAlias;
     private TextView csrText;
     private ArrayAdapter<String> spinnerAdapter;
@@ -99,7 +100,7 @@ public class KeyRequestFragment extends Fragment {
         try {
             aliases = AndroidBackedKeyPair.listAliases();
         } catch (IOException e) {
-            Log.e(TAG, "Cannot evaluate keys", e);
+            logger.log(Level.WARNING, "Cannot evaluate keys", e);
         }
         String newAlias = "IPv6Droid-" + aliases.size();
         createKeyAlias.setText(newAlias);
@@ -180,7 +181,7 @@ public class KeyRequestFragment extends Fragment {
             spinnerAdapter.notifyDataSetChanged();
         } catch (Exception e) {
             Toast.makeText(getContext(), e.getLocalizedMessage(), Toast.LENGTH_SHORT).show();
-            Log.e(TAG, "failed to create new key", e);
+            logger.log(Level.WARNING, "failed to create new key", e);
         }
     }
 

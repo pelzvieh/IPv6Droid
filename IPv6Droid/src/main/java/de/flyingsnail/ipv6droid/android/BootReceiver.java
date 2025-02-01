@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -29,34 +29,35 @@ import android.content.SharedPreferences;
 import android.net.VpnService;
 import android.os.Build;
 import android.preference.PreferenceManager;
-import android.util.Log;
 
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * This provides a callback function, asking IPv6DroidVpnService to start the VPN tunnel when it receives a boot completed
  * message.
  */
 public class BootReceiver extends BroadcastReceiver {
-    private final String TAG = BootReceiver.class.getName();
+    private final Logger logger = Logger.getLogger(BootReceiver.class.getName());
     public BootReceiver() {
     }
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        Log.i(TAG, "BootReceiver received intent: " + intent.getAction());
+        logger.info("BootReceiver received intent: " + intent.getAction());
         SharedPreferences myPrefs = PreferenceManager.getDefaultSharedPreferences(context);
         if (myPrefs.getBoolean("autostart", false)) {
             TunnelPersisting tunnelPersisting = new TunnelPersistingFile(context);
             try {
                 Tunnels tunnels = tunnelPersisting.readTunnels();
                 if (tunnels.isTunnelActive()) {
-                    Log.i(TAG, "Starting last used tunnel \"on boot\"");
-                    Log.d(TAG, "Preparing to use VpnService");
+                    logger.info("Starting last used tunnel \"on boot\"");
+                    logger.fine("Preparing to use VpnService");
                     // Start system-managed intent for VPN
                     Intent systemVpnIntent = VpnService.prepare(context);
                     if (systemVpnIntent == null) {
-                        Log.d(TAG, "No explicit user consent required - going ahead!");
+                        logger.fine("No explicit user consent required - going ahead!");
                         Intent i = new Intent(context, IPv6DroidVpnService.class);
                         // Android's Parcel system doesn't handle subclasses well, so...
                         i.putExtra(IPv6DroidVpnService.EXTRA_CACHED_TUNNELS, tunnels.getAndroidSerializable());
@@ -66,16 +67,16 @@ public class BootReceiver extends BroadcastReceiver {
                         } else {
                             context.startService(i);
                         }
-                        Log.d(TAG, "Sent service start intent");
+                        logger.fine("Sent service start intent");
                     } else
-                        Log.i(TAG, "User must consent to starting this VPN - no autostart possible");
+                        logger.info("User must consent to starting this VPN - no autostart possible");
 
                 } else {
-                    Log.i(TAG, "Autostart \"on boot\" is configured, but no tunnel persisted to be working.");
+                    logger.info("Autostart \"on boot\" is configured, but no tunnel persisted to be working.");
                 }
 
             } catch (IOException e) {
-                Log.e(TAG, "Unable to load list of persisted tunnels - no autostart possible", e);
+                logger.log(Level.WARNING, "Unable to load list of persisted tunnels - no autostart possible", e);
             }
         }
     }

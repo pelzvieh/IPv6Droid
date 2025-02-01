@@ -24,13 +24,14 @@
 package de.flyingsnail.ipv6droid.android.signinginterface;
 
 import android.content.Context;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.databinding.ObservableField;
 import androidx.databinding.ObservableList;
 
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.android.Tunnels;
 import de.flyingsnail.ipv6droid.android.dtlsrequest.CertificateToTunnel;
@@ -44,7 +45,7 @@ import de.flyingsnail.ipv6droid.transport.TunnelSpec;
  * write it back to an observable Tunnel object.
  */
 public class CertPathChangedCallback extends ObservableList.OnListChangedCallback<ObservableList<String>> {
-    private static final String TAG = CertPathChangedCallback.class.getSimpleName();
+    private static final Logger logger = Logger.getLogger(CertPathChangedCallback.class.getName());
     private final ObservableField<TunnelSpec> receiver;
     private final CertificateToTunnel certHelper;
     private final VpnStatusReport statusReport;
@@ -74,7 +75,7 @@ public class CertPathChangedCallback extends ObservableList.OnListChangedCallbac
                 tunnels.setActiveTunnel(spec);
                 statusReport.setTunnels(tunnels);
             } catch (IOException e) {
-                Log.e(TAG, "Failed to convert cert path to tunnel spec", e);
+                logger.log(Level.WARNING, "Failed to convert cert path to tunnel spec", e);
             }
         }
     }

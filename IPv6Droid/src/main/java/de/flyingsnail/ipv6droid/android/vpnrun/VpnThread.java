@@ -31,7 +31,6 @@ import android.net.TrafficStats;
 import android.net.VpnService;
 import android.os.Build;
 import android.system.OsConstants;
-import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -44,6 +43,8 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.StringTokenizer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.DTLSTunnelReader;
@@ -65,7 +66,7 @@ public class VpnThread extends Thread {
     /**
      * The tag for logging.
      */
-    private static final String TAG = VpnThread.class.getName();
+    private static final Logger logger = Logger.getLogger(VpnThread.class.getName());
 
     /**
      * The IPv6 address of the Google DNS servers.
@@ -91,7 +92,7 @@ public class VpnThread extends Thread {
                     new byte[]{0x20,0x01,0x48,0x60,0x48,0x60,0,0,0,0,0,0,0,0,(byte)0x88,(byte)0x44}
             );
         } catch (UnknownHostException e) {
-            Log.e(TAG, "Static initializer for Google DNS failed", e);
+            logger.log(Level.WARNING, "Static initializer for Google DNS failed", e);
         }
     }
 
@@ -204,7 +205,7 @@ public class VpnThread extends Thread {
                         }
                     }
                 } else {
-                    Log.i(TAG, "Using cached TicTunnel instead of contacting TIC");
+                    logger.info("Using cached TicTunnel instead of contacting TIC");
                 }
                 vpnStatus.setTunnels(tunnels);
                 vpnStatus.setProgressPerCent(25);
@@ -233,19 +234,19 @@ public class VpnThread extends Thread {
             vpnStatus.setActivity(R.string.vpnservice_activity_closing);
             vpnStatus.setCause(null);
         } catch (AuthenticationFailedException e) {
-            Log.e(TAG, "Authentication step failed", e);
+            logger.log(Level.WARNING, "Authentication step failed", e);
             service.notifyUserOfError(R.string.vpnservice_authentication_failed, e);
             vpnStatus.setCause(e);
         } catch (ConnectionFailedException e) {
-            Log.e(TAG, "This configuration will not work on this device", e);
+            logger.log(Level.WARNING, "This configuration will not work on this device", e);
             service.notifyUserOfError(R.string.vpnservice_invalid_configuration, e);
             vpnStatus.setCause(e);
         } catch (IOException e) {
-            Log.e(TAG, "IOException caught before reading in tunnel data", e);
+            logger.log(Level.WARNING, "IOException caught before reading in tunnel data", e);
             service.notifyUserOfError(R.string.vpnservice_io_during_startup, e);
             vpnStatus.setCause(e);
         } catch (Throwable t) {
-            Log.e(TAG, "Failed to run tunnel", t);
+            logger.log(Level.WARNING, "Failed to run tunnel", t);
             // something went wrong in an unexpected way
             service.notifyUserOfError(R.string.vpnservice_unexpected_problem, t);
             vpnStatus.setCause(t);
@@ -261,7 +262,7 @@ public class VpnThread extends Thread {
      */
     public void requestTunnelClose() {
         if (isIntendedToRun()) {
-            Log.i(TAG, "Shutting down");
+            logger.info("Shutting down");
             closeTunnel = true;
             cleanAll();
             setName(getName() + " (shutting down)");
@@ -317,7 +318,7 @@ public class VpnThread extends Thread {
         Calendar oldestExpectedPacket = Calendar.getInstance();
         oldestExpectedPacket.add(Calendar.SECOND, -heartbeatInterval);
         if (lastReceived.before(oldestExpectedPacket.getTime())) {
-            Log.i(TAG, "Our tunnel is having trouble - we didn't receive packets since "
+            logger.info("Our tunnel is having trouble - we didn't receive packets since "
                     + lastReceived + " (expected no earlier than " + oldestExpectedPacket.getTime()
                     + ")"
             );
@@ -355,7 +356,7 @@ public class VpnThread extends Thread {
                     builder.addRoute(address, prefixLen);
                 }
             } catch (UnknownHostException e) {
-                Log.e(TAG, "Could not add requested IPv6 route to builder", e);
+                logger.log(Level.WARNING, "Could not add requested IPv6 route to builder", e);
                 service.notifyUserOfError(R.string.vpnservice_route_not_added, e);
                 service.postToast(R.string.vpnservice_route_not_added, Toast.LENGTH_SHORT);
             }
@@ -380,7 +381,7 @@ public class VpnThread extends Thread {
         configureIntent.setClass(applicationContext, MainActivity.class);
         configureIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         builder.setConfigureIntent(PendingIntent.getActivity(applicationContext, 0, configureIntent, PendingIntent.FLAG_IMMUTABLE));
-        Log.i(TAG, "Builder is configured");
+        logger.info("Builder is configured");
     }
 
     /**
@@ -389,7 +390,7 @@ public class VpnThread extends Thread {
      */
     @SuppressLint("Assert")
     public synchronized Statistics getStatistics() {
-        Log.d(VpnThread.TAG, "getStatistics() called");
+        logger.fine("getStatistics() called");
         if (!isTunnelUp()) {
             throw new IllegalStateException("Attempt to get Statistics on a non-running tunnel");
         }
