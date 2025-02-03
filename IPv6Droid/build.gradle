@@ -62,11 +62,11 @@ android {
     compileSdk 35
 
     defaultConfig {
-
         versionCode 85
         versionName "2.99e"
         minSdkVersion 23
         targetSdkVersion 35
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
@@ -122,7 +122,14 @@ dependencies {
     implementation libs.androidx.databinding.runtime
     implementation libs.material
     implementation libs.rxjava
-    //implementation 'androidx.legacy:legacy-support-v4:1.0.0'
     testImplementation libs.junit
     testImplementation libs.mockito.core
+    androidTestImplementation libs.androidx.junit
+    androidTestImplementation libs.androidx.rules
+    // Optional -- UI testing with Espresso
+    // androidTestImplementation "androidx.test.espresso:espresso-core:$espressoVersion"
+    // Optional -- UI testing with UI Automator
+    // androidTestImplementation "androidx.test.uiautomator:uiautomator:$uiAutomatorVersion"
+    // Optional -- UI testing with Compose
+    // androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"
 }
