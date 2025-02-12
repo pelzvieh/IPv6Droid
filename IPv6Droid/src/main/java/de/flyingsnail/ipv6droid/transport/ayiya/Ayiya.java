@@ -65,11 +65,6 @@ import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 public class Ayiya implements Transporter {
 
     /**
-     * AYIYA version (which document this should conform to)
-     * Per draft-massar-v6ops-ayiya-02 (July 2004)
-     */
-    public static final String VERSION = "draft-02";
-    /**
      * The maximum allowed deviation of TIC and local clocks.
      */
     public static final long MAX_TIME_OFFSET = 120;
@@ -77,8 +72,6 @@ public class Ayiya implements Transporter {
     /** Tag for Logger */
     private static final Logger logger = Logger.getLogger(Ayiya.class.getName());
 
-    /** The TicTunnel type supported by this Transporter */
-    public static final String TUNNEL_TYPE = "ayiya";
     private final TicTunnel tunnel;
 
     /** The port number for AYIYA */
@@ -119,11 +112,6 @@ public class Ayiya implements Transporter {
      * is working.
      */
     private boolean validPacketReceived = false;
-
-    /**
-     * Count the number of invalid packets received.
-     */
-    private int invalidPacketCounter = 0;
 
     private Date lastPacketReceivedTime = new Date();
     private Date lastPacketSentTime = new Date();
@@ -451,7 +439,6 @@ public class Ayiya implements Transporter {
                     ErrorCode error = getErrorCode(bb.array(), bb.arrayOffset(), bb.limit());
                     if (error == null) {
                         logger.warning("Unknown error code");
-                        invalidPacketCounter++;
                     } else {
                         switch (error) {
                             case AUTHENTICATION_FAILED:
@@ -459,7 +446,6 @@ public class Ayiya implements Transporter {
                             case TIMELAPSE:
                                 throw new TunnelBrokenException("Please check clock and timezone setting", null);
                             default:
-                                invalidPacketCounter++;
                         }
                     }
                 }
@@ -472,7 +458,6 @@ public class Ayiya implements Transporter {
                                     ? "Please check clock and timezone setting"
                                     : "Server unwilling to serve us", null);
                 }
-                invalidPacketCounter++;
             }
         }
 

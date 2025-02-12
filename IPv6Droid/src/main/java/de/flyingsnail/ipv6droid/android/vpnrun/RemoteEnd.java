@@ -41,6 +41,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -288,7 +289,7 @@ public class RemoteEnd {
                     currentNetworkProperty.getNetwork().bindSocket(popSocket);  // use the given Network explicitly
                     // the certification revocation check will open its own socket, needs to be bound to native
                     if (!connectivityManager.bindProcessToNetwork(currentNetworkProperty.getNetwork())) {
-                        logger.info(String.format("Network %d alread became unavailable", currentNetworkProperty.getNetwork().getNetworkHandle()));
+                        logger.info(String.format(Locale.GERMAN, "Network %d alread became unavailable", currentNetworkProperty.getNetwork().getNetworkHandle()));
                     }
                 /* this is from Android VpnService how-to. Let's try without, as we've bound
                    this socket to the OS native network above.
@@ -414,7 +415,7 @@ public class RemoteEnd {
      * A copy thread calls back to state that it is gone.
      * @param diedThread the CopyThread that died.
      */
-    protected void copyThreadDied(CopyThread diedThread) {
+    protected void copyThreadDied(Thread diedThread) {
         // if one copy thread died, the transporter is useless anyway.
         logger.info("A copy thread died, closing transporter out-of-sync");
         transporter.close();

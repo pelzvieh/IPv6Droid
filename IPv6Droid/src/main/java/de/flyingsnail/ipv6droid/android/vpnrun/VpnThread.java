@@ -96,10 +96,6 @@ public class VpnThread extends Thread {
         }
     }
 
-    public IPv6DroidVpnService getService() {
-        return service;
-    }
-
     /**
      * The service that created this thread.
      */
@@ -284,13 +280,12 @@ public class VpnThread extends Thread {
     /**
      * Read tunnel information via the TIC protocol. Return true if anything changed on the current
      * tunnel.
-     * @return true if something changed
+     *
      * @throws ConnectionFailedException if some permanent problem exists with the currently
-     *            available tunnel configs
-     * @throws IOException if some (hopefully transient) technical problem came up.
+     *                                   available tunnel configs
+     * @throws IOException               if some (hopefully transient) technical problem came up.
      */
-    boolean readTunnels() throws ConnectionFailedException, IOException {
-        boolean tunnelChanged = false;
+    void readTunnels() throws ConnectionFailedException, IOException {
 
         TunnelReader tr = new DTLSTunnelReader(service);
 
@@ -304,14 +299,12 @@ public class VpnThread extends Thread {
             activeTunnelValid = tunnels.replaceTunnelList(availableTunnels);
         if (!activeTunnelValid) {
             // previous activeTunnel no longer present!
-            tunnelChanged = true;
             if (tunnels.size() == 1) {
                 tunnels.setActiveTunnel(tunnels.get(0));
             }
             // update tunnel list in status and indirectly MainActivity
             vpnStatus.setTunnels(tunnels);
         }
-        return tunnelChanged;
     }
 
     static boolean checkExpiry(@NonNull Date lastReceived, int heartbeatInterval) {

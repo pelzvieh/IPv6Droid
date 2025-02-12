@@ -47,27 +47,26 @@ import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 public class RemoteEndTest implements UserNotificationCallback {
 
     private RemoteEnd remoteEnd;
-    private VpnStatusReport report;
     private Throwable notifiedError;
     private List<Integer> toasted;
 
     @Before
     public void setUp() throws Exception {
         toasted = new ArrayList<>();
-        report = new VpnStatusReport(ApplicationProvider.getApplicationContext());
+        VpnStatusReport report = new VpnStatusReport(ApplicationProvider.getApplicationContext());
         TransporterBuilder.register(TunnelSpecMock.class, TransporterMock.class);
         TunnelSpec tunnel = new TunnelSpecMock() ;
         remoteEnd = new RemoteEnd(report, true, true, this, tunnel);
     }
 
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         if (remoteEnd != null)
             remoteEnd.stop();
     }
 
     @Test
-    public void testIsNetworkMobile() throws Exception {
+    public void testIsNetworkMobile() {
         boolean isMobile = remoteEnd.isNetworkMobile();
         assertFalse(isMobile);
         assertNull(notifiedError);

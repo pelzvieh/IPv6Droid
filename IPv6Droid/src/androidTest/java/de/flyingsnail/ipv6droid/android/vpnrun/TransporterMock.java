@@ -25,16 +25,13 @@ package de.flyingsnail.ipv6droid.android.vpnrun;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.DatagramSocket;
 import java.nio.ByteBuffer;
 import java.util.Date;
 
-import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
 import de.flyingsnail.ipv6droid.transport.Transporter;
-import de.flyingsnail.ipv6droid.transport.TunnelBrokenException;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
 public class TransporterMock implements Transporter {
@@ -60,12 +57,12 @@ public class TransporterMock implements Transporter {
     }
 
     @Override
-    public DatagramSocket prepare() throws IOException {
+    public DatagramSocket prepare() {
         throw new IllegalStateException("Not implemented");
     }
 
     @Override
-    public void connect() throws IOException, ConnectionFailedException {
+    public void connect() {
 
     }
 
@@ -80,17 +77,17 @@ public class TransporterMock implements Transporter {
     }
 
     @Override
-    public void beat() throws IOException, TunnelBrokenException {
+    public void beat() {
 
     }
 
     @Override
-    public ByteBuffer read(ByteBuffer bb) throws IOException, TunnelBrokenException {
+    public ByteBuffer read(ByteBuffer bb) {
         return ByteBuffer.allocate(0);
     }
 
     @Override
-    public void write(ByteBuffer bb) throws IOException, TunnelBrokenException {
+    public void write(ByteBuffer bb) {
 
     }
 

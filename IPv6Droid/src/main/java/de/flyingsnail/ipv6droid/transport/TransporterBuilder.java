@@ -50,7 +50,7 @@ public class TransporterBuilder {
     registry.put(input, output);
   }
 
-  public static Transporter createTransporter(TunnelSpec spec) throws NoSuchAlgorithmException, ConnectionFailedException {
+  public static Transporter createTransporter(TunnelSpec spec) throws NoSuchAlgorithmException {
     for (Class<? extends TunnelSpec> probeInput: registry.keySet()) {
       if (probeInput.isInstance(spec)) {
           try {

@@ -157,9 +157,6 @@ public class NetworksRepository {
         }
     }
 
-    private final NetworkLocalDataSource networkLocalDataSource;
-    private final ConnectivityLocalDataSource connectivityLocalDataSource;
-
     /**
      * Constructor with dependencies to inject.
      * @param networkLocalDataSource the NetworkLocalDataSource to use.
@@ -168,8 +165,6 @@ public class NetworksRepository {
     public NetworksRepository(final NetworkLocalDataSource networkLocalDataSource,
                               final ConnectivityLocalDataSource connectivityLocalDataSource) {
         logger.setLevel(Level.FINEST);
-        this.networkLocalDataSource = networkLocalDataSource;
-        this.connectivityLocalDataSource = connectivityLocalDataSource;
         logger.info("Building the Observable functional chains");
         /*
         Connectivity	  -acbp--g-l-ab----acpb--l

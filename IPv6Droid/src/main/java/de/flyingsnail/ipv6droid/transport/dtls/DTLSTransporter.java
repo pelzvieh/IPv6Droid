@@ -54,7 +54,6 @@ import de.flyingsnail.ipv6droid.transport.TunnelBrokenException;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
 public class DTLSTransporter implements Transporter {
-  public static final String TUNNEL_TYPE = TransporterParams.TUNNEL_TYPE;
   private final static Logger logger = Logger.getLogger(DTLSTransporter.class.getName());
   private final TransporterParams params;
   private final AndroidBackedKeyPair keyPair;

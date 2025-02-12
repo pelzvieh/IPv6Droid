@@ -23,7 +23,6 @@
 
 package de.flyingsnail.ipv6droid.android.vpnrun;
 
-import android.content.Context;
 import android.net.VpnService;
 import android.os.ParcelFileDescriptor;
 import android.widget.Toast;
@@ -250,16 +249,9 @@ public class LocalEnd {
     }
 
 
-    public Context getApplicationContext() {
-        return vpnThread.getApplicationContext();
-    }
-
     public Statistics addStatistics(Statistics stats) {
         return (remoteEnd == null ? stats : remoteEnd.addStatistics(stats))
                 .setTunnelRouted(tunnelRouted);
     }
 
-    public VpnThread getVpnThread() {
-        return vpnThread;
-    }
 }
