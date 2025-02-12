@@ -73,9 +73,6 @@ public class NetworksRepositoryTest {
     private ConnectivityLocalDataSource mockLocalDataSource;
 
     @Mock
-    private NetworkLocalDataSource mockNetworkLocalDataSource;
-
-    @Mock
     private NetworkCapabilities networkCapabilities_noInternet;
 
     @Mock
@@ -125,7 +122,7 @@ public class NetworksRepositoryTest {
                 .thenReturn(true);
         when(mockLocalDataSource.getConnectivityEventObservable()).thenReturn(connectivityEvents);
 
-        repository = new NetworksRepository(mockNetworkLocalDataSource, mockLocalDataSource);
+        repository = new NetworksRepository(mockLocalDataSource);
     }
 
     @Test

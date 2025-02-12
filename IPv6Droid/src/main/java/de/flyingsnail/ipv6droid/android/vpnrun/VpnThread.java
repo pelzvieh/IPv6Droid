@@ -422,10 +422,6 @@ public class VpnThread extends Thread {
         return isAlive() && !closeTunnel;
     }
 
-    Context getApplicationContext() {
-        return applicationContext;
-    }
-
     public void reportStatus() {
         vpnStatus.reportStatus();
     }

@@ -31,7 +31,6 @@ import androidx.annotation.NonNull;
 import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.android.datalayer.network.ConnectivityLocalDataSource;
-import de.flyingsnail.ipv6droid.android.datalayer.network.NetworkLocalDataSource;
 import de.flyingsnail.ipv6droid.android.datalayer.network.NetworksRepository;
 
 public class IPv6Droid extends Application {
@@ -60,8 +59,7 @@ public class IPv6Droid extends Application {
         super.onCreate();
         logger.fine("Application starting up");
         ConnectivityLocalDataSource connectivityLocalDataSource = new ConnectivityLocalDataSource(getSystemService(ConnectivityManager.class));
-        NetworkLocalDataSource networkLocalDataSource = new NetworkLocalDataSource();
-        networksRepository = new NetworksRepository(networkLocalDataSource, connectivityLocalDataSource);
+        networksRepository = new NetworksRepository(connectivityLocalDataSource);
     }
 
     public NetworksRepository getNetworksRepository() {

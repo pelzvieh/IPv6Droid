@@ -61,8 +61,7 @@ public class NetworksRepositoryDeviceTest {
         logger.info("Setting up");
         ConnectivityLocalDataSource connectivityLocalDataSource = new ConnectivityLocalDataSource(
                 ApplicationProvider.getApplicationContext().getSystemService(ConnectivityManager.class));
-        NetworkLocalDataSource networkLocalDataSource = new NetworkLocalDataSource();
-        repository = new NetworksRepository(networkLocalDataSource, connectivityLocalDataSource);
+        repository = new NetworksRepository(connectivityLocalDataSource);
     }
 
     @Test
