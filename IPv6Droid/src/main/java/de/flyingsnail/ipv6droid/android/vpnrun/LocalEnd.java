@@ -126,11 +126,10 @@ public class LocalEnd {
 
                 // loop over IPv4 network changes
                 logger.info("Constructing remote end");
-                remoteEnd = new RemoteEnd(this,
+                remoteEnd = new RemoteEnd(
                         vpnStatus,
                         forcedRoute,
                         tunnelRouted,
-                        executor,
                         userNotificationCallback,
                         tunnel);
 

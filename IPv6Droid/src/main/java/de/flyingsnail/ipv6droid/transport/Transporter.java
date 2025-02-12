@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -52,12 +52,6 @@ public interface Transporter {
   Date getLastPacketSentTime();
 
   /**
-   * Check if this object is in a functional state
-   * @return a boolean, true if socket is still connected
-   */
-  boolean isAlive();
-
-  /**
    * Prepare for connection, esp. create an unconnected DatagramSocket. This enables the parent
    * object to bind the socket to a network.
    * @return the DatagramSocket that is going to be used for native traffic
@@ -71,21 +65,10 @@ public interface Transporter {
   void connect() throws IOException, ConnectionFailedException;
 
   /**
-   * Re-Connect the tunnel, closing the existing socket
-   */
-  void reconnect() throws IOException, ConnectionFailedException;
-
-  /**
    * Tell if a valid response has already been received by this instance.
    * @return true if any valid response was already received.
    */
   boolean isValidPacketReceived();
-
-  /**
-   * Return the number of invalid packages received yet.
-   * @return an int representing the number.
-   */
-  int getInvalidPacketCounter();
 
   /**
    * Get the maximum transmission unit (MTU) associated with this Ayiya instance.
@@ -128,24 +111,8 @@ public interface Transporter {
    */
   OutputStream getOutputStream();
 
-  /** This can be used by friendly classes to protect this socket from tunneling, query its state, etc. */
-  DatagramSocket getSocket();
-
   /**
    * Close our socket. Basically that's about it.
    */
   void close();
-
-  /**
-   * Configure this AYIYA to use a different UDP port on IPv4.
-   * todo this should eventually become an attribute of TicTunnel
-   * @param port an int giving the port number to use.
-   */
-  void setPort(int port);
-
-  /**
-   * Return the number of bytes of overhead required by this transport on each packet.
-   * @return an int giving the number of bytes of overhead
-   */
-  int getOverhead();
 }

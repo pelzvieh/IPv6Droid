@@ -52,7 +52,6 @@ import de.flyingsnail.ipv6droid.android.datalayer.network.event.EventDisconnecte
 import de.flyingsnail.ipv6droid.android.datalayer.network.event.EventDisconnecting;
 import de.flyingsnail.ipv6droid.android.datalayer.network.event.EventLinkPropertiesChanged;
 import io.reactivex.rxjava3.core.Observable;
-import io.reactivex.rxjava3.core.ObservableSource;
 import io.reactivex.rxjava3.observables.ConnectableObservable;
 import io.reactivex.rxjava3.subjects.ReplaySubject;
 import io.reactivex.rxjava3.subjects.Subject;
@@ -80,10 +79,10 @@ public class NetworksRepository {
      * update to the affected network's NetworkProperty. The current NetworkProperty for each
      * known network is contained, along with the id of the network that changed with the emitted
      * instance.
-     * @return an ObservableSource&lt;NetworksInformationContainer&gt;
+     * @return an Observable&lt;NetworksInformationContainer&gt;
      */
     @NonNull
-    public ObservableSource<NetworksInformationContainer> getNetworksProperties() {
+    public Observable<NetworksInformationContainer> getNetworksProperties() {
         logger.fine("Returning networksProperties observable");
         return networksProperties;
     }
@@ -94,17 +93,26 @@ public class NetworksRepository {
      * @return an ObservableSource&lt;NetworkProperty&gt;
      */
     @NonNull
-    public ObservableSource<NetworkProperty> getCurrentNetworkObservable() {
+    public Observable<NetworkProperty> getCurrentNetworkObservable() {
         logger.fine("Returning currentNetworkObservable");
         return currentNetworkObservable;
     }
 
+    /**
+     * Get an Observable streaming the NetworkProperty of the network that is currently
+     * online.
+     * @return an Observable&lt;NetworkProperty&gt;
+     */
     @NonNull
     public Observable<NetworkProperty> getOnlineNetworkProperty() {
         logger.fine("Returning onlineNetwork observable");
         return onlineNetworkProperty;
     }
 
+    /**
+     * Get an Observable streaming the device's online state.
+     * @return an Observable&lt;Boolean&gt;
+     */
     @NonNull
     public Observable<Boolean> getDeviceOnline() {
         logger.fine("Returning deviceOnline observable");
@@ -194,7 +202,7 @@ public class NetworksRepository {
         this.deviceOnline =
                 onlineNetworkProperty
                         .map((e)-> {
-                            logger.info("Device is online with network " + e);
+                            logger.info("Device is online with network " + e.getNetwork());
                             return TRUE;
                         })
                         .mergeWith(

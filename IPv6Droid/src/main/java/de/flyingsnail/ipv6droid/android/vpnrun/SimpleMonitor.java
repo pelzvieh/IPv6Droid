@@ -68,11 +68,6 @@ class SimpleMonitor implements Monitor {
             inThread.join(heartbeatInterval);
             if (!remoteEnd.isIntendedToRun())
                 break;
-            // re-check cached network information
-            if (!remoteEnd.isCurrentSocketStillValid()) {
-                throw new IOException("Network changed");
-            }
-
         }
         logger.info("Terminated loop of current transporter object (interrupt or end of a copy thread)");
         Throwable deathCause = null;

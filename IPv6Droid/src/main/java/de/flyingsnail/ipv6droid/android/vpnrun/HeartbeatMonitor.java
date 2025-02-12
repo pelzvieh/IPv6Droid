@@ -85,10 +85,6 @@ class HeartbeatMonitor implements Monitor {
             inThread.join(heartbeatInterval - lastPacketDelta);
             if (!remoteEnd.isIntendedToRun())
                 break;
-            // re-check cached network information
-            if (!remoteEnd.isCurrentSocketStillValid()) {
-                throw new IOException("IP address changed");
-            }
             // determine last package transmission time
             lastPacketDelta = new Date().getTime() - transporter.getLastPacketSentTime().getTime();
             // if no traffic occurred, send a heartbeat package
@@ -107,8 +103,7 @@ class HeartbeatMonitor implements Monitor {
                no new packets for more than heartbeat interval? Might be device sleep!
                but if not pingable, probably broken.
                In the latter case we give it another heartbeat interval time to recover. */
-                if (remoteEnd.isCurrentSocketStillValid() &&
-                        !transporter.isValidPacketReceived() && // if the tunnel worked in a session, don't worry if it pauses - it's 100% network problems
+                if (!transporter.isValidPacketReceived() && // if the tunnel worked in a session, don't worry if it pauses - it's 100% network problems
                         VpnThread.checkExpiry(transporter.getLastPacketReceivedTime(),
                                 activeTunnel.getHeartbeatInterval()) ) {
                     if (!timeoutSuspected)

@@ -62,7 +62,7 @@ public class DTLSTransporter implements Transporter {
   private Date lastPacketReceivedTime;
   private Date lastPacketSentTime;
   private DatagramSocket socket;
-  private int port;
+  private final int port;
   private DTLSTransport dtls = null;
   private int maxPacketSize = 0;
   private boolean validPacketReceived = false;
@@ -136,16 +136,6 @@ public class DTLSTransporter implements Transporter {
   }
 
   /**
-   * Check if this object is in a functional state
-   *
-   * @return a boolean, true if socket is still connected
-   */
-  @Override
-  public boolean isAlive() {
-    return socket != null && socket.isConnected();
-  }
-
-  /**
    * Prepare for connection, esp. create an unconnected DatagramSocket. This enables the parent
    * object to bind the socket to a network.
    *
@@ -197,17 +187,6 @@ public class DTLSTransporter implements Transporter {
   }
 
   /**
-   * Re-Connect the tunnel, closing the existing socket
-   */
-  @Override
-  public void reconnect() throws IOException {
-    if (socket == null)
-      throw new IllegalStateException("DTLSTransporter is closed or not initialized");
-    close();
-    connect();
-  }
-
-  /**
    * Tell if a valid response has already been received by this instance.
    *
    * @return true if any valid response was already received.
@@ -215,16 +194,6 @@ public class DTLSTransporter implements Transporter {
   @Override
   public boolean isValidPacketReceived() {
     return validPacketReceived;
-  }
-
-  /**
-   * Return the number of invalid packages received yet.
-   *
-   * @return an int representing the number.
-   */
-  @Override
-  public int getInvalidPacketCounter() {
-    return 0; // invalid packets are handled by lower levels
   }
 
   /**
@@ -345,24 +314,6 @@ public class DTLSTransporter implements Transporter {
   }
 
   /**
-   * This can be used by friendly classes to protect this socket from tunneling, query its state, etc.
-   */
-  @Override
-  public DatagramSocket getSocket() {
-    return socket;
-  }
-
-  /**
-   * Return the number of bytes of overhead required by this transport on each packet.
-   *
-   * @return an int giving the number of bytes of overhead
-   */
-  @Override
-  public int getOverhead() {
-    return 0;
-  }
-
-  /**
    * Close our socket. Basically that's about it.
    */
   @Override
@@ -386,16 +337,4 @@ public class DTLSTransporter implements Transporter {
   public @NonNull String toString() {
     return getClass().getSimpleName() + "#" + socket.getLocalAddress().getHostAddress() + ":"+ socket.getLocalPort();
   }
-
-  /**
-   * Configure this DTLSTransporter to use a different UDP port on IPv4.
-   *
-   * @param port an int giving the port number to use.
-   * todo this should eventually become an attribute of TicTunnel
-   */
-  @Override
-  public void setPort(int port) {
-    this.port = port;
-  }
-
 }

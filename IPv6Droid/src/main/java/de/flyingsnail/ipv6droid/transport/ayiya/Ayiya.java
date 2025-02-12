@@ -55,11 +55,11 @@ import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
 /**
  * AYIYA - Anything In Anything
- *
+ * <p>
  * This realises the tunnel protocol with the PoP in the SixXS network.
- *
+ * <p>
  * Based on specifications published by SixXS, see
- * http://www.sixxs.net/tools/ayiya
+ * <a href="http://www.sixxs.net/tools/ayiya">Ayiya</a>
  *
  */
 public class Ayiya implements Transporter {
@@ -82,7 +82,7 @@ public class Ayiya implements Transporter {
     private final TicTunnel tunnel;
 
     /** The port number for AYIYA */
-    private int port = 5072;
+    private final int port = 5072;
 
     // @todo I'm afraid I missed an official source for this kind of constants
     private static final byte IPPROTO_IPv6 = 41;
@@ -156,24 +156,6 @@ public class Ayiya implements Transporter {
     @Override
     public Date getLastPacketSentTime() {
         return lastPacketSentTime;
-    }
-
-    /**
-     * Check if this object is in a functional state
-     * @return a boolean, true if socket is still connected
-     */
-    @Override
-    public boolean isAlive() {
-        if (socket != null && socket.isConnected()) {
-            try {
-                beat();
-                return true;
-            } catch (Exception e) {
-                return false;
-            }
-        } else {
-            return false;
-        }
     }
 
     /**
@@ -314,17 +296,6 @@ public class Ayiya implements Transporter {
     }
 
     /**
-     * Re-Connect the tunnel, closing the existing socket
-     */
-    @Override
-    public synchronized void reconnect() throws IOException, ConnectionFailedException {
-        if (socket == null)
-            throw new IllegalStateException("Ayiya object is closed or not initialized");
-        close();
-        connect();
-    }
-
-    /**
      * Tell if a valid response has already been received by this instance.
      * @return true if any valid response was already received.
      */
@@ -336,14 +307,6 @@ public class Ayiya implements Transporter {
         return validPacketReceived;
     }
 
-    /**
-     * Return the number of invalid packages received yet.
-     * @return an int representing the number.
-     */
-    @Override
-    public int getInvalidPacketCounter() {
-        return invalidPacketCounter;
-    }
     /**
      * Get the maximum transmission unit (MTU) associated with this Ayiya instance.
      * @return the MTU in bytes
@@ -690,11 +653,6 @@ public class Ayiya implements Transporter {
         return new TransporterOutputStream(this);
     }
 
-    /** This can be used by friendly classes to protect this socket from tunneling, query its state, etc. */
-    @Override
-    public DatagramSocket getSocket() {
-        return socket;
-    }
     /**
      * Close our socket. Basically that's about it.
      */
@@ -706,24 +664,4 @@ public class Ayiya implements Transporter {
         socket = null; // it's useless anyway
         logger.info("Ayiya tunnel closed");
     }
-
-    /**
-     * Configure this AYIYA to use a different UDP port on IPv4.
-     * todo this should eventually become an attribute of TicTunnel
-     * @param port an int giving the port number to use.
-     */
-    @Override
-    public void setPort(int port) {
-        this.port = port;
-    }
-
-  /**
-   * Return the number of bytes of overhead required by this transport on each packet.
-   *
-   * @return an int giving the number of bytes of overhead
-   */
-  @Override
-  public int getOverhead() {
-    return OVERHEAD;
-  }
 }

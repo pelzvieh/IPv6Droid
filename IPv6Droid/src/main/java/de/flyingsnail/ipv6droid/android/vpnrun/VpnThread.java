@@ -405,10 +405,11 @@ public class VpnThread extends Thread {
                     (Inet6Address)Inet6Address.getByName(applicationContext.getString(R.string.ipv6_test_host)),
                     activeTunnel.getIpv6Endpoint(),
                     activeTunnel.getMtu());
+            stats = localEnd == null ? stats : localEnd.addStatistics(stats);
         } catch (UnknownHostException e) {
-            e.printStackTrace();
+            logger.log(Level.WARNING, "Could not create Statistics object", e);
         }
-        return localEnd == null ? stats : localEnd.addStatistics(stats);
+        return stats;
     }
 
     /**

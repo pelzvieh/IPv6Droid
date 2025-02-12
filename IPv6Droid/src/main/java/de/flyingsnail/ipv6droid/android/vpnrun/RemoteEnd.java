@@ -23,7 +23,6 @@
 
 package de.flyingsnail.ipv6droid.android.vpnrun;
 
-import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkInfo;
@@ -39,13 +38,18 @@ import java.net.DatagramSocket;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.security.NoSuchAlgorithmException;
+import java.util.Collections;
 import java.util.Date;
-import java.util.concurrent.ExecutorService;
+import java.util.List;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.IPv6Droid;
 import de.flyingsnail.ipv6droid.android.UserNotificationCallback;
+import de.flyingsnail.ipv6droid.android.datalayer.network.NetworkProperty;
+import de.flyingsnail.ipv6droid.android.datalayer.network.NetworksRepository;
 import de.flyingsnail.ipv6droid.android.statistics.Statistics;
 import de.flyingsnail.ipv6droid.android.statistics.TransmissionStatistics;
 import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
@@ -53,6 +57,8 @@ import de.flyingsnail.ipv6droid.transport.Transporter;
 import de.flyingsnail.ipv6droid.transport.TransporterBuilder;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 import de.flyingsnail.ipv6droid.transport.ayiya.Ayiya;
+import io.reactivex.rxjava3.annotations.NonNull;
+import io.reactivex.rxjava3.disposables.Disposable;
 
 /**
  * This class encapsulates the information required to run a tunnel with a fixed local
@@ -60,17 +66,15 @@ import de.flyingsnail.ipv6droid.transport.ayiya.Ayiya;
  *
  * @author pelzi
  */
-public class RemoteEnd implements NetworkChangeListener {
+public class RemoteEnd {
     static final Logger logger = Logger.getLogger(RemoteEnd.class.getName());
-    private final LocalEnd localEnd;
     private final VpnStatusReport vpnStatus;
     private final Date expiryDate;
     private boolean intendedToRun;
     private final boolean forcedRoute;
     private final boolean isRouted;
-    private final NetworkHelper networkHelper;
     private Inet4Address localIp = null;
-    private final ExecutorService executor;
+    private final ConnectivityManager connectivityManager;
     /**
      * The incoming statistics collector.
      */
@@ -104,14 +108,28 @@ public class RemoteEnd implements NetworkChangeListener {
      * (i.e. since "startedAt").
      */
     private int reconnectCount;
-    private Network currentNetwork = null;
 
     /**
      * The tunnel protocol object
      */
     private final Transporter transporter;
 
-    private final UserNotificationCallback service;
+    private final UserNotificationCallback userNotificationCallback;
+    /**
+     * Are we connected to some network?
+     */
+    private boolean deviceConnected;
+    /**
+     * What is the currently connected network, or the network that was
+     * last connect, if currently we're offline?
+     */
+    private NetworkProperty currentNetworkProperty = null;
+
+    /**
+     * The end cause of the function RefreshRemoteEnd. Might be set by asynchronous event
+     * listeners prior to them shooting the copy threads.
+     */
+    private EndCause endCause = null;
 
     enum EndCause {
         REQUIRES_ROUTIING, INHIBITS_ROUTING, FD_INVALID, EXPIRED, ON_REQUEST
@@ -120,32 +138,29 @@ public class RemoteEnd implements NetworkChangeListener {
     /**
      * Constructor. It is important that this be called before the VPN is started by the
      * Android system.
-     * @param localEnd the LocalEnd that calls this constructor
      * @param vpnStatus a VpnStatusReport object to report to
      * @param forcedRoute a boolean indicating if route through VPN should set up even if local
      *                    network is IPv6 capable
      * @param isRouted a boolean indicating if the VPN is going to be set up routed
-     * @param executor an ExecutorService to be used for asnychronous tasks.
      * @param userNotificationCallback a UserNotificationCallback to generate user notifications to
      * @param tunnel a TunnelSpec specifying the tunnel to be set up
      * @throws ConnectionFailedException in case of a permanent problem with the tunnel
      */
-    RemoteEnd(final LocalEnd localEnd,
-              final VpnStatusReport vpnStatus,
+    RemoteEnd(final VpnStatusReport vpnStatus,
               final boolean forcedRoute,
               final boolean isRouted,
-              final ExecutorService executor,
               final UserNotificationCallback userNotificationCallback,
               final TunnelSpec tunnel) throws ConnectionFailedException {
-        this.localEnd = localEnd;
         this.vpnStatus = vpnStatus;
 
         intendedToRun = true;
         this.forcedRoute = forcedRoute;
         this.isRouted = isRouted;
         this.reconnectCount = 0;
-        this.executor = executor;
-        this.service = userNotificationCallback;
+        this.connectivityManager = IPv6Droid.getInstance()
+                .getApplicationContext()
+                .getSystemService(ConnectivityManager.class);
+        this.userNotificationCallback = userNotificationCallback;
         this.expiryDate = tunnel.getExpiryDate();
 
         // Prepare the tunnel to PoP
@@ -158,8 +173,55 @@ public class RemoteEnd implements NetworkChangeListener {
         // the statistics collector
         this.ingoingStatistics = new TransmissionStatistics();
         this.outgoingStatistics = new TransmissionStatistics();
-        networkHelper = new NetworkHelper(this,
-                (ConnectivityManager) localEnd.getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE));
+    }
+
+    private void onNetworkError(Throwable throwable) {
+        logger.log(Level.WARNING, "Error in network property observable pipeline ", throwable);
+        stop();
+    }
+
+    /**
+     * Callback for device online/offline
+     * @param isConnected a Boolean indicating if the device is online or offline.
+     */
+    private void onIsOnline(Boolean isConnected) {
+        deviceConnected = Objects.requireNonNullElse(isConnected, Boolean.FALSE);
+        if (isConnected) {
+            synchronized (this) {
+                this.notifyAll();
+            }
+        } else {
+            // note: we're not terminating the copyThreads here. Reason is that
+            // perhaps connectivity will be restored on the same network and we
+            // can just go on by then.
+            logger.info("We're no longer connected.");
+            vpnStatus.setProgressPerCent(45);
+            vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
+            vpnStatus.setActivity(R.string.vpnservice_activity_connectivity);
+        }
+    }
+
+    /**
+     * Callback for change of the properties of the currently online network
+     * (including a change of the Network itself).
+     * @param networkProperty the NetworkProperty of the currently online network.
+     */
+    private void onNetworkChanged(@NonNull NetworkProperty networkProperty) {
+        // memorize the Network associated with the previous networkProperty
+        Network currentNetwork = (currentNetworkProperty == null)
+                ? null : currentNetworkProperty.getNetwork();
+        // act on new NetworkProperty
+        currentNetworkProperty = networkProperty;
+        if (currentNetwork == null || currentNetwork.getNetworkHandle() != networkProperty.getNetwork().getNetworkHandle()) {
+            logger.info("transporter object no longer functional after connectivity change - reconnecting");
+            cleanCopyThreads();
+        }
+        // check if our routing is still valid, otherwise invalidate vpnFD
+        if (isTunnelRoutingRequired(networkProperty) ^ isRouted) {
+            logger.info("tunnel routing requirement changed, forcing re-build of local vpn socket");
+            endCause = isRouted ? EndCause.INHIBITS_ROUTING : EndCause.REQUIRES_ROUTIING;
+            stop();
+        }
     }
 
     /**
@@ -171,144 +233,153 @@ public class RemoteEnd implements NetworkChangeListener {
      */
     EndCause refreshRemoteEnd(FileDescriptor localFD) throws ConnectionFailedException, InterruptedException {
         Date lastStartAttempt = new Date(0L);
-        EndCause endCause = null;
-        networkHelper.start();
+        endCause = null;
+        // subscribe to the required network changes
+        NetworksRepository networksRepository = IPv6Droid.getInstance().getNetworksRepository();
+        @NonNull final Disposable deviceOnlineSubscriptionDisposer = networksRepository
+                .getDeviceOnline()
+                .subscribe(this::onIsOnline);
+        @NonNull final Disposable onlineNetworkPropertySubscriptionDisposer = networksRepository
+                .getOnlineNetworkProperty()
+                .subscribe(this::onNetworkChanged, this::onNetworkError);
+        try { // try-finally to ensure disposal of disposables (no Autoclosables, unfortunately)
 
-        while (intendedToRun && localFD.valid()) {
-            try {
-                // make sure we can connect to any network
-                networkHelper.getConnectivityManager().bindProcessToNetwork(null);
+            while (intendedToRun && localFD.valid()) {
+                try {
+                    // Packets to be sent are queued in this input stream.
+                    FileInputStream localIn = new FileInputStream(localFD);
 
-                // Packets to be sent are queued in this input stream.
-                FileInputStream localIn = new FileInputStream(localFD);
+                    // Packets received need to be written to this output stream.
+                    FileOutputStream localOut = new FileOutputStream(localFD);
 
-                // Packets received need to be written to this output stream.
-                FileOutputStream localOut = new FileOutputStream(localFD);
+                    if (Thread.interrupted())
+                        throw new InterruptedException("Tunnel loop has interrupted status set");
 
-                if (Thread.interrupted())
-                    throw new InterruptedException("Tunnel loop has interrupted status set");
+                    // ensure we're online
+                    waitOnConnectivity();
 
-                // ensure we're online
-                waitOnConnectivity();
+                    // Re-Check if we should close down, as this can easily happen when waiting on connectivity
+                    if (!intendedToRun) {
+                        break;
+                    }
+                    // Check if our tunnel is still valid, as this can easily change whilst waiting on connectivity
+                    if (new Date().after(expiryDate)) {
+                        endCause = EndCause.EXPIRED;
+                        break;
+                    }
 
-                // Re-Check if we should close down, as this can easily happen when waiting on connectivity
-                if (!intendedToRun) {
-                    break;
-                }
-                // Check if our tunnel is still valid, as this can easily change whilst waiting on connectivity
-                if (new Date().after(expiryDate)) {
-                    endCause = EndCause.EXPIRED;
-                    break;
-                }
+                    vpnStatus.setStatus(VpnStatusReport.Status.Connecting);
+                    vpnStatus.setActivity(R.string.vpnservice_activity_reconnect);
 
-                if (isTunnelRoutingRequired() ^ isRouted) {
-                    endCause = isRouted ? EndCause.INHIBITS_ROUTING : EndCause.REQUIRES_ROUTIING;
-                    break;
-                }
+                    // timestamp base mechanism to prevent busy looping through e.g. IOException
+                    Date now = new Date();
+                    long lastIterationRun = now.getTime() - lastStartAttempt.getTime();
+                    if (lastIterationRun < 1000L)
+                        //noinspection BusyWait
+                        Thread.sleep(1000L - lastIterationRun);
+                    lastStartAttempt = new Date();
 
-                vpnStatus.setStatus(VpnStatusReport.Status.Connecting);
-                vpnStatus.setActivity(R.string.vpnservice_activity_reconnect);
+                    // setup tunnel to PoP
+                    logger.info("Connecting transporter object");
+                    vpnStatus.setStatus(VpnStatusReport.Status.Connecting);
+                    vpnStatus.setActivity(R.string.vpnservice_activity_connecting);
 
-                // timestamp base mechanism to prevent busy looping through e.g. IOException
-                Date now = new Date();
-                long lastIterationRun = now.getTime() - lastStartAttempt.getTime();
-                if (lastIterationRun < 1000L)
-                    //noinspection BusyWait
-                    Thread.sleep(1000L - lastIterationRun);
-                lastStartAttempt = new Date();
-
-                // setup tunnel to PoP
-                logger.info("Connecting transporter object");
-                vpnStatus.setStatus(VpnStatusReport.Status.Connecting);
-                vpnStatus.setActivity(R.string.vpnservice_activity_connecting);
-
-                DatagramSocket popSocket = transporter.prepare();
-                currentNetwork.bindSocket(popSocket);  // use the given Network explicitly
-                // the certification revocation check will open its own socket, needs to be bound to native
-                networkHelper.getConnectivityManager().bindProcessToNetwork(currentNetwork);
+                    DatagramSocket popSocket = transporter.prepare();
+                    currentNetworkProperty.getNetwork().bindSocket(popSocket);  // use the given Network explicitly
+                    // the certification revocation check will open its own socket, needs to be bound to native
+                    if (!connectivityManager.bindProcessToNetwork(currentNetworkProperty.getNetwork())) {
+                        logger.info(String.format("Network %d alread became unavailable", currentNetworkProperty.getNetwork().getNetworkHandle()));
+                    }
                 /* this is from Android VpnService how-to. Let's try without, as we've bound
                    this socket to the OS native network above.
                 localEnd.getVpnThread().getService().protect(popSocket); // do not redirect to VPN
                  */
 
-                logger.info("Connecting transporter");
-                transporter.connect();
+                    logger.info("Connecting transporter");
+                    transporter.connect();
 
-                logger.info("Transporter connected");
-                vpnStatus.setProgressPerCent(75);
-                vpnStatus.setStatus(VpnStatusReport.Status.Connected);
-                vpnStatus.setCause(null);
+                    logger.info("Transporter connected");
+                    vpnStatus.setProgressPerCent(75);
+                    vpnStatus.setStatus(VpnStatusReport.Status.Connected);
+                    vpnStatus.setCause(null);
 
-                // Initialize the input and output streams from the transporter socket
-                InputStream popIn = transporter.getInputStream();
-                OutputStream popOut = transporter.getOutputStream();
+                    // Initialize the input and output streams from the transporter socket
+                    InputStream popIn = transporter.getInputStream();
+                    OutputStream popOut = transporter.getOutputStream();
 
-                // update network info
-                try {
-                    localIp = (Inet4Address) popSocket.getLocalAddress();
-                } catch (ClassCastException e) {
-                    logger.log(Level.WARNING, "local address is not Inet4Address", e);
-                    // affects only statistics display
+                    // update network info
+                    try {
+                        localIp = (Inet4Address) popSocket.getLocalAddress();
+                    } catch (ClassCastException e) {
+                        logger.log(Level.WARNING, "local address is not Inet4Address", e);
+                        // affects only statistics display
+                    }
+
+                    // start the copying threads
+                    logger.info("Starting copy threads");
+                    synchronized (this) {
+                        outThread = new CopyThread(
+                                localIn, popOut, userNotificationCallback, this,
+                                "Transport from local to POP", TAG_OUTGOING_THREAD,
+                                0, outgoingStatistics);
+                        inThread = new CopyThread(
+                                popIn, localOut, userNotificationCallback, this,
+                                "Transport from POP to local", TAG_INCOMING_THREAD,
+                                0, ingoingStatistics);
+                        outThread.start();
+                        inThread.start();
+                    }
+                    vpnStatus.setActivity(R.string.vpnservice_activity_ping_pop);
+                    vpnStatus.setCause(null);
+
+                    Monitor vpnMonitor =
+                            transporter instanceof Ayiya ?
+                                    new HeartbeatMonitor(this, inThread, outThread) :
+                                    new SimpleMonitor(this, inThread, outThread);
+
+                    // now the tunnel is expected to work so future sockets are no longer bound to native
+                    connectivityManager.bindProcessToNetwork(null);
+
+                    // now do a ping on IPv6 level. This should involve receiving one packet
+                    if (!Inet6Address.getByName(IPv6Droid.getInstance().getApplicationContext().getString(R.string.ipv6_test_host)).isReachable(10000)) {
+                        logger.log(Level.WARNING, "Warning: couldn't ping pop via ipv6!");
+                    }
+
+                    vpnStatus.setActivity(R.string.vpnservice_activity_online);
+
+                    // loop until interrupted or tunnel defective
+                    vpnMonitor.loop();
+                    logger.info("monitored heartbeat loop ended");
+                } catch (IOException e) {
+                    logger.log(Level.INFO, "Tunnel connection broke down, closing and reconnecting transporter (remote end)", e);
+                    vpnStatus.setProgressPerCent(50);
+                    vpnStatus.setCause(e);
+                    vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
+                } catch (InterruptedException | RuntimeException | ConnectionFailedException e) {
+                    logger.warning("refresh remote end loop received unexpected exception");
+                    stop();
+                    throw e;
+                } finally {
+                    cleanCopyThreads();
+                    localIp = null;
                 }
-
-                // start the copying threads
-                logger.info("Starting copy threads");
-                synchronized (this) {
-                    outThread = new CopyThread(localIn, popOut, service, this, "Transport from local to POP", TAG_OUTGOING_THREAD, 0, outgoingStatistics);
-                    inThread = new CopyThread(popIn, localOut, service, this, "Transport from POP to local", TAG_INCOMING_THREAD, 0, ingoingStatistics);
-                    outThread.start();
-                    inThread.start();
-                }
-                vpnStatus.setActivity(R.string.vpnservice_activity_ping_pop);
-                vpnStatus.setCause(null);
-
-                Monitor vpnMonitor =
-                        transporter instanceof Ayiya ?
-                                new HeartbeatMonitor(this, inThread, outThread) :
-                                new SimpleMonitor(this, inThread, outThread);
-
-                // now the tunnel is expected to work so future sockets are no longer bound to native
-                networkHelper.getConnectivityManager().bindProcessToNetwork(null);
-
-                // now do a ping on IPv6 level. This should involve receiving one packet
-                if (!Inet6Address.getByName(localEnd.getApplicationContext().getString(R.string.ipv6_test_host)).isReachable(10000)) {
-                    logger.log(Level.WARNING, "Warning: couldn't ping pop via ipv6!");
-                }
-
-                vpnStatus.setActivity(R.string.vpnservice_activity_online);
-
-                // loop until interrupted or tunnel defective
-                vpnMonitor.loop();
-                logger.info("monitored heartbeat loop ended");
-            } catch (IOException e) {
-                logger.log(Level.INFO, "Tunnel connection broke down, closing and reconnecting transporter (remote end)", e);
-                vpnStatus.setProgressPerCent(50);
-                vpnStatus.setCause(e);
-                vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
-            } catch (InterruptedException e) {
-                networkHelper.stop();
-                logger.info("refresh remote end loop received interrupt");
-                throw e;
-            } catch (RuntimeException | ConnectionFailedException e) {
-                logger.warning("refresh remote end loop received unexpected exception");
-                stop();
-                throw e;
-            } finally {
-                cleanCopyThreads();
-                localIp = null;
+                reconnectCount++;
             }
-            reconnectCount++;
+            if (endCause == null) {
+                endCause = intendedToRun ? EndCause.FD_INVALID : EndCause.ON_REQUEST;
+            }
+            logger.info("refreshRemoteEnd loop terminated - " +
+                    endCause);
+            return endCause;
+        } finally {
+            // dispose of the disposables...
+            deviceOnlineSubscriptionDisposer.dispose();
+            onlineNetworkPropertySubscriptionDisposer.dispose();
         }
-        if (endCause == null) {
-            endCause = intendedToRun ? EndCause.FD_INVALID : EndCause.ON_REQUEST;
-        }
-        logger.info("refreshRemoteEnd loop terminated - " +
-                endCause);
-        return endCause;
     }
 
     void stop() {
-        networkHelper.stop();
+        logger.info("Stopping remote end");
         intendedToRun = false;
         cleanCopyThreads();
     }
@@ -318,7 +389,7 @@ public class RemoteEnd implements NetworkChangeListener {
      *
      */
     private void waitOnConnectivity() throws InterruptedException {
-        while (!isDeviceConnected()) {
+        while (!deviceConnected && isIntendedToRun()) {
             logger.info("Waiting for device to connect to a network");
             vpnStatus.setProgressPerCent(45);
             vpnStatus.setStatus(VpnStatusReport.Status.NoNetwork);
@@ -327,8 +398,7 @@ public class RemoteEnd implements NetworkChangeListener {
                 this.wait();
             }
         }
-        currentNetwork = networkHelper.getNativeNetwork();
-        logger.info("We're connected to network " + currentNetwork.toString());
+        logger.info("We're connected to network " + currentNetworkProperty.getNetwork());
     }
 
     /**
@@ -338,68 +408,6 @@ public class RemoteEnd implements NetworkChangeListener {
     private Inet4Address getLocalIp() {
         return localIp;
     }
-
-
-    /**
-     * The device has a new connection. Details can be queried from NetworkHelper.
-     */
-    @Override
-    public void onNewConnection() {
-        // if someone would call this, but not NetworkHelper. This would be really strange.
-        if (networkHelper == null)
-            return;
-        // check if our routing is still valid, otherwise invalidate vpnFD
-        if (isTunnelRoutingRequired() ^ isRouted) {
-            logger.info("tunnel routing requirement changed, forcing re-build of local vpn socket");
-            stop();
-        } else {
-            // check if our sockets are still valid
-            final Transporter myTransporter = transporter; // avoid race conditions
-            final CopyThread myInThread = inThread;
-            if (myTransporter != null && myInThread != null && myInThread.isAlive()) {
-                /*
-                   myTransporter.isAlive is not sufficient to detect impact of connectivity change!
-                   Reason is probably that the formerly used network can still be used for a limited
-                   time period.
-                 */
-                if (!(myTransporter.isAlive() && isCurrentSocketStillValid())) {
-                    logger.info("transporter object no longer functional after connectivity change - reconnecting");
-                    executor.submit(() -> {
-                        try {
-                            cleanCopyThreads();
-                        } catch (Throwable t) {
-                            logger.log(Level.WARNING, "stopping copy threads failed", t);
-                        }
-                        return null;
-                    });
-                }
-            } // vpn copy threads are still running
-        }
-
-        // wake up threads waiting on connectivity
-        synchronized (this) {
-            notifyAll();
-        }
-
-    }
-
-    /**
-     * The device just went offline.
-     */
-    @Override
-    public void onDisconnected() {
-        // if someone would call this, but not NetworkHelper. This would be really strange.
-        if (networkHelper == null)
-            return;
-
-        currentNetwork = networkHelper.getNativeNetwork(); // usually null at this point...
-
-        logger.info("We're no longer connected.");
-        vpnStatus.setProgressPerCent(45);
-        vpnStatus.setStatus(VpnStatusReport.Status.Disturbed);
-        vpnStatus.setActivity(R.string.vpnservice_activity_connectivity);
-    }
-
 
 
     /**
@@ -421,23 +429,12 @@ public class RemoteEnd implements NetworkChangeListener {
     }
 
     /**
-     * Check if we're still on the same network.
-     *
-     * @return true if the current local address still matches one of the link addresses
-     */
-    boolean isCurrentSocketStillValid() {
-        Network nn = networkHelper == null ? null : networkHelper.getNativeNetwork();
-        return nn != null && nn.equals(currentNetwork);
-    }
-
-
-
-    /**
      * Check if we're on mobile network
      * @return true if we're on a mobile network currently
      */
     boolean isNetworkMobile() {
-        NetworkInfo ni = networkHelper.getConnectivityManager().getActiveNetworkInfo();
+        NetworkInfo ni = connectivityManager.getNetworkInfo(currentNetworkProperty.getNetwork());
+        logger.info("Current network information: " + ni);
         return ni != null && ni.getType() == ConnectivityManager.TYPE_MOBILE;
     }
 
@@ -446,18 +443,15 @@ public class RemoteEnd implements NetworkChangeListener {
     }
 
     /**
-     * Check if we're on the network we think we are
-     * @return true if we're online on the right network
-     */
-    boolean isDeviceConnected() {
-        Network n = networkHelper.getNativeNetwork();
-        return n != null;
-    }
-
-    /**
      * Request copy threads to close, reset thread fields, and close transporter object
      */
     private void cleanCopyThreads() {
+        // detach our process from any network it might still be attached to...
+        try {
+            connectivityManager.bindProcessToNetwork(null);
+        } finally {
+            logger.fine("Unbound process from network");
+        }
         final Transporter myTransporter = transporter; // avoid race condition
         if (myTransporter != null) {
             try {
@@ -480,8 +474,8 @@ public class RemoteEnd implements NetworkChangeListener {
     }
 
 
-    private boolean isTunnelRoutingRequired() {
-        return forcedRoute || !ipv6DefaultExists();
+    private boolean isTunnelRoutingRequired(@NonNull final NetworkProperty networkProperty) {
+        return forcedRoute || !ipv6DefaultExists(networkProperty);
     }
 
 
@@ -489,9 +483,12 @@ public class RemoteEnd implements NetworkChangeListener {
      * Check for existing IPv6 connectivity. We're using the nativeRouting info of the operating system.
      * @return true if there's existing IPv6 connectivity
      */
-    private boolean ipv6DefaultExists() {
+    private boolean ipv6DefaultExists(@NonNull final NetworkProperty networkProperty) {
         logger.fine("Checking if we have an IPv6 default route on current network");
-        for (RouteInfo routeInfo : networkHelper.getNativeRouteInfos()) {
+        List<RouteInfo> routes = networkProperty.getProperties() != null
+                ? networkProperty.getProperties().getRoutes()
+                : Collections.emptyList();
+        for (RouteInfo routeInfo : routes) {
             // isLoggable would be useful here, but checks for an (outdated?) convention of TAG shorter than 23 chars
             logger.fine("Checking if route is an IPv6 default route: " + routeInfo);
             // @todo strictly speaking, we shouldn't check for default route, but for the configured route of the tunnel
@@ -525,10 +522,8 @@ public class RemoteEnd implements NetworkChangeListener {
                 .addIngoingStatistics(ingoingStatistics)
                 .addOutgoingStatistics(outgoingStatistics)
                 .setMyIPv4(getLocalIp())
-                .setNativeDnsSetting(networkHelper.getNativeDnsServers())
-                .setVpnDnsSetting(networkHelper.getVpnDnsServers())
-                .setNativeRouting(networkHelper.getNativeRouteInfos())
-                .setVpnRouting(networkHelper.getVpnRouteInfos())
+                .setNativeDnsSetting(currentNetworkProperty.getProperties() != null ? currentNetworkProperty.getProperties().getDnsServers() : null)
+                .setNativeRouting(currentNetworkProperty.getProperties().getRoutes())
                 .setReconnectCount(reconnectCount);
     }
 

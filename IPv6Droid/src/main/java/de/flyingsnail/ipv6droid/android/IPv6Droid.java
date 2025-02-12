@@ -26,6 +26,8 @@ package de.flyingsnail.ipv6droid.android;
 import android.app.Application;
 import android.net.ConnectivityManager;
 
+import androidx.annotation.NonNull;
+
 import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.android.datalayer.network.ConnectivityLocalDataSource;
@@ -34,8 +36,24 @@ import de.flyingsnail.ipv6droid.android.datalayer.network.NetworksRepository;
 
 public class IPv6Droid extends Application {
     static final Logger logger = Logger.getLogger(IPv6Droid.class.getName());
+    static private IPv6Droid instance = null;
 
     private NetworksRepository networksRepository;
+
+    public IPv6Droid() {
+        logger.fine("Application constructor");
+        if (instance != null) {
+            throw new IllegalStateException("Attempt to construct Application object twice");
+        }
+        instance = this;
+    }
+
+    public static @NonNull IPv6Droid getInstance() {
+        if (instance == null) {
+            throw new IllegalStateException("Application not yet constructed");
+        }
+        return instance;
+    }
 
     @Override
     public void onCreate() {
