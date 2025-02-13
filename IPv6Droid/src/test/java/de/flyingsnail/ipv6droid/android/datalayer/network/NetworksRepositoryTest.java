@@ -59,7 +59,7 @@ import io.reactivex.rxjava3.observers.TestObserver;
 
 @RunWith(MockitoJUnitRunner.class)
 public class NetworksRepositoryTest {
-    private static final Logger logger = Logger.getLogger(NetworksRepositoryTest.class.getName());
+    private static final Logger logger = AndroidLoggingHandler.getLogger(NetworksRepositoryTest.class);
 
     private NetworksRepository repository;
 

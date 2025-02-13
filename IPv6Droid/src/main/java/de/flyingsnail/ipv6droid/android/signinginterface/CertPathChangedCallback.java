@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.android.Tunnels;
 import de.flyingsnail.ipv6droid.android.dtlsrequest.CertificateToTunnel;
 import de.flyingsnail.ipv6droid.android.vpnrun.VpnStatusReport;
@@ -45,7 +46,7 @@ import de.flyingsnail.ipv6droid.transport.TunnelSpec;
  * write it back to an observable Tunnel object.
  */
 public class CertPathChangedCallback extends ObservableList.OnListChangedCallback<ObservableList<String>> {
-    private static final Logger logger = Logger.getLogger(CertPathChangedCallback.class.getName());
+    private static final Logger logger = AndroidLoggingHandler.getLogger(CertPathChangedCallback.class);
     private final ObservableField<TunnelSpec> receiver;
     private final CertificateToTunnel certHelper;
     private final VpnStatusReport statusReport;

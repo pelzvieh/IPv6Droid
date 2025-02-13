@@ -26,6 +26,7 @@ package de.flyingsnail.ipv6droid.android.vpnrun;
 import java.io.IOException;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.transport.Transporter;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
@@ -36,7 +37,7 @@ import de.flyingsnail.ipv6droid.transport.TunnelSpec;
  * terminated (see there).
  */
 class SimpleMonitor implements Monitor {
-    private final Logger logger = Logger.getLogger(SimpleMonitor.class.getName());
+    private final Logger logger = AndroidLoggingHandler.getLogger(SimpleMonitor.class);
 
     private final CopyThread inThread;
     private final CopyThread outThread;

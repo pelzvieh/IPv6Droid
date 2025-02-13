@@ -46,6 +46,7 @@ import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.android.dtlsrequest.AndroidBackedKeyPair;
 import de.flyingsnail.ipv6droid.transport.Transporter;
 import de.flyingsnail.ipv6droid.transport.TransporterInputStream;
@@ -54,7 +55,7 @@ import de.flyingsnail.ipv6droid.transport.TunnelBrokenException;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
 public class DTLSTransporter implements Transporter {
-  private final static Logger logger = Logger.getLogger(DTLSTransporter.class.getName());
+  private final static Logger logger = AndroidLoggingHandler.getLogger(DTLSTransporter.class);
   private final TransporterParams params;
   private final AndroidBackedKeyPair keyPair;
   private final String dnsName;
@@ -279,14 +280,14 @@ public class DTLSTransporter implements Transporter {
    */
   @Override
   public void write(ByteBuffer payload) throws IOException, TunnelBrokenException {
-    if (socket == null || dtls == null)
-      throw new IllegalStateException("write(byte[]) called on unconnected DTLSTransporter");
-    if (!socket.isConnected())
+    final DatagramSocket mySocket = socket; // avoid concurrent modification
+    final DTLSTransport myDtls = dtls; // avoid concurrent modification
+    if (mySocket == null || myDtls == null || !mySocket.isConnected())
       throw new TunnelBrokenException("Socket to PoP is closed", null);
     if (payload.remaining() > mtu)
       throw new IOException("Too big packet received: " + payload.remaining() + " (MTU: " + mtu + ")");
 
-    dtls.send(payload.array(), payload.arrayOffset()+payload.position(), payload.remaining());
+    myDtls.send(payload.array(), payload.arrayOffset()+payload.position(), payload.remaining());
 
     lastPacketSentTime = new Date();
   }
@@ -317,18 +318,20 @@ public class DTLSTransporter implements Transporter {
    */
   @Override
   public void close() {
-    if (dtls != null) {
+    final DTLSTransport myDtls = dtls; // avoid concurrent modification
+    dtls = null;
+    if (myDtls != null) {
       try {
-        dtls.close();
+        myDtls.close();
       } catch (IOException e) {
         logger.log(Level.WARNING, "Unable to close dtls connection cleanly", e);
       }
     }
-    if (socket != null && !socket.isClosed()) {
-      socket.close();
-    }
+    final DatagramSocket mySocket = socket; // avoid concurrent modification
     socket = null; // it's useless anyway
-    dtls = null;
+    if (mySocket != null && !mySocket.isClosed()) {
+      mySocket.close();
+    }
     logger.info("DTLS tunnel closed");
   }
 

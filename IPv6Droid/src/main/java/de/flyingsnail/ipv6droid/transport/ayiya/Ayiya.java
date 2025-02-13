@@ -46,6 +46,7 @@ import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
 import de.flyingsnail.ipv6droid.transport.Transporter;
 import de.flyingsnail.ipv6droid.transport.TransporterInputStream;
@@ -70,7 +71,7 @@ public class Ayiya implements Transporter {
     public static final long MAX_TIME_OFFSET = 120;
 
     /** Tag for Logger */
-    private static final Logger logger = Logger.getLogger(Ayiya.class.getName());
+    private static final Logger logger = AndroidLoggingHandler.getLogger(Ayiya.class);
 
     private final TicTunnel tunnel;
 
@@ -598,9 +599,7 @@ public class Ayiya implements Transporter {
     @Override
     @SuppressLint("Assert")
     public void write(ByteBuffer payload) throws IOException, TunnelBrokenException {
-        if (socket == null)
-            throw new IllegalStateException("write(byte[]) called on unconnected Ayiya");
-        if (!socket.isConnected())
+        if (socket == null || !socket.isConnected())
             throw new TunnelBrokenException("Socket to PoP is closed", null);
 
         byte[] ayiyaPacket;

@@ -31,8 +31,10 @@ import android.net.NetworkRequest;
 
 import androidx.annotation.NonNull;
 
+import java.util.Locale;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.android.datalayer.network.event.Event;
 import de.flyingsnail.ipv6droid.android.datalayer.network.event.EventAvailable;
 import de.flyingsnail.ipv6droid.android.datalayer.network.event.EventBlockingChanged;
@@ -48,7 +50,7 @@ import io.reactivex.rxjava3.core.ObservableEmitter;
  * The data source for network information from the Android connectivity manager system service.
  */
 public class ConnectivityLocalDataSource  {
-    final static Logger logger = Logger.getLogger(ConnectivityLocalDataSource.class.getName());
+    final static Logger logger = AndroidLoggingHandler.getLogger(ConnectivityLocalDataSource.class);
 
     private final Observable<Event> connectivityEvent;
 
@@ -67,40 +69,43 @@ public class ConnectivityLocalDataSource  {
 
         @Override
         public void onAvailable(final @NonNull Network network) {
-            logger.info(String.format("New network %d became available", network.getNetworkHandle()));
+            logger.info(String.format("New network %s became available", network));
             emitter.onNext(new EventAvailable(network));
         }
 
         @Override
         public void onLinkPropertiesChanged(final @NonNull Network network,
                                             final @NonNull LinkProperties linkProperties) {
-            logger.info(String.format("Link properties changed for network %d", network.getNetworkHandle()));
+            logger.info(String.format("Link properties changed for network %s", network));
+            logger.finer(String.format("Link properties: %s", linkProperties));
             emitter.onNext(new EventLinkPropertiesChanged(network, linkProperties));
         }
 
         @Override
         public void onBlockedStatusChanged(@NonNull Network network, boolean blocked) {
-            logger.info(String.format("Network %d is %s", network.getNetworkHandle(),
+            logger.info(String.format("Network %s is %s", network,
                     blocked?"blocked":"unblocked"));
             emitter.onNext(new EventBlockingChanged(network, blocked));
         }
 
         @Override
         public void onLosing(@NonNull Network network, int maxMsToLive) {
-            logger.info(String.format("Network %d is going down in %d ms",
-                    network.getNetworkHandle(), maxMsToLive));
+            logger.info(
+                    String.format(Locale.GERMAN, "Network %s is going down in %d ms",
+                    network, maxMsToLive));
             emitter.onNext(new EventDisconnecting(network, maxMsToLive));
         }
 
         @Override
         public void onLost(Network network) {
-            logger.info(String.format("Network %d lost connection", network.getNetworkHandle()));
+            logger.info(String.format("Network %s lost connection", network));
             emitter.onNext(new EventDisconnected(network));
         }
 
         @Override
         public void onCapabilitiesChanged(@NonNull Network network, @NonNull NetworkCapabilities networkCapabilities) {
-            logger.info(String.format("Network capabilites changed for network %d", network.getNetworkHandle()));
+            logger.info(String.format("Network capabilites changed for network %s", network));
+            logger.finer(String.format("Capabilities: %s", networkCapabilities));
             emitter.onNext(new EventCapabilitiesChanged(network, networkCapabilities));
         }
 
@@ -120,7 +125,6 @@ public class ConnectivityLocalDataSource  {
 
     public ConnectivityLocalDataSource(final ConnectivityManager connectivityManager) {
         this.connectivityManager = connectivityManager;
-        //this.networkCallback = new DataSourceNetworkCallback();
         connectivityEvent = Observable.create(emitter -> {
                     logger.info("Emitter is up");
                     DataSourceNetworkCallback callback = new DataSourceNetworkCallback(emitter);

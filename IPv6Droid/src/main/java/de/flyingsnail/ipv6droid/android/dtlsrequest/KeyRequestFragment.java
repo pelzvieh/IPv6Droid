@@ -47,6 +47,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -54,7 +55,7 @@ import de.flyingsnail.ipv6droid.R;
  * create an instance of this fragment.
  */
 public class KeyRequestFragment extends Fragment {
-    private static final Logger logger = Logger.getLogger(KeyRequestFragment.class.getName());
+    private static final Logger logger = AndroidLoggingHandler.getLogger(KeyRequestFragment.class);
     private EditText createKeyAlias;
     private TextView csrText;
     private ArrayAdapter<String> spinnerAdapter;

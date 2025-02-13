@@ -36,6 +36,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.android.UserNotificationCallback;
 import de.flyingsnail.ipv6droid.android.statistics.Statistics;
 import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
@@ -49,7 +50,7 @@ import de.flyingsnail.ipv6droid.transport.TunnelSpec;
  */
 public class LocalEnd {
 
-    static private final Logger logger = Logger.getLogger(LocalEnd.class.getName());
+    static private final Logger logger = AndroidLoggingHandler.getLogger(LocalEnd.class);
 
     private final VpnThread vpnThread;
     private final VpnService.Builder builder;

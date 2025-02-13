@@ -42,7 +42,7 @@ import de.flyingsnail.ipv6droid.simplecert4ipv6droid.databinding.FragmentSecondB
 
 public class CertificateFragment extends Fragment {
     // todo make this navigatable to the user
-    private static final Logger logger = Logger.getLogger(CertificateFragment.class.getName());
+    private static final Logger logger = AndroidLoggingHandler.getLogger(CertificateFragment.class);
 
     private FragmentSecondBinding binding;
     private CertSetup certSetup;

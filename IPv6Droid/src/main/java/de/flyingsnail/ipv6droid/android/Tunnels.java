@@ -44,7 +44,7 @@ public class Tunnels extends ArrayList<TunnelSpec> implements Cloneable {
     static final long serialVersionUID =-9178679015599058965L;
     // the TicTunnel that is currently active/selected for activation
     private @Nullable TunnelSpec activeTunnel;
-    static final Logger logger = Logger.getLogger(Tunnels.class.getName());
+    static final Logger logger = AndroidLoggingHandler.getLogger(Tunnels.class);
 
     /**
      * A Serializable for the whole purpose to have a Serializable for which Android didn't implement

@@ -32,10 +32,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 
 public class StatisticsActivity extends AppCompatActivity {
 
-    static final Logger logger = Logger.getLogger(StatisticsActivity.class.getName());
+    static final Logger logger = AndroidLoggingHandler.getLogger(StatisticsActivity.class);
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

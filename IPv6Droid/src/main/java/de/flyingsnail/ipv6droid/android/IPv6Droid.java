@@ -28,18 +28,25 @@ import android.net.ConnectivityManager;
 
 import androidx.annotation.NonNull;
 
+import java.util.logging.Handler;
 import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.android.datalayer.network.ConnectivityLocalDataSource;
 import de.flyingsnail.ipv6droid.android.datalayer.network.NetworksRepository;
 
 public class IPv6Droid extends Application {
-    static final Logger logger = Logger.getLogger(IPv6Droid.class.getName());
+    static final Logger logger = AndroidLoggingHandler.getLogger(IPv6Droid.class);
     static private IPv6Droid instance = null;
 
     private NetworksRepository networksRepository;
 
     public IPv6Droid() {
+        Logger root = Logger.getLogger("");
+        for (Handler handler : root.getHandlers()) {
+            root.removeHandler(handler);
+        }
+        root.addHandler(AndroidLoggingHandler.getInstance());
+
         logger.fine("Application constructor");
         if (instance != null) {
             throw new IllegalStateException("Attempt to construct Application object twice");

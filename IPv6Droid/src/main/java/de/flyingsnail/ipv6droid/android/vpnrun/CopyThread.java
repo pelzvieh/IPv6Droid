@@ -37,6 +37,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.android.UserNotificationCallback;
 import de.flyingsnail.ipv6droid.android.statistics.TransmissionStatistics;
 
@@ -45,7 +46,7 @@ import de.flyingsnail.ipv6droid.android.statistics.TransmissionStatistics;
  * to an output stream.
  */
 class CopyThread extends Thread {
-    private static final Logger logger = Logger.getLogger(CopyThread.class.getName());
+    private static final Logger logger = AndroidLoggingHandler.getLogger(CopyThread.class);
     // the stream to read from
     private InputStream in;
     // the stream to write to

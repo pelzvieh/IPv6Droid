@@ -34,6 +34,8 @@ import java.net.DatagramSocket;
 import java.util.Date;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
+
 /**
  * This is an @ref {org.bouncycastle.tls.UDPTransport} performing self-checks
  * regarding silent session loss. Such session loss occurs with Android's
@@ -43,7 +45,7 @@ import java.util.logging.Logger;
  */
 class SelfCheckingUDPTransport extends UDPTransport {
 
-  private final Logger logger = Logger.getLogger(SelfCheckingUDPTransport.class.getName());
+  private final Logger logger = AndroidLoggingHandler.getLogger(SelfCheckingUDPTransport.class);
 
   /**
    * The Date when the currently active read operation was started or null if it is

@@ -48,7 +48,7 @@ import de.flyingsnail.ipv6droid.android.dtlsrequest.AndroidBackedKeyPair;
  */
 public class SettingsFragment extends PreferenceFragmentCompat {
 
-    private final static Logger logger = Logger.getLogger(SettingsFragment.class.getName());
+    private final static Logger logger = AndroidLoggingHandler.getLogger(SettingsFragment.class);
 
     @Override
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {

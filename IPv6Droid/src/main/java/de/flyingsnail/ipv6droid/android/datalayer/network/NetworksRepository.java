@@ -44,6 +44,7 @@ import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.android.datalayer.network.event.Event;
 import de.flyingsnail.ipv6droid.android.datalayer.network.event.EventAvailable;
 import de.flyingsnail.ipv6droid.android.datalayer.network.event.EventBlockingChanged;
@@ -59,14 +60,14 @@ import io.reactivex.rxjava3.subjects.Subject;
 /**
  * This class provides the single source of truth concerning the device's
  * networks and their respective state. It is consuming a number of sources
- * for network enumeration and to actively retreive changes.
+ * for network enumeration and to actively retrieve changes.
  * <p>
  * This is a Repository class in the Data Layer according to the
  * <a href="https://developer.android.com/topic/architecture/data-layer">Android developer reference
  * architecture</a>.
  */
 public class NetworksRepository {
-    private static final Logger logger = Logger.getLogger(NetworksRepository.class.getName());
+    private static final Logger logger = AndroidLoggingHandler.getLogger(NetworksRepository.class);
     private final @NonNull ConnectableObservable<NetworksInformationContainer> networksProperties;
     private final @NonNull Observable<NetworkProperty> currentNetworkObservable;
     private final @NonNull Observable<NetworkProperty> onlineNetworkProperty;
@@ -162,8 +163,7 @@ public class NetworksRepository {
      * @param connectivityLocalDataSource the ConnectivityLocalDataSource to use.
      */
     public NetworksRepository(final ConnectivityLocalDataSource connectivityLocalDataSource) {
-        logger.setLevel(Level.FINEST);
-        logger.info("Building the Observable functional chains");
+        logger.fine("Building the Observable functional chains");
         /*
         Connectivity	  -acbp--g-l-ab----acpb--l
 		                     1111  1 1 33    1111  3
@@ -228,20 +228,18 @@ public class NetworksRepository {
             @NonNull NetworksInformationContainer networks,
             @NonNull Event e) {
         Long id = e.getAffectedNetwork().getNetworkHandle();
-        logger.fine(String.format(Locale.ENGLISH, "event for network %d", id));
+        logger.info(String.format(Locale.GERMAN, "event for network %s", e.getAffectedNetwork()));
         Map<Long, NetworkProperty> nextMap = new HashMap<>(networks.networkProperties);
         if (!nextMap.containsKey(id)) {
-            logger.fine("New network handle reported - creating entry");
-            nextMap.put(
-                    id,
-                    applyNetworkEvent(
-                            new NetworkProperty(e.getAffectedNetwork()),
-                            e));
+            NetworkProperty newProp = applyNetworkEvent(
+                    new NetworkProperty(e.getAffectedNetwork()),
+                    e);
+            logger.log(Level.FINE, String.format("New network handle reported - creating entry %s", newProp));
+            nextMap.put(id, newProp);
         } else {
-            logger.fine("Update for existing network");
-            nextMap.put(
-                    id,
-                    applyNetworkEvent(Objects.requireNonNull(nextMap.get(id)), e));
+            NetworkProperty updatable = applyNetworkEvent(Objects.requireNonNull(nextMap.get(id)), e);
+            logger.log(Level.FINE, String.format("Update for existing network: %s", updatable));
+            nextMap.put(id, updatable);
         }
         return new NetworksInformationContainer(id, nextMap);
     }
@@ -275,7 +273,7 @@ public class NetworksRepository {
             networkProperty.capabilities = null;
             networkProperty.blocked = null;
             networkProperty.invalidAfter = null;
-            logger.info("Writing networkProperty to currentNetworkSource: " + networkProperty);
+            logger.fine("Writing networkProperty to currentNetworkSource: " + networkProperty);
             currentNetworkSource.onNext(networkProperty);
             return true;
         } else {

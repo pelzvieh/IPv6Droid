@@ -48,7 +48,7 @@ import java.util.logging.Logger;
  * IPv6Droid core app and this SimpleCertification compagnion app.
  */
 public class SimpleCertificationService extends Service {
-    final static Logger logger = Logger.getLogger(SimpleCertificationService.class.getName());
+    final static Logger logger = AndroidLoggingHandler.getLogger(SimpleCertificationService.class);
 
     /**
      * A String used to identify the Intent action when binding to a certificate issuing service.

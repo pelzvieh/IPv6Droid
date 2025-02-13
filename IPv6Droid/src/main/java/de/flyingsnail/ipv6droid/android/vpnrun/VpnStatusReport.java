@@ -37,6 +37,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.android.IPv6DroidVpnService;
 import de.flyingsnail.ipv6droid.android.Tunnels;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
@@ -54,7 +55,7 @@ public class VpnStatusReport implements Serializable, Cloneable {
      * The extended data name for the status in a status broadcast intent.
      */
     public static final String EDATA_STATUS_REPORT = IPv6DroidVpnService.class.getName() + ".STATUS_REPORT";
-    private static final Logger logger = Logger.getLogger(VpnStatusReport.class.getName());
+    private static final Logger logger = AndroidLoggingHandler.getLogger(VpnStatusReport.class);
 
     /**
      * An int indicating the progress of tunnel creation.

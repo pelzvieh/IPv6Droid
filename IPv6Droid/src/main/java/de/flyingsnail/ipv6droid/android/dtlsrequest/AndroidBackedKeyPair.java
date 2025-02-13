@@ -65,9 +65,11 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
+
 public class AndroidBackedKeyPair {
 
-    private static final Logger logger = Logger.getLogger(AndroidBackedKeyPair.class.getName());
+    private static final Logger logger = AndroidLoggingHandler.getLogger(AndroidBackedKeyPair.class);
 
     private final KeyPair keyPair;
 

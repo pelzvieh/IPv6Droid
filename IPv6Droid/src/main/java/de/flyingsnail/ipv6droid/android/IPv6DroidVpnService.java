@@ -75,7 +75,7 @@ import de.flyingsnail.ipv6droid.android.vpnrun.VpnThread;
  */
 public class IPv6DroidVpnService extends VpnService implements UserNotificationCallback {
 
-    private static final Logger logger = Logger.getLogger(IPv6DroidVpnService.class.getName());
+    private static final Logger logger = AndroidLoggingHandler.getLogger(IPv6DroidVpnService.class);
     private static final String SESSION_NAME = IPv6DroidVpnService.class.getSimpleName();
 
     public static final String EXTRA_CACHED_TUNNELS = IPv6DroidVpnService.class.getName() + ".CACHED_TUNNEL";

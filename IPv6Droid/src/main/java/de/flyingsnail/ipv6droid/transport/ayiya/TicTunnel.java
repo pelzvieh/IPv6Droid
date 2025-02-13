@@ -30,13 +30,15 @@ import java.net.Inet6Address;
 import java.util.Date;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
+
 /**
  * This represents the tunnel description as delivered by the tic protocol.
  * Created by pelzi on 17.08.13.
  */
 public class TicTunnel implements de.flyingsnail.ipv6droid.transport.TunnelSpec {
     /** The tag to identify logger. */
-    private static final Logger logger = Logger.getLogger(TicTunnel.class.getName());
+    private static final Logger logger = AndroidLoggingHandler.getLogger(TicTunnel.class);
 
     /** the id to use in tic queries */
     private String id;

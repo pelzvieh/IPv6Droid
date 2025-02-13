@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -23,6 +23,8 @@
 
 package de.flyingsnail.ipv6droid.transport.dtls;
 
+import static org.bouncycastle.tls.CipherSuite.TLS_DHE_RSA_WITH_AES_128_CBC_SHA256;
+
 import org.bouncycastle.tls.AbstractTlsClient;
 import org.bouncycastle.tls.AlertDescription;
 import org.bouncycastle.tls.AlertLevel;
@@ -40,9 +42,8 @@ import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.android.dtlsrequest.AndroidBackedKeyPair;
-
-import static org.bouncycastle.tls.CipherSuite.TLS_DHE_RSA_WITH_AES_128_CBC_SHA256;
 
 /**
  * A TlsClient as defined by the Bouncy Castle low level TLS API, sub-class-configured to serve
@@ -58,7 +59,7 @@ class IPv6DTlsClient extends AbstractTlsClient {
     private final AndroidBackedKeyPair androidBackedKeyPair;
     private final Certificate myCertChain;
 
-    private final Logger logger = Logger.getLogger(DTLSUtils.class.getName());
+    private final Logger logger = AndroidLoggingHandler.getLogger(DTLSUtils.class);
     private final String dnsName;
 
     /**

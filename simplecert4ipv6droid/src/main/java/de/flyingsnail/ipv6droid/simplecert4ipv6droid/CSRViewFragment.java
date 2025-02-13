@@ -45,7 +45,7 @@ import de.flyingsnail.ipv6droid.simplecert4ipv6droid.databinding.FragmentCsrView
 
 public class CSRViewFragment extends Fragment {
 
-    private static final Logger logger = Logger.getLogger(CSRViewFragment.class.getName());
+    private static final Logger logger = AndroidLoggingHandler.getLogger(CSRViewFragment.class);
     private FragmentCsrViewBinding binding;
 
     private CertSetup certSetup;

@@ -49,6 +49,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.android.IPv6DroidVpnService;
 import de.flyingsnail.ipv6droid.android.statistics.Statistics;
 
@@ -60,7 +61,7 @@ import de.flyingsnail.ipv6droid.android.statistics.Statistics;
 //@TargetApi(18)
 public class StatisticsFragment extends Fragment implements ServiceConnection {
     private static final String ARG_STATISTICS_BINDER = "StatisticsBinder";
-    private static final Logger logger = Logger.getLogger(StatisticsFragment.class.getName());
+    private static final Logger logger = AndroidLoggingHandler.getLogger(StatisticsFragment.class);
 
 
     private IPv6DroidVpnService.StatisticsBinder statisticsBinder;

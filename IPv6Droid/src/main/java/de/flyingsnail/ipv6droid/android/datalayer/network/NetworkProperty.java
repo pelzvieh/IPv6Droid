@@ -80,4 +80,11 @@ public class NetworkProperty implements Cloneable {
         clone.capabilities = capabilities;
         return clone;
     }
+
+    @NonNull
+    @Override
+    public String toString() {
+        return String.format("NetworkProperty{network=%s, properties=%s, capabilities=%s, blocked=%s, invalidAfter=%s}",
+                network, properties, capabilities, blocked, invalidAfter);
+    }
 }

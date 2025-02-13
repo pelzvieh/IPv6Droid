@@ -27,10 +27,11 @@ import java.io.IOException;
 import java.util.List;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.transport.dtls.TransporterParams;
 
 public class CertificateToTunnel {
-    private final Logger logger = Logger.getLogger(CertificateToTunnel.class.getName());
+    private final Logger logger = AndroidLoggingHandler.getLogger(CertificateToTunnel.class);
     private String alias;
     /**
      * Generate a PEM encoded certificate signing request, using on-device key management.

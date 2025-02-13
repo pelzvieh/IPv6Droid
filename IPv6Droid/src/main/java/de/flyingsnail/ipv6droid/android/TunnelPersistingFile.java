@@ -54,7 +54,7 @@ public class TunnelPersistingFile implements TunnelPersisting  {
     /**
      * The tag to use for logging
      */
-    private static final Logger logger = Logger.getLogger(TunnelPersistingFile.class.getName());
+    private static final Logger logger = AndroidLoggingHandler.getLogger(TunnelPersistingFile.class);
 
     /**
      * Constructor. Takes a Context object (required).

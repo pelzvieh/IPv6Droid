@@ -39,7 +39,7 @@ import java.util.logging.Logger;
  * message.
  */
 public class BootReceiver extends BroadcastReceiver {
-    private final Logger logger = Logger.getLogger(BootReceiver.class.getName());
+    private final Logger logger = AndroidLoggingHandler.getLogger(BootReceiver.class);
     public BootReceiver() {
     }
 

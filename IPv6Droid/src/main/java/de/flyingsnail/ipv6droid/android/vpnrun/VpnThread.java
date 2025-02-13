@@ -47,6 +47,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.android.DTLSTunnelReader;
 import de.flyingsnail.ipv6droid.android.IPv6DroidVpnService;
 import de.flyingsnail.ipv6droid.android.MainActivity;
@@ -66,7 +67,7 @@ public class VpnThread extends Thread {
     /**
      * The tag for logging.
      */
-    private static final Logger logger = Logger.getLogger(VpnThread.class.getName());
+    private static final Logger logger = AndroidLoggingHandler.getLogger(VpnThread.class);
 
     /**
      * The IPv6 address of the Google DNS servers.

@@ -35,6 +35,7 @@ import androidx.databinding.ObservableList;
 import java.io.IOException;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.android.dtlsrequest.CertificateToTunnel;
 
 /**
@@ -46,7 +47,7 @@ import de.flyingsnail.ipv6droid.android.dtlsrequest.CertificateToTunnel;
 public class CSRIntentManager implements AutoCloseable {
     /** A String used to identify the Intent action when binding to a certificate issuing service */
     public static final String ACTION = "de.flyingsnail.ipv6droid.REQUEST_TUNNEL";
-    final private static Logger logger = Logger.getLogger(CSRIntentManager.class.getName());
+    final private static Logger logger = AndroidLoggingHandler.getLogger(CSRIntentManager.class);
     private final CertificateToTunnel certHelper;
     private final Context context;
     private final ObservableList<String> supplierPackageReceiver;

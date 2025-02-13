@@ -54,11 +54,12 @@ import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.android.dtlsrequest.AndroidBackedKeyPair;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
 public class TransporterParams implements TunnelSpec, Serializable {
-    private static final Logger logger = Logger.getLogger(TransporterParams.class.getName());
+    private static final Logger logger = AndroidLoggingHandler.getLogger(TransporterParams.class);
     private static final ExecutorService resolverPool = Executors.newCachedThreadPool();
     static final String TUNNEL_TYPE = "DTLSTunnel";
     private TlsCrypto crypto;

@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -38,13 +38,15 @@ import java.io.IOException;
 import java.util.Vector;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
+
 /**
  * This class implements the TlsAuthentication interface required by the Bouncycastle DTLS
  * framework. It creates the authenticator for client-side validation, and it validates the
  * certificate chain presented by the server.
  */
 class IPv6TlsAuthentication implements TlsAuthentication {
-    private final Logger logger = Logger.getLogger(IPv6TlsAuthentication.class.getName());
+    private final Logger logger = AndroidLoggingHandler.getLogger(IPv6TlsAuthentication.class);
 
     private final Vector<SignatureAndHashAlgorithm> clientSigAlgs;
 

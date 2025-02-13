@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
 import de.flyingsnail.ipv6droid.transport.Transporter;
 import de.flyingsnail.ipv6droid.transport.TunnelBrokenException;
@@ -41,7 +42,7 @@ import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
  *
  */
 class HeartbeatMonitor implements Monitor {
-    private final Logger logger = Logger.getLogger(HeartbeatMonitor.class.getName());
+    private final Logger logger = AndroidLoggingHandler.getLogger(HeartbeatMonitor.class);
     /**
      * Time that we must wait before contacting TIC again. This applies to cached tunnels even!
      */

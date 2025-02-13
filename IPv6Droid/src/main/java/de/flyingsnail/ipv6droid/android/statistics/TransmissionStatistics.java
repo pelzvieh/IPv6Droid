@@ -30,11 +30,13 @@ import androidx.annotation.Nullable;
 import java.util.Date;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
+
 /**
  * TransmissionStatistics keeps rolling averages of package transmission in a specific direction.
  */
 public class TransmissionStatistics {
-    private static final Logger logger = Logger.getLogger(TransmissionStatistics.class.getName());
+    private static final Logger logger = AndroidLoggingHandler.getLogger(TransmissionStatistics.class);
 
     private static final double DECAY_TIME = 60000.0; // time of decay to 1/e in milliseconds
     public static final long BURST_TIMEOUT = 1000L;

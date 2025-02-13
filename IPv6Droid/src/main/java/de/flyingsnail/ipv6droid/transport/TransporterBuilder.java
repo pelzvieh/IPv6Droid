@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.transport.ayiya.Ayiya;
 import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
 import de.flyingsnail.ipv6droid.transport.dtls.DTLSTransporter;
@@ -37,7 +38,7 @@ import de.flyingsnail.ipv6droid.transport.dtls.TransporterParams;
 
 public class TransporterBuilder {
   private static final Map<Class<? extends TunnelSpec>, Class<? extends Transporter>> registry;
-  private static final Logger logger = Logger.getLogger(TransporterBuilder.class.getName());
+  private static final Logger logger = AndroidLoggingHandler.getLogger(TransporterBuilder.class);
 
   static {
     registry = new HashMap<> (Map.of(

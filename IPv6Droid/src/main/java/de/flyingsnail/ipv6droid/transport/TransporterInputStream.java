@@ -32,10 +32,11 @@ import java.nio.ByteOrder;
 import java.util.Objects;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.transport.ayiya.Ayiya;
 
 public class TransporterInputStream extends InputStream {
-  private final static Logger logger = Logger.getLogger(TransporterInputStream.class.getName());
+  private final static Logger logger = AndroidLoggingHandler.getLogger(TransporterInputStream.class);
   private final Transporter transporter;
   private final ThreadLocal<ByteBuffer> streamBuffer = new ThreadLocal<>();
 

@@ -47,6 +47,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.android.IPv6Droid;
 import de.flyingsnail.ipv6droid.android.UserNotificationCallback;
 import de.flyingsnail.ipv6droid.android.datalayer.network.NetworkProperty;
@@ -68,7 +69,7 @@ import io.reactivex.rxjava3.disposables.Disposable;
  * @author pelzi
  */
 public class RemoteEnd {
-    static final Logger logger = Logger.getLogger(RemoteEnd.class.getName());
+    static final Logger logger = AndroidLoggingHandler.getLogger(RemoteEnd.class);
     private final VpnStatusReport vpnStatus;
     private final Date expiryDate;
     private boolean intendedToRun;
@@ -417,7 +418,7 @@ public class RemoteEnd {
      */
     protected void copyThreadDied(Thread diedThread) {
         // if one copy thread died, the transporter is useless anyway.
-        logger.info("A copy thread died, closing transporter out-of-sync");
+        logger.info(String.format("Copy thread %s died, closing transporter out-of-sync", diedThread.getName()));
         transporter.close();
         // no special treatment for inThread required, a dying inThread is immediately noticed
         // by VpnThread.

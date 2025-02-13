@@ -42,7 +42,7 @@ import de.flyingsnail.ipv6droid.transport.dtls.TransporterParams;
  */
 public class DTLSTunnelReader implements TunnelReader {
 
-    private final static Logger logger = Logger.getLogger(DTLSTunnelReader.class.getName());
+    private final static Logger logger = AndroidLoggingHandler.getLogger(DTLSTunnelReader.class);
 
     private final TransporterParams params;
 

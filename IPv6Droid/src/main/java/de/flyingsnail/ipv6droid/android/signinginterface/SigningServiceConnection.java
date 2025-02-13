@@ -43,8 +43,10 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
+
 class MessageHandler extends Handler {
-    final static Logger logger = Logger.getLogger(MessageHandler.class.getName());
+    final static Logger logger = AndroidLoggingHandler.getLogger(MessageHandler.class);
     final ObservableList<String> certPathReceiver;
 
     public MessageHandler(@NonNull Looper looper, @NonNull ObservableList<String> receiver) {
@@ -78,7 +80,7 @@ class SigningServiceConnection implements ServiceConnection {
      * the cert path.
      */
     public static final String CERTPATH_KEY="CERT";
-    private static final Logger logger = Logger.getLogger(SigningServiceConnection.class.getName());
+    private static final Logger logger = AndroidLoggingHandler.getLogger(SigningServiceConnection.class);
     private boolean damaged;
     private Messenger serviceMessenger;
 

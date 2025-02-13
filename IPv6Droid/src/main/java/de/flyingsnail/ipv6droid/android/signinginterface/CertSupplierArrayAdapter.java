@@ -43,6 +43,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.databinding.ProviderlistTemplateBinding;
 
 /**
@@ -51,7 +52,7 @@ import de.flyingsnail.ipv6droid.databinding.ProviderlistTemplateBinding;
  */
 public class CertSupplierArrayAdapter extends ArrayAdapter<String> {
 
-    private final static Logger logger = Logger.getLogger(CertSupplierArrayAdapter.class.getName());
+    private final static Logger logger = AndroidLoggingHandler.getLogger(CertSupplierArrayAdapter.class);
     private final int viewResource;
 
     /**

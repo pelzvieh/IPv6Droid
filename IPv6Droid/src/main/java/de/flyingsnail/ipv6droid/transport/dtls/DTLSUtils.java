@@ -50,6 +50,8 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
+
 /**
  * This is a collection of static methods to help loading standard PEM resources into the somewhat
  * enigmatic low-level objects of Bouncy Castle DTLS implementation. Because DTLS is only available
@@ -59,7 +61,7 @@ import java.util.logging.Logger;
  * Refer to the @link{https://github.com/bcgit/bc-java/blob/master/tls/src/test/java/org/bouncycastle/tls/test/TlsTestUtils.java} BC implementation.
  */
 class DTLSUtils {
-    private static final Logger logger = Logger.getLogger(DTLSUtils.class.getName());
+    private static final Logger logger = AndroidLoggingHandler.getLogger(DTLSUtils.class);
 
     private DTLSUtils() {}
 

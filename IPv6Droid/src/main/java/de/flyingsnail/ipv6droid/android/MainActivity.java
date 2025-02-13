@@ -82,7 +82,7 @@ public class MainActivity extends AppCompatActivity {
     /**
      * The tag to use for logging
      */
-    private static final Logger logger = Logger.getLogger(MainActivity.class.getName());
+    private static final Logger logger = AndroidLoggingHandler.getLogger(MainActivity.class);
     private static final int REQUEST_START_VPN = 1;
     // private static final int REQUEST_SETTINGS = 2;
     private static final int REQUEST_STATISTICS = 3;

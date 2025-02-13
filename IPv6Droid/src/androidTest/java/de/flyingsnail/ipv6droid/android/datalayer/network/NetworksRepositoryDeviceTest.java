@@ -47,7 +47,7 @@ import io.reactivex.rxjava3.observers.TestObserver;
 
 @RunWith(AndroidJUnit4.class)
 public class NetworksRepositoryDeviceTest {
-    private static final Logger logger = Logger.getLogger(NetworksRepositoryDeviceTest.class.getName());
+    private static final Logger logger = AndroidLoggingHandler.getLogger(NetworksRepositoryDeviceTest.class);
 
     private NetworksRepository repository;
 
