@@ -393,7 +393,7 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
             ongoingNotificationBuilder.setContentText(getResources().getString(statusReport.getActivity()));
         else
             ongoingNotificationBuilder.setContentText(getResources().getString(R.string.vpnservice_activity_wait));
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(ongoingNotificationId, ongoingNotificationBuilder.build(), FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED);
         } else {
             startForeground(ongoingNotificationId, ongoingNotificationBuilder.build());

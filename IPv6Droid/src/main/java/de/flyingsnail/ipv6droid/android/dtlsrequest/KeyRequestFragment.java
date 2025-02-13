@@ -50,9 +50,7 @@ import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 
 /**
- * A simple {@link Fragment} subclass.
- * Use the {@link KeyRequestFragment#newInstance} factory method to
- * create an instance of this fragment.
+ * A simple {@link Fragment} subclass to show a certificate signing request.
  */
 public class KeyRequestFragment extends Fragment {
     private static final Logger logger = AndroidLoggingHandler.getLogger(KeyRequestFragment.class);
@@ -63,19 +61,6 @@ public class KeyRequestFragment extends Fragment {
 
     public KeyRequestFragment() {
         // Required empty public constructor
-    }
-
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @return A new instance of fragment KeyRequestFragment.
-     */
-    public static KeyRequestFragment newInstance() {
-        KeyRequestFragment fragment = new KeyRequestFragment();
-        Bundle args = new Bundle();
-        fragment.setArguments(args);
-        return fragment;
     }
 
     @Override
@@ -120,7 +105,7 @@ public class KeyRequestFragment extends Fragment {
                 onNoKeySelected();
             }
         });
-        if (aliases.size() == 0)
+        if (aliases.isEmpty())
             onNoKeySelected();
         else {
             existingKeysSpinner.setSelection(0);

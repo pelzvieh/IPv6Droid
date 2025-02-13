@@ -71,7 +71,7 @@ class ChainChecker {
 
   private final Set<TrustAnchor> trustAnchors;
   
-  public ChainChecker(final TlsCertificate trustedCA, String dnsName) {
+  public ChainChecker(final TlsCertificate trustedCA) {
     try {
       CertificateFactory newFactory;
       try {
@@ -262,10 +262,9 @@ class ChainChecker {
     } catch (CertPathValidatorException e) {
       StringBuilder diagnostics = new StringBuilder("Failed to verify cert chain:\n");
       for (TlsCertificate cert: chain)
-        diagnostics.append(
-            "-----BEGIN CERTIFICATE-----\n" 
-            + Base64.toBase64String(cert.getEncoded())
-            + "\n-----END CERTIFICATE-----\n\n");
+        diagnostics.append("-----BEGIN CERTIFICATE-----\n")
+                .append(Base64.toBase64String(cert.getEncoded()))
+                .append("\n-----END CERTIFICATE-----\n\n");
       logger.info(diagnostics.toString());
       logger.info("Error at cert #" + e.getIndex());
 

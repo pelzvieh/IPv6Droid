@@ -40,6 +40,7 @@ import org.junit.runner.RunWith;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import io.reactivex.rxjava3.annotations.NonNull;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.ObservableSource;

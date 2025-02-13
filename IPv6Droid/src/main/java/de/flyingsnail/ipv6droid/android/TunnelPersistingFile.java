@@ -72,6 +72,7 @@ public class TunnelPersistingFile implements TunnelPersisting  {
      */
     @Override
     public @NonNull Tunnels readTunnels() throws IOException {
+        logger.info("Reading tunnels from " + FILE_LAST_TUNNEL);
         // open private file
         InputStream is = context.openFileInput(FILE_LAST_TUNNEL);
         ObjectInputStream os = new ObjectInputStream(is);
@@ -84,6 +85,7 @@ public class TunnelPersistingFile implements TunnelPersisting  {
         if (cachedTunnels instanceof Tunnels) {
             return (Tunnels) cachedTunnels;
         } else {
+            logger.info("Falling back to previous safe format");
             // this is for reading the previous file format
             int selected = os.readInt();
             TunnelSpec tunnel = cachedTunnels.get(selected);
@@ -107,6 +109,7 @@ public class TunnelPersistingFile implements TunnelPersisting  {
         os.writeInt(tunnels.indexOf(tunnels.getActiveTunnel()));
         os.close();
         fs.close();
+        logger.info("Wrote tunnels to " + FILE_LAST_TUNNEL);
     }
 
 }

@@ -57,8 +57,8 @@ import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
  * enigmatic low-level objects of Bouncy Castle DTLS implementation. Because DTLS is only available
  * from the low-level, not the JCA standard, familiar resources like java keystores cannot be easily
  * used.
- *
- * Refer to the @link{https://github.com/bcgit/bc-java/blob/master/tls/src/test/java/org/bouncycastle/tls/test/TlsTestUtils.java} BC implementation.
+ * <p>
+ * Refer to the @link{<a href="https://github.com/bcgit/bc-java/blob/master/tls/src/test/java/org/bouncycastle/tls/test/TlsTestUtils.java">BC implementation</a>}.
  */
 class DTLSUtils {
     private static final Logger logger = AndroidLoggingHandler.getLogger(DTLSUtils.class);

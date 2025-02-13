@@ -41,7 +41,7 @@ import de.flyingsnail.ipv6droid.transport.TunnelSpec;
  */
 public class Tunnels extends ArrayList<TunnelSpec> implements Cloneable {
     // Version number for serialized state
-    static final long serialVersionUID =-9178679015599058965L;
+    private static final long serialVersionUID =-9178679015599058965L;
     // the TicTunnel that is currently active/selected for activation
     private @Nullable TunnelSpec activeTunnel;
     static final Logger logger = AndroidLoggingHandler.getLogger(Tunnels.class);
@@ -220,5 +220,13 @@ public class Tunnels extends ArrayList<TunnelSpec> implements Cloneable {
 
     public Serializable getAndroidSerializable () {
         return new AndroidParcelShield(this);
+    }
+
+    @Override
+    @NonNull
+    public Tunnels clone() {
+        Tunnels clone = new Tunnels(this.size());
+        clone.setAll(this);
+        return clone;
     }
 }

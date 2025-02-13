@@ -81,11 +81,9 @@ class SigningServiceConnection implements ServiceConnection {
      */
     public static final String CERTPATH_KEY="CERT";
     private static final Logger logger = AndroidLoggingHandler.getLogger(SigningServiceConnection.class);
-    private boolean damaged;
     private Messenger serviceMessenger;
 
     private final Messenger myMessenger;
-    private final MessageHandler myHandler;
     private String queuedSigningRequest;
 
     /**
@@ -95,10 +93,9 @@ class SigningServiceConnection implements ServiceConnection {
      */
     public SigningServiceConnection (@NonNull ObservableList<String> certPathReceiver) {
         serviceMessenger = null;
-        myHandler = new MessageHandler(Looper.getMainLooper(), certPathReceiver);
+        MessageHandler myHandler = new MessageHandler(Looper.getMainLooper(), certPathReceiver);
         myMessenger = new Messenger(myHandler);
         queuedSigningRequest = null;
-        damaged = false;
     }
 
     @Override
@@ -123,14 +120,12 @@ class SigningServiceConnection implements ServiceConnection {
 
     @Override
     public synchronized void onBindingDied(ComponentName name) {
-        damaged = true;
         this.notifyAll();
         logger.warning("Certification app died: " + name);
     }
 
     @Override
     public synchronized void onNullBinding(ComponentName name) {
-        damaged = true;
         this.notifyAll();
         logger.warning("Certification app refused binding: " + name);
     }
@@ -152,14 +147,5 @@ class SigningServiceConnection implements ServiceConnection {
         } catch (RemoteException | RuntimeException e) {
             throw new IOException("Failed to send message to remote app", e);
         }
-    }
-
-    /**
-     * Indicate if this ServiceConnection is damaged, i. e. will not receive any certificates in
-     * future.
-     * @return a boolean indicating if this ServiceConnection is damaged.
-     */
-    public boolean isDamaged() {
-        return damaged;
     }
 }

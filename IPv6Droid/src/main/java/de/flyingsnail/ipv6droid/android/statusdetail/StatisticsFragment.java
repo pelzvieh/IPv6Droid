@@ -54,13 +54,9 @@ import de.flyingsnail.ipv6droid.android.IPv6DroidVpnService;
 import de.flyingsnail.ipv6droid.android.statistics.Statistics;
 
 /**
- * A simple {@link Fragment} subclass.
- * Use the {@link StatisticsFragment#newInstance} factory method to
- * create an instance of this fragment.
+ * A simple {@link Fragment} subclass to display statistics.
  */
-//@TargetApi(18)
 public class StatisticsFragment extends Fragment implements ServiceConnection {
-    private static final String ARG_STATISTICS_BINDER = "StatisticsBinder";
     private static final Logger logger = AndroidLoggingHandler.getLogger(StatisticsFragment.class);
 
 
@@ -95,16 +91,6 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
     private ScheduledThreadPoolExecutor executor;
     private DateFormat timestampFormatter;
     private Future<?> updaterFuture;
-
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @return A new instance of fragment StatisticsFragment.
-     */
-    public static StatisticsFragment newInstance() {
-        return new StatisticsFragment();
-    }
 
     public StatisticsFragment() {
         updaterFuture = null;
@@ -331,33 +317,31 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
         /**
          * Helper method to update a TextView's text only if the text changed. Reason is that text
          * selection by the user is cancelled by TextView.setText.
+         *
          * @param textView the TextView to update
          * @param newValue the String that should be set, but could be the same as the current text
-         * @return boolean, true if the text was different from the existing and the View was updated.
          */
-        private boolean updateTextView (TextView textView, Object newValue) {
+        private void updateTextView (TextView textView, Object newValue) {
             String newString = (newValue == null) ? "" : String.valueOf(newValue);
             if (!newString.equals(textView.getText().toString())) {
                 textView.setTextKeepState(newString);
-                return true;
             }
-            return false;
         }
 
-        private boolean updateTextView (TextView textView, InetAddress newValue) {
+        private void updateTextView (TextView textView, InetAddress newValue) {
             if (newValue == null) {
-                return updateTextView(textView, "-");
+                updateTextView(textView, "-");
             } else {
-                return updateTextView(textView, newValue.getHostAddress());
+                updateTextView(textView, newValue.getHostAddress());
             }
         }
 
-        private boolean updateTextView (TextView textView, long newValue) {
-            return updateTextView(textView, numberFormat.format(newValue));
+        private void updateTextView (TextView textView, long newValue) {
+            updateTextView(textView, numberFormat.format(newValue));
         }
 
-        private boolean updateTextView (TextView textView, double newValue) {
-            return updateTextView(textView, numberFormat.format(newValue));
+        private void updateTextView (TextView textView, double newValue) {
+            updateTextView(textView, numberFormat.format(newValue));
         }
     }
 }

@@ -53,7 +53,6 @@ import de.flyingsnail.ipv6droid.databinding.ProviderlistTemplateBinding;
 public class CertSupplierArrayAdapter extends ArrayAdapter<String> {
 
     private final static Logger logger = AndroidLoggingHandler.getLogger(CertSupplierArrayAdapter.class);
-    private final int viewResource;
 
     /**
      * Constructor. @see ArrayAdapter#ArrayAdapter.
@@ -63,7 +62,6 @@ public class CertSupplierArrayAdapter extends ArrayAdapter<String> {
      */
     public CertSupplierArrayAdapter(@NonNull Context context, int viewResource, @NonNull List<String> objects) {
         super(context, viewResource, objects);
-        this.viewResource = viewResource;
 
     }
 

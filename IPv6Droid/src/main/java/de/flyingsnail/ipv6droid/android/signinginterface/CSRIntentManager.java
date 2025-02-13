@@ -40,7 +40,7 @@ import de.flyingsnail.ipv6droid.android.dtlsrequest.CertificateToTunnel;
 
 /**
  * A manager for the CSR/certificate exchange protocol with a partner app.
- *
+ * <p>
  * This manager is enumerating suitable partner apps, binding and handling
  * to their service on behalf of the supplied Context.
  */
@@ -58,7 +58,6 @@ public class CSRIntentManager implements AutoCloseable {
      * @param context the Android Context (Activity or Service) that we're acting for
      * @param supplierPackageReceiver the ObservableList&lt;String&gt; that will receive packages
      *                                offering the required service.
-     * @throws IOException in case of failure to bind to the supplier app's service.
      */
     public CSRIntentManager(@NonNull final Context context,
                             @NonNull final ObservableList<String> supplierPackageReceiver)  {

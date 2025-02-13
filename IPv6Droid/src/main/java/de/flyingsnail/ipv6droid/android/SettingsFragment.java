@@ -35,6 +35,7 @@ import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.TwoStatePreference;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.R;
@@ -121,10 +122,12 @@ public class SettingsFragment extends PreferenceFragmentCompat {
     public void onResume() {
         super.onResume();
         SharedPreferences preferences = getPreferenceScreen().getSharedPreferences();
-        for (String key: preferences.getAll().keySet()) {
-            preferenceSummaryToValueListener.onSharedPreferenceChanged(preferences, key);
+        if (preferences != null) {
+            for (String key: preferences.getAll().keySet()) {
+                preferenceSummaryToValueListener.onSharedPreferenceChanged(preferences, key);
+            }
+            preferences.registerOnSharedPreferenceChangeListener(preferenceSummaryToValueListener);
         }
-        preferences.registerOnSharedPreferenceChangeListener(preferenceSummaryToValueListener);
         Preference autoStart = findPreference("autostart");
         if (autoStart != null)
             autoStart.setEnabled(Build.VERSION.SDK_INT < Build.VERSION_CODES.N);
@@ -139,7 +142,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
     @Override
     public void onPause() {
         super.onPause();
-        getPreferenceScreen().getSharedPreferences()
+        Objects.requireNonNull(getPreferenceScreen().getSharedPreferences())
                 .unregisterOnSharedPreferenceChangeListener(preferenceSummaryToValueListener);
     }
 

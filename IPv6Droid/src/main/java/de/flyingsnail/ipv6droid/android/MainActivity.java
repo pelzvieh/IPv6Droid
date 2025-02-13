@@ -450,7 +450,9 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
         if (preferences.getBoolean(SHOW_NOTIFICATIONS, true) &&
                 !NotificationManagerCompat.from(this).areNotificationsEnabled()) {
-            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+            }
         }
     }
 
@@ -518,14 +520,13 @@ public class MainActivity extends AppCompatActivity {
                 case Connected:
                     imageRes = R.drawable.transmitting;
                     break;
-                case Idle:
-                    imageRes = R.drawable.off;
-                    break;
                 case Connecting:
                     imageRes = R.drawable.pending;
                     break;
                 case Disturbed:
                     imageRes = R.drawable.disturbed;
+                    break;
+                default:
                     break;
             }
             MainActivity.this.status.setImageResource(imageRes);

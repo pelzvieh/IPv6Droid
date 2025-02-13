@@ -105,7 +105,7 @@ public class TransmissionStatistics {
         else {
             // return the value as if a burst was just started and ended right now
             long lapse = dateDifference(new Date(), myLastCompletedBurst.lastPacketReceived);
-            return rollingAverage(lapse, averageBurstPause, lapse/1000);
+            return rollingAverage(lapse, averageBurstPause, lapse/1000.0);
         }
     }
 
@@ -122,7 +122,7 @@ public class TransmissionStatistics {
             return rollingAverage(
                     dateDifference(currentBurst.firstPacketReceived, lastCompletedBurst.firstPacketReceived),
                     averageBurstLength,
-                    dateDifference(new Date(), currentBurst.firstPacketReceived)/1000);
+                    dateDifference(new Date(), currentBurst.firstPacketReceived)/1000.0);
         }
     }
 
@@ -140,6 +140,7 @@ public class TransmissionStatistics {
                 burstCompleted(currentBurst, lastCompletedBurst);
             lastCompletedBurst = currentBurst;
             currentBurst = null;
+            logger.info("Burst finished");
             return true;
         }
         return false;

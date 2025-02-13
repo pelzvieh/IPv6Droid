@@ -30,7 +30,6 @@ import androidx.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Date;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.logging.Level;
@@ -58,20 +57,14 @@ class CopyThread extends Thread {
     private final UserNotificationCallback service;
     // instance of the RemoteEnd controlling the copy threads.
     private final RemoteEnd remoteEnd;
-    // time when last packet received
-    private Date lastPacketReceived;
     // the instance that will keep statistics for this copy thread
     private final TransmissionStatistics statisticsCollector;
 
     // the throwable that caused this thread to die
     private Throwable deathCause;
 
-    // The time to wait for additional packets until sending them out
-    private final long packetBundlingPeriod;
     // The maximum size of packet buffer
     private final static int MAX_PACKET_BUFFER_LENGTH = 10;
-    // the outgoing packet queue
-    private final Queue<byte[]> packetQueue;
     // the pool of unused packet buffers
     private final Queue<byte[]> bufferPool;
 
@@ -102,11 +95,10 @@ class CopyThread extends Thread {
         this.setName(threadName);
         this.service = service;
         this.remoteEnd = remoteEnd;
-        this.packetBundlingPeriod = packetBundlingPeriod;
+        // The time to wait for additional packets until sending them out
         int packetBufferLength = (packetBundlingPeriod > 0) ? MAX_PACKET_BUFFER_LENGTH : 0;
         this.statisticsCollector = statisticsCollector;
         // allocate packet buffer
-        packetQueue = new ArrayBlockingQueue<>(packetBufferLength == 0 ? 1 : packetBufferLength);
         bufferPool = new ArrayBlockingQueue<>(packetBufferLength + 1);
         for (int i = 0; i <= packetBufferLength; i++)
             bufferPool.add(new byte[32767]);
@@ -153,7 +145,6 @@ class CopyThread extends Thread {
             out = null;
         }
         bufferPool.clear();
-        packetQueue.clear();
         deathCause = null;
         logger.info("Cleanup of " + getName() + " finished");
     }
@@ -165,7 +156,6 @@ class CopyThread extends Thread {
             logger.info("Copy thread started");
 
             int recvZero = 0;
-            long lastWrite = new Date().getTime();
             stopCopy = false;
             boolean packetReceived = false;
 

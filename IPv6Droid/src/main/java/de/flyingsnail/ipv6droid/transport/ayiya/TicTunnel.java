@@ -40,9 +40,6 @@ public class TicTunnel implements de.flyingsnail.ipv6droid.transport.TunnelSpec 
     /** The tag to identify logger. */
     private static final Logger logger = AndroidLoggingHandler.getLogger(TicTunnel.class);
 
-    /** the id to use in tic queries */
-    private String id;
-
     /**
      * The id told in the tunnel description. It is different in the examples given (no leading "T")
      * - no idea why we have two ids.
@@ -73,11 +70,6 @@ public class TicTunnel implements de.flyingsnail.ipv6droid.transport.TunnelSpec 
      * The name of the POP.
      */
     private String popName;
-
-    /**
-     * No idea what this is.
-     */
-    private Inet4Address ipv4Endpoint;
 
     /** POP address in IPv4 */
     private Inet4Address ipv4Pop;
@@ -138,7 +130,6 @@ public class TicTunnel implements de.flyingsnail.ipv6droid.transport.TunnelSpec 
      * @param id a String representing the id to use for querying the tic.
      */
     public TicTunnel(String id) {
-        this.id = id;
     }
 
     @Override
@@ -300,7 +291,6 @@ public class TicTunnel implements de.flyingsnail.ipv6droid.transport.TunnelSpec 
 
     /** set ID. Required for json unmarshalling */
     public void setId(String id) {
-        this.id = id;
     }
 
 
@@ -342,7 +332,6 @@ public class TicTunnel implements de.flyingsnail.ipv6droid.transport.TunnelSpec 
      */
     public boolean equalsDeep(Object o) {
         return equals (o)
-                && getHeartbeatInterval() == ((TicTunnel)o).getHeartbeatInterval()
                 && getTunnelName().equals(((TicTunnel)o).getTunnelName())
                 && getIPv4Pop().equals(((TicTunnel)o).getIPv4Pop())
                 && getType().equals(((TicTunnel)o).getType())

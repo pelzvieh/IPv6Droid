@@ -100,8 +100,7 @@ class SelfCheckingUDPTransport extends UDPTransport {
     lastReadTimeout = new Date();
     lastReadTimeout.setTime(lastReadTimeout.getTime() + waitMillis + 1000L);
     try {
-      int read = super.receive(buf, off, len, waitMillis);
-      return read;
+        return super.receive(buf, off, len, waitMillis);
     } finally {
       lastReadTimeout = null;
     }

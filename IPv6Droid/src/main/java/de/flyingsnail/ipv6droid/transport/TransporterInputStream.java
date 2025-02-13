@@ -67,7 +67,7 @@ public class TransporterInputStream extends InputStream {
     @Override
     public int read() throws IOException {
         ensureBuffer();
-        return Objects.requireNonNull(streamBuffer.get()).get();
+        return Objects.requireNonNull(streamBuffer.get()).get() & 0xFF;
     }
 
     @Override

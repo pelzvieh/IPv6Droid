@@ -45,6 +45,7 @@ import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.android.datalayer.network.event.Event;
 import de.flyingsnail.ipv6droid.android.datalayer.network.event.EventAvailable;
 import de.flyingsnail.ipv6droid.android.datalayer.network.event.EventBlockingChanged;

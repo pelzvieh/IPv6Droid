@@ -110,8 +110,8 @@ class IPv6DTlsClient extends AbstractTlsClient {
     public TlsAuthentication getAuthentication() {
         return new IPv6TlsAuthentication(trustedCA,
                 (Vector<SignatureAndHashAlgorithm>)context.getSecurityParametersHandshake().getClientSigAlgs(),
-                androidBackedKeyPair.getTlsCredentialedSigner(myCertChain),
-                dnsName);
+                androidBackedKeyPair.getTlsCredentialedSigner(myCertChain)
+        );
     }
 
     @Override

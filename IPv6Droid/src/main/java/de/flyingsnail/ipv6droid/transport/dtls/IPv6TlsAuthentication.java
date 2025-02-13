@@ -59,16 +59,14 @@ class IPv6TlsAuthentication implements TlsAuthentication {
      * @param trustedCA a TlsCertificate giving the one CA certificate that we are going to trust.
      * @param clientSigAlgs a Vector of SignatureAndHashAlgorithm objects accepted by the client.
      * @param tlsCredentialedSigner a TlsCredentialedSigner, our signing object
-     * @param dnsName the host name of the server, must be matched by certificate
      */
     IPv6TlsAuthentication(final TlsCertificate trustedCA,
                           final Vector<SignatureAndHashAlgorithm> clientSigAlgs,
-                          final TlsCredentialedSigner tlsCredentialedSigner,
-                          final String dnsName) {
+                          final TlsCredentialedSigner tlsCredentialedSigner) {
         this.clientSigAlgs = clientSigAlgs;
         this.tlsCredentialedSigner = tlsCredentialedSigner;
 
-        chainChecker = new ChainChecker(trustedCA, dnsName);
+        chainChecker = new ChainChecker(trustedCA);
     }
 
     @Override
