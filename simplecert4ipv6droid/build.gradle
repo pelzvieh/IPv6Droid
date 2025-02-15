@@ -39,6 +39,18 @@ repositories {
     google()
 }
 
+// Create a variable called keystorePropertiesFile, and initialize it to your
+// keystore.properties file, in the rootProject folder.
+def keystorePropertiesFile = rootProject.file("keystore.local.properties")
+
+// Initialize a new Properties() object called keystoreProperties.
+def keystoreProperties = new Properties()
+
+// Load your keystore.properties file into the keystoreProperties object.
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace 'de.flyingsnail.ipv6droid.simplecert4ipv6droid'
     compileSdk 35
@@ -59,8 +71,6 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
     }
 
     dependenciesInfo {
@@ -76,7 +86,6 @@ android {
 }
 
 dependencies {
-
     implementation libs.androidx.appcompat
     implementation libs.material
     implementation libs.androidx.constraintlayout

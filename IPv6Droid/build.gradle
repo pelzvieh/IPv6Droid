@@ -46,8 +46,9 @@ def keystorePropertiesFile = rootProject.file("keystore.local.properties")
 def keystoreProperties = new Properties()
 
 // Load your keystore.properties file into the keystoreProperties object.
-keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
-
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
 
 android {
     signingConfigs {
@@ -63,15 +64,13 @@ android {
 
     defaultConfig {
         versionCode 85
-        versionName "2.99e"
+        versionName "2.99f"
         minSdkVersion 23
         targetSdkVersion 35
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
-        //sourceCompatibility JavaVersion.VERSION_1_8
-        //targetCompatibility JavaVersion.VERSION_1_8
     }
     packagingOptions {
         resources {
