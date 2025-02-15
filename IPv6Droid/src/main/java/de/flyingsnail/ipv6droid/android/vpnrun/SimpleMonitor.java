@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -23,10 +23,10 @@
 
 package de.flyingsnail.ipv6droid.android.vpnrun;
 
-import android.util.Log;
-
 import java.io.IOException;
+import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.transport.Transporter;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
@@ -37,7 +37,7 @@ import de.flyingsnail.ipv6droid.transport.TunnelSpec;
  * terminated (see there).
  */
 class SimpleMonitor implements Monitor {
-    private final String TAG = SimpleMonitor.class.getName();
+    private final Logger logger = AndroidLoggingHandler.getLogger(SimpleMonitor.class);
 
     private final CopyThread inThread;
     private final CopyThread outThread;
@@ -69,13 +69,8 @@ class SimpleMonitor implements Monitor {
             inThread.join(heartbeatInterval);
             if (!remoteEnd.isIntendedToRun())
                 break;
-            // re-check cached network information
-            if (!remoteEnd.isCurrentSocketStillValid()) {
-                throw new IOException("Network changed");
-            }
-
         }
-        Log.i(TAG, "Terminated loop of current transporter object (interrupt or end of a copy thread)");
+        logger.info("Terminated loop of current transporter object (interrupt or end of a copy thread)");
         Throwable deathCause = null;
         final CopyThread myInThread = inThread;
         final CopyThread myOutThread = outThread;

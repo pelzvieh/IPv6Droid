@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -25,7 +25,6 @@ package de.flyingsnail.ipv6droid.android.vpnrun;
 
 import android.content.Context;
 import android.content.Intent;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -34,8 +33,11 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.android.IPv6DroidVpnService;
 import de.flyingsnail.ipv6droid.android.Tunnels;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
@@ -53,7 +55,7 @@ public class VpnStatusReport implements Serializable, Cloneable {
      * The extended data name for the status in a status broadcast intent.
      */
     public static final String EDATA_STATUS_REPORT = IPv6DroidVpnService.class.getName() + ".STATUS_REPORT";
-    private static final String TAG = VpnStatusReport.class.getName();
+    private static final Logger logger = AndroidLoggingHandler.getLogger(VpnStatusReport.class);
 
     /**
      * An int indicating the progress of tunnel creation.
@@ -153,7 +155,7 @@ public class VpnStatusReport implements Serializable, Cloneable {
     }
 
     protected void setTunnelProvedWorking() {
-        boolean changed = this.tunnelProvedWorking != true;
+        boolean changed = !this.tunnelProvedWorking;
         this.tunnelProvedWorking = true;
         if (changed)
             reportStatus();
@@ -289,7 +291,7 @@ public class VpnStatusReport implements Serializable, Cloneable {
             // Broadcast locally
             LocalBroadcastManager.getInstance(context).sendBroadcast(statusBroadcast);
         } catch (CloneNotSupportedException e) {
-            Log.wtf(TAG, "CloneNotSupported on VpnStatusReport", e);
+            logger.log(Level.SEVERE, "CloneNotSupported on VpnStatusReport", e);
         }
     }
 

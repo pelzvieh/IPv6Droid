@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -21,19 +21,12 @@
  *
  */
 
-package de.flyingsnail.ipv6droid.android.vpnrun;
+package de.flyingsnail.ipv6droid.android.datalayer.network.event;
 
-/**
- * An object interested in high level connectivity changes as provided by NetworkHelper.
- */
-interface NetworkChangeListener {
-    /**
-     * The device has a new connection. Details can be queried from NetworkHelper.
-     */
-    void onNewConnection();
+import android.net.Network;
 
-    /**
-     * The device just went offline.
-     */
-    void onDisconnected();
+public class EventDisconnected extends EventBase {
+    public EventDisconnected(Network network) {
+        super(network);
+    }
 }

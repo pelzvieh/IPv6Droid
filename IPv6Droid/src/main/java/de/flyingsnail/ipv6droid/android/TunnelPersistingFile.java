@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -34,6 +34,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.util.List;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
@@ -53,7 +54,7 @@ public class TunnelPersistingFile implements TunnelPersisting  {
     /**
      * The tag to use for logging
      */
-    private static final String TAG = TunnelPersistingFile.class.getName();
+    private static final Logger logger = AndroidLoggingHandler.getLogger(TunnelPersistingFile.class);
 
     /**
      * Constructor. Takes a Context object (required).
@@ -71,6 +72,7 @@ public class TunnelPersistingFile implements TunnelPersisting  {
      */
     @Override
     public @NonNull Tunnels readTunnels() throws IOException {
+        logger.info("Reading tunnels from " + FILE_LAST_TUNNEL);
         // open private file
         InputStream is = context.openFileInput(FILE_LAST_TUNNEL);
         ObjectInputStream os = new ObjectInputStream(is);
@@ -83,6 +85,7 @@ public class TunnelPersistingFile implements TunnelPersisting  {
         if (cachedTunnels instanceof Tunnels) {
             return (Tunnels) cachedTunnels;
         } else {
+            logger.info("Falling back to previous safe format");
             // this is for reading the previous file format
             int selected = os.readInt();
             TunnelSpec tunnel = cachedTunnels.get(selected);
@@ -106,6 +109,7 @@ public class TunnelPersistingFile implements TunnelPersisting  {
         os.writeInt(tunnels.indexOf(tunnels.getActiveTunnel()));
         os.close();
         fs.close();
+        logger.info("Wrote tunnels to " + FILE_LAST_TUNNEL);
     }
 
 }

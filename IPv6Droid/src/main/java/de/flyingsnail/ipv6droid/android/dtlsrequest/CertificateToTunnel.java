@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2024 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -23,15 +23,15 @@
 
 package de.flyingsnail.ipv6droid.android.dtlsrequest;
 
-import android.util.Log;
-
 import java.io.IOException;
 import java.util.List;
+import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.transport.dtls.TransporterParams;
 
 public class CertificateToTunnel {
-    private final String TAG = CertificateToTunnel.class.getSimpleName();
+    private final Logger logger = AndroidLoggingHandler.getLogger(CertificateToTunnel.class);
     private String alias;
     /**
      * Generate a PEM encoded certificate signing request, using on-device key management.
@@ -46,7 +46,7 @@ public class CertificateToTunnel {
                 this.alias = alias;
                 return new AndroidBackedKeyPair(alias).getCertificationRequest();
             } catch (IOException e) {
-                Log.i(TAG, "Key pair alias " + alias + " did not convert to CSR: " + e);
+                logger.info("Key pair alias " + alias + " did not convert to CSR: " + e);
                 // try the other ones, if none works, generate a new
             }
         }

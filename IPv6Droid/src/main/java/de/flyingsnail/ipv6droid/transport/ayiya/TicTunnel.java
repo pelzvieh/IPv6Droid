@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -23,13 +23,14 @@
 
 package de.flyingsnail.ipv6droid.transport.ayiya;
 
-import android.util.Log;
-
 import androidx.annotation.NonNull;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.util.Date;
+import java.util.logging.Logger;
+
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 
 /**
  * This represents the tunnel description as delivered by the tic protocol.
@@ -37,10 +38,7 @@ import java.util.Date;
  */
 public class TicTunnel implements de.flyingsnail.ipv6droid.transport.TunnelSpec {
     /** The tag to identify logger. */
-    private static final String TAG = TicTunnel.class.getSimpleName();
-
-    /** the id to use in tic queries */
-    private String id;
+    private static final Logger logger = AndroidLoggingHandler.getLogger(TicTunnel.class);
 
     /**
      * The id told in the tunnel description. It is different in the examples given (no leading "T")
@@ -72,11 +70,6 @@ public class TicTunnel implements de.flyingsnail.ipv6droid.transport.TunnelSpec 
      * The name of the POP.
      */
     private String popName;
-
-    /**
-     * No idea what this is.
-     */
-    private Inet4Address ipv4Endpoint;
 
     /** POP address in IPv4 */
     private Inet4Address ipv4Pop;
@@ -137,7 +130,6 @@ public class TicTunnel implements de.flyingsnail.ipv6droid.transport.TunnelSpec 
      * @param id a String representing the id to use for querying the tic.
      */
     public TicTunnel(String id) {
-        this.id = id;
     }
 
     @Override
@@ -147,7 +139,7 @@ public class TicTunnel implements de.flyingsnail.ipv6droid.transport.TunnelSpec 
 
     @Override
     public void setIPv4Pop(Inet4Address ipv4Pop) {
-        Log.d(TAG, "setting ipv4 of POP to " + ipv4Pop);
+        logger.fine("setting ipv4 of POP to " + ipv4Pop);
         this.ipv4Pop = ipv4Pop;
     }
 
@@ -290,7 +282,7 @@ public class TicTunnel implements de.flyingsnail.ipv6droid.transport.TunnelSpec 
     /** required for unmarshalling json */
     public void setValid(boolean valid) {
         if (valid != isValid())
-            Log.wtf(TAG, "Impossible to set valid state");
+            logger.severe("Impossible to set valid state");
     }
 
     public Date getCreationDate() {
@@ -299,7 +291,6 @@ public class TicTunnel implements de.flyingsnail.ipv6droid.transport.TunnelSpec 
 
     /** set ID. Required for json unmarshalling */
     public void setId(String id) {
-        this.id = id;
     }
 
 
@@ -341,7 +332,6 @@ public class TicTunnel implements de.flyingsnail.ipv6droid.transport.TunnelSpec 
      */
     public boolean equalsDeep(Object o) {
         return equals (o)
-                && getHeartbeatInterval() == ((TicTunnel)o).getHeartbeatInterval()
                 && getTunnelName().equals(((TicTunnel)o).getTunnelName())
                 && getIPv4Pop().equals(((TicTunnel)o).getIPv4Pop())
                 && getType().equals(((TicTunnel)o).getType())

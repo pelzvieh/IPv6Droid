@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -32,7 +32,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -46,20 +45,19 @@ import java.text.NumberFormat;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.android.IPv6DroidVpnService;
 import de.flyingsnail.ipv6droid.android.statistics.Statistics;
 
 /**
- * A simple {@link Fragment} subclass.
- * Use the {@link StatisticsFragment#newInstance} factory method to
- * create an instance of this fragment.
+ * A simple {@link Fragment} subclass to display statistics.
  */
-//@TargetApi(18)
 public class StatisticsFragment extends Fragment implements ServiceConnection {
-    private static final String ARG_STATISTICS_BINDER = "StatisticsBinder";
-    private static final String TAG = StatisticsFragment.class.getName();
+    private static final Logger logger = AndroidLoggingHandler.getLogger(StatisticsFragment.class);
 
 
     private IPv6DroidVpnService.StatisticsBinder statisticsBinder;
@@ -94,30 +92,20 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
     private DateFormat timestampFormatter;
     private Future<?> updaterFuture;
 
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @return A new instance of fragment StatisticsFragment.
-     */
-    public static StatisticsFragment newInstance() {
-        return new StatisticsFragment();
-    }
-
     public StatisticsFragment() {
         updaterFuture = null;
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        Log.d(TAG, "onCreate started");
+        logger.fine("onCreate started");
         super.onCreate(savedInstanceState);
         // create scheduled executor
         executor = new ScheduledThreadPoolExecutor(1);
         // bind to IPv6DroidVpnService for statistics
         bindToStatistics();
         timestampFormatter = android.text.format.DateFormat.getTimeFormat(getActivity());
-        Log.i(TAG, "Creation successful");
+        logger.info("Creation successful");
     }
 
     /**
@@ -129,13 +117,13 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
             Intent intent = new Intent(getActivity(), IPv6DroidVpnService.class);
             intent.setAction(IPv6DroidVpnService.STATISTICS_INTERFACE);
             if (!myActivity.bindService(intent, this, 0))
-                Log.e(StatisticsFragment.TAG, "Bind request to statistics interface failed");
+                logger.warning("Bind request to statistics interface failed");
         }
     }
 
     @Override
     public void onDestroy() {
-        Log.d(TAG, "onDestroy started");
+        logger.fine("onDestroy started");
         Activity myActivity = getActivity();
         if (myActivity != null) {
             myActivity.unbindService(this);
@@ -147,13 +135,13 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
         executor.shutdownNow();
         executor = null;
         super.onDestroy();
-        Log.i(TAG, "Destroyed");
+        logger.info("Destroyed");
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        Log.d(TAG, "onCreateView started");
+        logger.fine("onCreateView started");
         // Inflate the layout for this fragment
         View myView = inflater.inflate(R.layout.fragment_statistics, container, false);
 
@@ -182,13 +170,13 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
         vpnDnsView = myView.findViewById(R.id.statistics_vpn_dns);
         isRoutedView = myView.findViewById(R.id.statistics_isrouted);
         timestampView = myView.findViewById(R.id.statistics_timestamp);
-        Log.i(TAG, "Successfully created view");
+        logger.info("Successfully created view");
         return myView;
     }
 
     @Override
     public void onStart() {
-        Log.d(TAG, "onStart started");
+        logger.fine("onStart started");
 
         super.onStart();
         // create the UI Handler
@@ -196,43 +184,43 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
 
         // cancel an existing updater, should not happen
         if (updaterFuture != null) {
-            Log.e(StatisticsFragment.TAG, "updaterFuture existing in onStart method, should never happen. Trying to cancel");
+            logger.warning("updaterFuture existing in onStart method, should never happen. Trying to cancel");
             if (updaterFuture.cancel(true))
-                Log.i(StatisticsFragment.TAG, "succeeded to cancel previous updater");
+                logger.info("succeeded to cancel previous updater");
         }
         updaterFuture = null;
         // schedule an updater for execution, keeping the "Future" object returned (needed for cancellation)
         try {
-            updaterFuture = executor.scheduleWithFixedDelay(new Updater(handler), 0, 1l, TimeUnit.SECONDS);
+            updaterFuture = executor.scheduleWithFixedDelay(new Updater(handler), 0, 1L, TimeUnit.SECONDS);
         } catch (Exception e) {
-            Log.e(TAG, "Could not schedule statistics updates");
+            logger.log(Level.WARNING, "Could not schedule statistics updates");
             View myView = getView();
             if (myView != null)
                 myView.setVisibility(View.INVISIBLE);
         }
-        Log.i(TAG, "Successfully started");
+        logger.info("Successfully started");
     }
 
     @Override
     public void onStop() {
-        Log.d(TAG, "onStop");
+        logger.fine("onStop");
         if (updaterFuture != null) {
             if (!updaterFuture.cancel(true))
-                Log.e(StatisticsFragment.TAG, "Failed to cancel updater job");
+                logger.warning("Failed to cancel updater job");
         }
         super.onStop();
-        Log.i(TAG, "Gracefully stopped");
+        logger.info("Gracefully stopped");
     }
 
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
-        Log.d(TAG, "Bound to statistics service of IPv6DroidVpnService");
+        logger.fine("Bound to statistics service of IPv6DroidVpnService");
         statisticsBinder = (IPv6DroidVpnService.StatisticsBinder)service;
     }
 
     @Override
     public void onServiceDisconnected(ComponentName name) {
-        Log.i(TAG, "Connection to statistics service of IPv6DroidVpnService lost");
+        logger.info("Connection to statistics service of IPv6DroidVpnService lost");
         statisticsBinder = null;
     }
 
@@ -250,7 +238,7 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
         @Override
         public void run() {
             try {
-                Log.d(TAG, "Statistics refresh");
+                logger.fine("Statistics refresh");
                 Statistics stats = null;
                 if (statisticsBinder != null) {
                     stats = statisticsBinder.getStatistics();
@@ -265,7 +253,7 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
                     redrawMessage.sendToTarget();
                 }
             } catch (Exception e) {
-                Log.e(TAG, "Updating statistics failed", e);
+                logger.log(Level.WARNING, "Updating statistics failed", e);
             }
         }
     }
@@ -288,7 +276,7 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
             View myView = getView();
             if (myView == null)
                 return; // happens during reconstruction of view hierarchy, e.g. when device orientation changed
-            Log.d(TAG, "Redrawing Statistics");
+            logger.fine("Redrawing Statistics");
 
             Statistics stats = (Statistics)inputMessage.obj;
             if (stats == null) {
@@ -329,33 +317,31 @@ public class StatisticsFragment extends Fragment implements ServiceConnection {
         /**
          * Helper method to update a TextView's text only if the text changed. Reason is that text
          * selection by the user is cancelled by TextView.setText.
+         *
          * @param textView the TextView to update
          * @param newValue the String that should be set, but could be the same as the current text
-         * @return boolean, true if the text was different from the existing and the View was updated.
          */
-        private boolean updateTextView (TextView textView, Object newValue) {
+        private void updateTextView (TextView textView, Object newValue) {
             String newString = (newValue == null) ? "" : String.valueOf(newValue);
             if (!newString.equals(textView.getText().toString())) {
                 textView.setTextKeepState(newString);
-                return true;
             }
-            return false;
         }
 
-        private boolean updateTextView (TextView textView, InetAddress newValue) {
+        private void updateTextView (TextView textView, InetAddress newValue) {
             if (newValue == null) {
-                return updateTextView(textView, "-");
+                updateTextView(textView, "-");
             } else {
-                return updateTextView(textView, newValue.getHostAddress());
+                updateTextView(textView, newValue.getHostAddress());
             }
         }
 
-        private boolean updateTextView (TextView textView, long newValue) {
-            return updateTextView(textView, numberFormat.format(newValue));
+        private void updateTextView (TextView textView, long newValue) {
+            updateTextView(textView, numberFormat.format(newValue));
         }
 
-        private boolean updateTextView (TextView textView, double newValue) {
-            return updateTextView(textView, numberFormat.format(newValue));
+        private void updateTextView (TextView textView, double newValue) {
+            updateTextView(textView, numberFormat.format(newValue));
         }
     }
 }

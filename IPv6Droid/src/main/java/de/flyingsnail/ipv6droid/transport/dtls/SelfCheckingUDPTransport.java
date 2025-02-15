@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2023 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -23,8 +23,6 @@
 
 package de.flyingsnail.ipv6droid.transport.dtls;
 
-import android.util.Log;
-
 import androidx.annotation.Nullable;
 
 import org.bouncycastle.tls.AlertDescription;
@@ -34,6 +32,9 @@ import org.bouncycastle.tls.UDPTransport;
 import java.io.IOException;
 import java.net.DatagramSocket;
 import java.util.Date;
+import java.util.logging.Logger;
+
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 
 /**
  * This is an @ref {org.bouncycastle.tls.UDPTransport} performing self-checks
@@ -44,7 +45,7 @@ import java.util.Date;
  */
 class SelfCheckingUDPTransport extends UDPTransport {
 
-  private final String TAG = SelfCheckingUDPTransport.class.getSimpleName();
+  private final Logger logger = AndroidLoggingHandler.getLogger(SelfCheckingUDPTransport.class);
 
   /**
    * The Date when the currently active read operation was started or null if it is
@@ -75,7 +76,7 @@ class SelfCheckingUDPTransport extends UDPTransport {
   private void forceAbortOnTimeoutExcess() throws IOException {
     final Date currentLimit = lastReadTimeout; // do not use field, race-condition
     if (currentLimit != null && new Date().after(currentLimit)) {
-      Log.w(TAG, "Aborting TLS connection because of stale read");
+      logger.warning("Aborting TLS connection because of stale read");
       throw new TlsFatalAlert(AlertDescription.internal_error, "Socket read overdue");
     }
   }
@@ -99,8 +100,7 @@ class SelfCheckingUDPTransport extends UDPTransport {
     lastReadTimeout = new Date();
     lastReadTimeout.setTime(lastReadTimeout.getTime() + waitMillis + 1000L);
     try {
-      int read = super.receive(buf, off, len, waitMillis);
-      return read;
+        return super.receive(buf, off, len, waitMillis);
     } finally {
       lastReadTimeout = null;
     }

@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2020 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -24,16 +24,19 @@
 package de.flyingsnail.ipv6droid.android.statusdetail;
 
 import android.os.Bundle;
-import android.util.Log;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import de.flyingsnail.ipv6droid.R;
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 
 public class StatisticsActivity extends AppCompatActivity {
 
-    static final String TAG=StatisticsActivity.class.getName();
+    static final Logger logger = AndroidLoggingHandler.getLogger(StatisticsActivity.class);
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -44,7 +47,7 @@ public class StatisticsActivity extends AppCompatActivity {
             //noinspection ConstantConditions
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         } catch (NullPointerException npe) {
-            Log.d(TAG, "No action bar", npe);
+            logger.log(Level.FINE, "No action bar", npe);
         }
     }
 

@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -54,6 +54,8 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
+
 
 /**
  * @author pelzi
@@ -61,7 +63,7 @@ import java.util.logging.Logger;
  */
 class ChainChecker {
   
-  private final Logger logger = Logger.getLogger(ChainChecker.class.getName());
+  private final Logger logger = AndroidLoggingHandler.getLogger(ChainChecker.class);
   
   private final CertificateFactory certificateFactory;
 
@@ -69,7 +71,7 @@ class ChainChecker {
 
   private final Set<TrustAnchor> trustAnchors;
   
-  public ChainChecker(final TlsCertificate trustedCA, String dnsName) {
+  public ChainChecker(final TlsCertificate trustedCA) {
     try {
       CertificateFactory newFactory;
       try {
@@ -260,10 +262,9 @@ class ChainChecker {
     } catch (CertPathValidatorException e) {
       StringBuilder diagnostics = new StringBuilder("Failed to verify cert chain:\n");
       for (TlsCertificate cert: chain)
-        diagnostics.append(
-            "-----BEGIN CERTIFICATE-----\n" 
-            + Base64.toBase64String(cert.getEncoded())
-            + "\n-----END CERTIFICATE-----\n\n");
+        diagnostics.append("-----BEGIN CERTIFICATE-----\n")
+                .append(Base64.toBase64String(cert.getEncoded()))
+                .append("\n-----END CERTIFICATE-----\n\n");
       logger.info(diagnostics.toString());
       logger.info("Error at cert #" + e.getIndex());
 

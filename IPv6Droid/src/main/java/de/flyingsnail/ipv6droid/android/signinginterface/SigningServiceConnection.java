@@ -34,16 +34,19 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.databinding.ObservableList;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 
 class MessageHandler extends Handler {
-    final static String TAG = MessageHandler.class.getSimpleName();
+    final static Logger logger = AndroidLoggingHandler.getLogger(MessageHandler.class);
     final ObservableList<String> certPathReceiver;
 
     public MessageHandler(@NonNull Looper looper, @NonNull ObservableList<String> receiver) {
@@ -53,13 +56,13 @@ class MessageHandler extends Handler {
 
     @Override
     public void handleMessage(@NonNull Message msg) {
-        Log.i(TAG, "Received message from remote");
+        logger.info("Received message from remote");
         Bundle answer = msg.getData();
         final List<String> certPath = answer.getStringArrayList(CERTPATH_KEY);
         if (certPath == null) {
-            Log.e(TAG, "Received message from signing app does not contain key " + CERTPATH_KEY);
+            logger.log(Level.WARNING, "Received message from signing app does not contain key " + CERTPATH_KEY);
         } else {
-            Log.d(TAG, "Received cert path: " + certPath);
+            logger.fine("Received cert path: " + certPath);
             certPathReceiver.clear();
             certPathReceiver.addAll(certPath);
         }
@@ -77,12 +80,10 @@ class SigningServiceConnection implements ServiceConnection {
      * the cert path.
      */
     public static final String CERTPATH_KEY="CERT";
-    private static final String TAG = SigningServiceConnection.class.getSimpleName();
-    private boolean damaged;
+    private static final Logger logger = AndroidLoggingHandler.getLogger(SigningServiceConnection.class);
     private Messenger serviceMessenger;
 
     private final Messenger myMessenger;
-    private final MessageHandler myHandler;
     private String queuedSigningRequest;
 
     /**
@@ -92,21 +93,20 @@ class SigningServiceConnection implements ServiceConnection {
      */
     public SigningServiceConnection (@NonNull ObservableList<String> certPathReceiver) {
         serviceMessenger = null;
-        myHandler = new MessageHandler(Looper.getMainLooper(), certPathReceiver);
+        MessageHandler myHandler = new MessageHandler(Looper.getMainLooper(), certPathReceiver);
         myMessenger = new Messenger(myHandler);
         queuedSigningRequest = null;
-        damaged = false;
     }
 
     @Override
     public synchronized void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-        Log.i(TAG, "We have a connection, creating Messenger");
+        logger.info("We have a connection, creating Messenger");
         serviceMessenger = new Messenger(iBinder);
         if (queuedSigningRequest != null) {
             try {
                 requestCertificate(queuedSigningRequest);
             } catch (IOException e) {
-                Log.e(TAG, "Failed to post queued CSR", e);
+                logger.log(Level.WARNING, "Failed to post queued CSR", e);
             }
         }
     }
@@ -115,21 +115,19 @@ class SigningServiceConnection implements ServiceConnection {
     public synchronized void onServiceDisconnected(ComponentName componentName) {
         serviceMessenger = null;
         this.notifyAll();
-        Log.i(TAG, "Lost connection");
+        logger.info("Lost connection");
     }
 
     @Override
     public synchronized void onBindingDied(ComponentName name) {
-        damaged = true;
         this.notifyAll();
-        Log.w(TAG, "Certification app died: " + name);
+        logger.warning("Certification app died: " + name);
     }
 
     @Override
     public synchronized void onNullBinding(ComponentName name) {
-        damaged = true;
         this.notifyAll();
-        Log.w(TAG, "Certification app refused binding: " + name);
+        logger.warning("Certification app refused binding: " + name);
     }
 
     public void requestCertificate(final String signingRequest) throws IOException {
@@ -149,14 +147,5 @@ class SigningServiceConnection implements ServiceConnection {
         } catch (RemoteException | RuntimeException e) {
             throw new IOException("Failed to send message to remote app", e);
         }
-    }
-
-    /**
-     * Indicate if this ServiceConnection is damaged, i. e. will not receive any certificates in
-     * future.
-     * @return a boolean indicating if this ServiceConnection is damaged.
-     */
-    public boolean isDamaged() {
-        return damaged;
     }
 }

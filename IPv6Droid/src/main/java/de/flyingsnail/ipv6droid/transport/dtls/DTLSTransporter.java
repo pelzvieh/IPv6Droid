@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2023 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -23,8 +23,6 @@
 
 package de.flyingsnail.ipv6droid.transport.dtls;
 
-import android.util.Log;
-
 import androidx.annotation.NonNull;
 
 import org.bouncycastle.tls.Certificate;
@@ -44,7 +42,11 @@ import java.net.Inet4Address;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.util.Date;
+import java.util.Locale;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.android.dtlsrequest.AndroidBackedKeyPair;
 import de.flyingsnail.ipv6droid.transport.Transporter;
 import de.flyingsnail.ipv6droid.transport.TransporterInputStream;
@@ -53,15 +55,14 @@ import de.flyingsnail.ipv6droid.transport.TunnelBrokenException;
 import de.flyingsnail.ipv6droid.transport.TunnelSpec;
 
 public class DTLSTransporter implements Transporter {
-  public static final String TUNNEL_TYPE = TransporterParams.TUNNEL_TYPE;
-  private final static String TAG = DTLSTransporter.class.getName();
+  private final static Logger logger = AndroidLoggingHandler.getLogger(DTLSTransporter.class);
   private final TransporterParams params;
   private final AndroidBackedKeyPair keyPair;
   private final String dnsName;
   private Date lastPacketReceivedTime;
   private Date lastPacketSentTime;
   private DatagramSocket socket;
-  private int port;
+  private final int port;
   private DTLSTransport dtls = null;
   private int maxPacketSize = 0;
   private boolean validPacketReceived = false;
@@ -98,8 +99,7 @@ public class DTLSTransporter implements Transporter {
     keyPair = params.getKeyPair();
     dnsName = params.getDnsPop();
 
-    Log.i(TAG,
-            String.format("DTLS transporter constructed: port=%d, mtu=%d, heartbeat=%d, dnsName=%s",
+    logger.info(String.format(Locale.ENGLISH, "DTLS transporter constructed: port=%d, mtu=%d, heartbeat=%d, dnsName=%s",
                     port, mtu, heartbeat, dnsName));
   }
 
@@ -133,16 +133,6 @@ public class DTLSTransporter implements Transporter {
   @Override
   public Date getLastPacketSentTime() {
     return lastPacketSentTime;
-  }
-
-  /**
-   * Check if this object is in a functional state
-   *
-   * @return a boolean, true if socket is still connected
-   */
-  @Override
-  public boolean isAlive() {
-    return socket != null && socket.isConnected();
   }
 
   /**
@@ -193,18 +183,7 @@ public class DTLSTransporter implements Transporter {
     DTLSClientProtocol protocol = new DTLSClientProtocol();
     dtls = protocol.connect(client, transport);
 
-    Log.i(TAG, "DTLS tunnel to POP IP " + ipv4Pop + " created.");
-  }
-
-  /**
-   * Re-Connect the tunnel, closing the existing socket
-   */
-  @Override
-  public void reconnect() throws IOException {
-    if (socket == null)
-      throw new IllegalStateException("DTLSTransporter is closed or not initialized");
-    close();
-    connect();
+    logger.info("DTLS tunnel to POP IP " + ipv4Pop + " created.");
   }
 
   /**
@@ -218,16 +197,6 @@ public class DTLSTransporter implements Transporter {
   }
 
   /**
-   * Return the number of invalid packages received yet.
-   *
-   * @return an int representing the number.
-   */
-  @Override
-  public int getInvalidPacketCounter() {
-    return 0; // invalid packets are handled by lower levels
-  }
-
-  /**
    * Get the maximum transmission unit (MTU) associated with this DTLS instance.
    *
    * @return the MTU in bytes
@@ -237,7 +206,7 @@ public class DTLSTransporter implements Transporter {
     try {
       return dtls == null ? 0 : dtls.getSendLimit();
     } catch (IOException e) {
-      Log.e(TAG, "Exception reading send limit from dtls", e);
+      logger.log(Level.WARNING, "Exception reading send limit from dtls", e);
       return 0;
     }
   }
@@ -278,7 +247,7 @@ public class DTLSTransporter implements Transporter {
         maxPacketSize = bytecount;
 
       if (bytecount <= 0) {
-        Log.d(TAG, "Received no payload bytes within timeout");
+        logger.fine("Received no payload bytes within timeout");
         try {
           Thread.sleep(100L);
         } catch (InterruptedException e) {
@@ -286,7 +255,7 @@ public class DTLSTransporter implements Transporter {
         }
         continue;
       } else if (bytecount == bb.capacity()) {
-        Log.e(TAG, "WARNING: maximum size of buffer reached - indication of a MTU problem");
+        logger.log(Level.WARNING, "WARNING: maximum size of buffer reached - indication of a MTU problem");
       }
 
       // update timestamp of last packet received
@@ -311,14 +280,14 @@ public class DTLSTransporter implements Transporter {
    */
   @Override
   public void write(ByteBuffer payload) throws IOException, TunnelBrokenException {
-    if (socket == null || dtls == null)
-      throw new IllegalStateException("write(byte[]) called on unconnected DTLSTransporter");
-    if (!socket.isConnected())
+    final DatagramSocket mySocket = socket; // avoid concurrent modification
+    final DTLSTransport myDtls = dtls; // avoid concurrent modification
+    if (mySocket == null || myDtls == null || !mySocket.isConnected())
       throw new TunnelBrokenException("Socket to PoP is closed", null);
     if (payload.remaining() > mtu)
       throw new IOException("Too big packet received: " + payload.remaining() + " (MTU: " + mtu + ")");
 
-    dtls.send(payload.array(), payload.arrayOffset()+payload.position(), payload.remaining());
+    myDtls.send(payload.array(), payload.arrayOffset()+payload.position(), payload.remaining());
 
     lastPacketSentTime = new Date();
   }
@@ -345,57 +314,29 @@ public class DTLSTransporter implements Transporter {
   }
 
   /**
-   * This can be used by friendly classes to protect this socket from tunneling, query its state, etc.
-   */
-  @Override
-  public DatagramSocket getSocket() {
-    return socket;
-  }
-
-  /**
-   * Return the number of bytes of overhead required by this transport on each packet.
-   *
-   * @return an int giving the number of bytes of overhead
-   */
-  @Override
-  public int getOverhead() {
-    return 0;
-  }
-
-  /**
    * Close our socket. Basically that's about it.
    */
   @Override
   public void close() {
-    if (dtls != null) {
+    final DTLSTransport myDtls = dtls; // avoid concurrent modification
+    dtls = null;
+    if (myDtls != null) {
       try {
-        dtls.close();
+        myDtls.close();
       } catch (IOException e) {
-        Log.e(TAG, "Unable to close dtls connection cleanly", e);
+        logger.log(Level.WARNING, "Unable to close dtls connection cleanly", e);
       }
     }
-    if (socket != null && !socket.isClosed()) {
-      socket.close();
-    }
+    final DatagramSocket mySocket = socket; // avoid concurrent modification
     socket = null; // it's useless anyway
-    dtls = null;
-    Log.i(TAG, "DTLS tunnel closed");
+    if (mySocket != null && !mySocket.isClosed()) {
+      mySocket.close();
+    }
+    logger.info("DTLS tunnel closed");
   }
 
   @Override
   public @NonNull String toString() {
     return getClass().getSimpleName() + "#" + socket.getLocalAddress().getHostAddress() + ":"+ socket.getLocalPort();
   }
-
-  /**
-   * Configure this DTLSTransporter to use a different UDP port on IPv4.
-   *
-   * @param port an int giving the port number to use.
-   * todo this should eventually become an attribute of TicTunnel
-   */
-  @Override
-  public void setPort(int port) {
-    this.port = port;
-  }
-
 }

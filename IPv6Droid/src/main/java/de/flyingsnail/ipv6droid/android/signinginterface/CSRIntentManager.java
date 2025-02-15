@@ -27,26 +27,27 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.ResolveInfo;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.databinding.ObservableList;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.android.dtlsrequest.CertificateToTunnel;
 
 /**
  * A manager for the CSR/certificate exchange protocol with a partner app.
- *
+ * <p>
  * This manager is enumerating suitable partner apps, binding and handling
  * to their service on behalf of the supplied Context.
  */
 public class CSRIntentManager implements AutoCloseable {
     /** A String used to identify the Intent action when binding to a certificate issuing service */
     public static final String ACTION = "de.flyingsnail.ipv6droid.REQUEST_TUNNEL";
-    final private static String TAG = CSRIntentManager.class.getSimpleName();
+    final private static Logger logger = AndroidLoggingHandler.getLogger(CSRIntentManager.class);
     private final CertificateToTunnel certHelper;
     private final Context context;
     private final ObservableList<String> supplierPackageReceiver;
@@ -57,7 +58,6 @@ public class CSRIntentManager implements AutoCloseable {
      * @param context the Android Context (Activity or Service) that we're acting for
      * @param supplierPackageReceiver the ObservableList&lt;String&gt; that will receive packages
      *                                offering the required service.
-     * @throws IOException in case of failure to bind to the supplier app's service.
      */
     public CSRIntentManager(@NonNull final Context context,
                             @NonNull final ObservableList<String> supplierPackageReceiver)  {
@@ -72,9 +72,9 @@ public class CSRIntentManager implements AutoCloseable {
         // query matching services and explicitly set package name to one of them
         final Intent queryCertificateIntent = new Intent(ACTION);
         for (ResolveInfo resolveInfo: context.getPackageManager().queryIntentServices(queryCertificateIntent, 0) ) {
-            Log.i(TAG, "bind candidate " + resolveInfo);
+            logger.info("bind candidate " + resolveInfo);
             if (resolveInfo.serviceInfo != null) {
-                Log.d(TAG, " - bind candidate has service info with packageName" + resolveInfo.serviceInfo.packageName);
+                logger.fine(" - bind candidate has service info with packageName" + resolveInfo.serviceInfo.packageName);
                 supplierPackageReceiver.add(resolveInfo.serviceInfo.packageName);
             }
         }

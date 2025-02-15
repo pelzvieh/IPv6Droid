@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -28,19 +28,22 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import java.util.Date;
+import java.util.logging.Logger;
+
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 
 /**
  * TransmissionStatistics keeps rolling averages of package transmission in a specific direction.
  */
 public class TransmissionStatistics {
-    private static final String TAG = TransmissionStatistics.class.getName();
+    private static final Logger logger = AndroidLoggingHandler.getLogger(TransmissionStatistics.class);
 
     private static final double DECAY_TIME = 60000.0; // time of decay to 1/e in milliseconds
-    public static final long BURST_TIMEOUT = 1000l;
+    public static final long BURST_TIMEOUT = 1000L;
     // overall count of copied bytes
-    private long byteCount = 0l;
+    private long byteCount = 0L;
     // overall count of copied packets
-    private long packetCount = 0l;
+    private long packetCount = 0L;
 
     // the info about the last completed burst
     private @Nullable Burstinfo lastCompletedBurst = null;
@@ -102,7 +105,7 @@ public class TransmissionStatistics {
         else {
             // return the value as if a burst was just started and ended right now
             long lapse = dateDifference(new Date(), myLastCompletedBurst.lastPacketReceived);
-            return rollingAverage(lapse, averageBurstPause, lapse/1000);
+            return rollingAverage(lapse, averageBurstPause, lapse/1000.0);
         }
     }
 
@@ -119,7 +122,7 @@ public class TransmissionStatistics {
             return rollingAverage(
                     dateDifference(currentBurst.firstPacketReceived, lastCompletedBurst.firstPacketReceived),
                     averageBurstLength,
-                    dateDifference(new Date(), currentBurst.firstPacketReceived)/1000);
+                    dateDifference(new Date(), currentBurst.firstPacketReceived)/1000.0);
         }
     }
 
@@ -137,6 +140,7 @@ public class TransmissionStatistics {
                 burstCompleted(currentBurst, lastCompletedBurst);
             lastCompletedBurst = currentBurst;
             currentBurst = null;
+            logger.info("Burst finished");
             return true;
         }
         return false;

@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -27,7 +27,6 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.InputType;
-import android.util.Log;
 
 import androidx.preference.EditTextPreference;
 import androidx.preference.ListPreference;
@@ -36,6 +35,8 @@ import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.TwoStatePreference;
 
 import java.io.IOException;
+import java.util.Objects;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.dtlsrequest.AndroidBackedKeyPair;
@@ -48,7 +49,7 @@ import de.flyingsnail.ipv6droid.android.dtlsrequest.AndroidBackedKeyPair;
  */
 public class SettingsFragment extends PreferenceFragmentCompat {
 
-    private final static String TAG = SettingsFragment.class.getName();
+    private final static Logger logger = AndroidLoggingHandler.getLogger(SettingsFragment.class);
 
     @Override
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
@@ -72,7 +73,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
             try {
                 keys = AndroidBackedKeyPair.listAliases().toArray(keys);
             } catch (IOException e) {
-                Log.i(TAG, "No key pair in Android Key Store");
+                logger.info("No key pair in Android Key Store");
             }
 
             dtlsKeyAlias.setEntries(keys);
@@ -121,10 +122,12 @@ public class SettingsFragment extends PreferenceFragmentCompat {
     public void onResume() {
         super.onResume();
         SharedPreferences preferences = getPreferenceScreen().getSharedPreferences();
-        for (String key: preferences.getAll().keySet()) {
-            preferenceSummaryToValueListener.onSharedPreferenceChanged(preferences, key);
+        if (preferences != null) {
+            for (String key: preferences.getAll().keySet()) {
+                preferenceSummaryToValueListener.onSharedPreferenceChanged(preferences, key);
+            }
+            preferences.registerOnSharedPreferenceChangeListener(preferenceSummaryToValueListener);
         }
-        preferences.registerOnSharedPreferenceChangeListener(preferenceSummaryToValueListener);
         Preference autoStart = findPreference("autostart");
         if (autoStart != null)
             autoStart.setEnabled(Build.VERSION.SDK_INT < Build.VERSION_CODES.N);
@@ -139,7 +142,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
     @Override
     public void onPause() {
         super.onPause();
-        getPreferenceScreen().getSharedPreferences()
+        Objects.requireNonNull(getPreferenceScreen().getSharedPreferences())
                 .unregisterOnSharedPreferenceChangeListener(preferenceSummaryToValueListener);
     }
 

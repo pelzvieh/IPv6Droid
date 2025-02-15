@@ -33,7 +33,6 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.RemoteException;
-import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -41,13 +40,15 @@ import androidx.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * This service implements the certificate request protocol between
  * IPv6Droid core app and this SimpleCertification compagnion app.
  */
 public class SimpleCertificationService extends Service {
-    final static String TAG = SimpleCertificationService.class.getSimpleName();
+    final static Logger logger = AndroidLoggingHandler.getLogger(SimpleCertificationService.class);
 
     /**
      * A String used to identify the Intent action when binding to a certificate issuing service.
@@ -110,7 +111,7 @@ public class SimpleCertificationService extends Service {
      * @param cert a String representing a PEM encoded X509 certificate.
      */
     public void setCertChain(List<String> cert) {
-        Log.i(TAG, "Received cert path");
+        logger.info("Received cert path");
         this.cert = new ArrayList<>(cert.size());
         this.cert.addAll(cert);
         if (replyMessenger != null) {
@@ -128,10 +129,10 @@ public class SimpleCertificationService extends Service {
         message.setData(certBundle);
         try {
             replyMessenger.send(message);
-            Log.i(TAG, "Sent cert path to bound external services");
+            logger.info("Sent cert path to bound external services");
         } catch (RemoteException e) {
             Toast.makeText(getApplicationContext(), "Unable to send message with cert path", Toast.LENGTH_LONG).show();
-            Log.e(TAG, "Unable to send message with cert path", e);
+            logger.log(Level.WARNING, "Unable to send message with cert path", e);
         }
     }
 
@@ -149,19 +150,19 @@ public class SimpleCertificationService extends Service {
 
         @Override
         public void handleMessage(Message msg) {
-            Log.i(TAG, "Received message");
+            logger.info("Received message");
             switch (msg.what) {
                 case MSG_WHAT_CERT_REQUEST:
                     String csr = msg.getData().getString("csr");
                     if (Objects.nonNull(csr)) {
-                        Log.i(TAG, "Handling received CSR: " + csr);
+                        logger.info("Handling received CSR: " + csr);
                         simpleCertificationService.handleActionCertRequest(csr, msg.replyTo);
                     } else {
-                        Log.e(TAG, "Received message with illegal data content");
+                        logger.log(Level.WARNING, "Received message with illegal data content");
                     }
                     break;
                 default:
-                    Log.w(TAG, "Message is unkown: " + msg.what);
+                    logger.warning("Message is unkown: " + msg.what);
                     super.handleMessage(msg);
             }
         }
@@ -175,13 +176,13 @@ public class SimpleCertificationService extends Service {
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        Log.i(TAG, "Received binding request for " + intent.getAction());
+        logger.info("Received binding request for " + intent.getAction());
         if (ACTION_CSR.equals(intent.getAction())) {
             return messenger.getBinder();
         } else if (ACTION_UI.equals(intent.getAction())) {
             return new LocalBinder();
         } else {
-            Log.e(TAG, "Unsupported action: " + intent.getAction());
+            logger.log(Level.WARNING, "Unsupported action: " + intent.getAction());
             return null;
         }
     }

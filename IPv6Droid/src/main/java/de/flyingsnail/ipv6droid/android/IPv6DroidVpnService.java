@@ -42,7 +42,6 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
-import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -61,6 +60,8 @@ import java.util.Date;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import de.flyingsnail.ipv6droid.R;
 import de.flyingsnail.ipv6droid.android.statistics.Statistics;
@@ -74,7 +75,7 @@ import de.flyingsnail.ipv6droid.android.vpnrun.VpnThread;
  */
 public class IPv6DroidVpnService extends VpnService implements UserNotificationCallback {
 
-    private static final String TAG = IPv6DroidVpnService.class.getName();
+    private static final Logger logger = AndroidLoggingHandler.getLogger(IPv6DroidVpnService.class);
     private static final String SESSION_NAME = IPv6DroidVpnService.class.getSimpleName();
 
     public static final String EXTRA_CACHED_TUNNELS = IPv6DroidVpnService.class.getName() + ".CACHED_TUNNEL";
@@ -127,7 +128,7 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
 
     @Override
     public void onCreate() {
-        Log.i(TAG, "Instance about to be created");
+        logger.info("Instance about to be created");
         super.onCreate();
 
         handler = new Handler(getMainLooper());
@@ -157,9 +158,9 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
         try {
             cachedTunnels = tunnelPersisting.readTunnels();
         } catch (FileNotFoundException e) {
-            Log.i(TAG, "no persisted tunnels information");
+            logger.info("no persisted tunnels information");
         } catch (IOException e) {
-            Log.e(TAG, "Can't load persisted tunnels", e);
+            logger.log(Level.WARNING, "Can't load persisted tunnels", e);
             Toast.makeText(this, R.string.vpnservice_toast_cache_unreadable, Toast.LENGTH_SHORT)
                     .show();
         }
@@ -167,7 +168,7 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
 
     @Override
     public synchronized int onStartCommand(Intent intent, int flags, int startId) {
-        Log.i(TAG, "received start command");
+        logger.info("received start command");
         if (thread == null || !thread.isIntendedToRun()) {
             // become user visible
             displayOngoingNotification(null);
@@ -175,7 +176,7 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
             // Build the configuration object from the saved shared preferences.
             SharedPreferences myPreferences = PreferenceManager.getDefaultSharedPreferences(this);
             RoutingConfiguration routingConfiguration = loadRoutingConfiguration(myPreferences);
-            Log.d(TAG, "retrieved configuration");
+            logger.fine("retrieved configuration");
 
             // Read out the requested tunnels configuration from the Intent, if present.
             // This is necessary to support, because it might differ from the persisted tunnel set,
@@ -192,7 +193,7 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
             thread = new VpnThread(this, cachedTunnels, routingConfiguration, SESSION_NAME);
             startVpn();
         } else {
-            Log.i(TAG, "VpnThread not started again - already running");
+            logger.info("VpnThread not started again - already running");
             Toast.makeText(getApplicationContext(),
                     R.string.vpnservice_already_running,
                     Toast.LENGTH_LONG).show();
@@ -209,7 +210,7 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
      */
     @Override
     public void notifyUserOfError(int resourceId, @NonNull Throwable e) {
-        Log.d(IPv6DroidVpnService.TAG, "Notifying user of error", e);
+        logger.log(Level.FINE, "Notifying user of error", e);
         errorNotificationBuilder.setContentTitle(getString(resourceId));
         errorNotificationBuilder.setContentText(String.valueOf(e.getClass()));
         errorNotificationBuilder.setSubText(String.valueOf(e.getLocalizedMessage()));
@@ -255,7 +256,7 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
     private synchronized void startVpn() {
         vpnShouldRun = true;
         thread.start();
-        Log.i(TAG, "VpnThread started");
+        logger.info("VpnThread started");
     }
 
     /**
@@ -264,7 +265,7 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
     private synchronized void stopVpn() {
         vpnShouldRun = false;
         if (thread != null && thread.isIntendedToRun()) {
-            Log.i(TAG, "stopVpn - requestTunnelClose on VpnThread");
+            logger.info("stopVpn - requestTunnelClose on VpnThread");
             thread.requestTunnelClose();
         }
         thread = null;
@@ -275,7 +276,7 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
      */
     @Override
     public void onDestroy() {
-        Log.i(TAG, "Prepare destruction of VpnService");
+        logger.info("Prepare destruction of VpnService");
         stopVpn();
         notifyUserOfError(R.string.ayiyavpnservice_destroyed, new Exception(""));
         unregisterLocalCommandReceiver();
@@ -288,7 +289,7 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
      */
     @Override
     public void onRevoke() {
-        Log.i(TAG, "VPN usage rights are being revoked - closing tunnel thread");
+        logger.info("VPN usage rights are being revoked - closing tunnel thread");
         stopVpn();
         notifyUserOfError(R.string.ayiyavpnservice_revoked, new Exception(""));
         super.onRevoke();
@@ -303,7 +304,7 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
         intentFilter.addAction(MainActivity.BC_STATUS_UPDATE);
         LocalBroadcastManager.getInstance(this).registerReceiver(commandReceiver,
                 intentFilter);
-        Log.d(TAG, "registered CommandReceiver for local broadcasts");
+        logger.fine("registered CommandReceiver for local broadcasts");
     }
 
     /**
@@ -311,7 +312,7 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
      */
     private void unregisterLocalCommandReceiver() {
         LocalBroadcastManager.getInstance(this).unregisterReceiver(commandReceiver);
-        Log.d(TAG, "un-registered CommandReceiver for local broadcasts");
+        logger.fine("un-registered CommandReceiver for local broadcasts");
     }
 
     /**
@@ -326,12 +327,12 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
     @Override
     public IBinder onBind(Intent intent) {
         if (STATISTICS_INTERFACE.equals(intent.getAction())) {
-            Log.i(TAG, "Bind request to statistics interface received");
+            logger.info("Bind request to statistics interface received");
             return new StatisticsBinder();
         } else if (SERVICE_INTERFACE.equals(intent.getAction())) {
-            Log.i(TAG, "Bind request to android.net.VpnService");
+            logger.info("Bind request to android.net.VpnService");
             IBinder superBinder = super.onBind(intent);
-            Log.d(TAG, "super returned IBinder " + superBinder);
+            logger.fine("super returned IBinder " + superBinder);
             return superBinder;
         } else
             return null;
@@ -385,14 +386,14 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
      * @param statusReport a VpnStatusReport giving details about current VPN status
      */
     private void displayOngoingNotification(@Nullable VpnStatusReport statusReport) {
-        Log.d(TAG, "Displaying/updating ongoing notification " + statusReport);
+        logger.fine("Displaying/updating ongoing notification " + statusReport);
 
         ongoingNotificationBuilder.setWhen(new Date().getTime());
         if (statusReport != null)
             ongoingNotificationBuilder.setContentText(getResources().getString(statusReport.getActivity()));
         else
             ongoingNotificationBuilder.setContentText(getResources().getString(R.string.vpnservice_activity_wait));
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(ongoingNotificationId, ongoingNotificationBuilder.build(), FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED);
         } else {
             startForeground(ongoingNotificationId, ongoingNotificationBuilder.build());
@@ -411,18 +412,18 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
             String action = intent.getAction();
             if (thread != null && thread.isAlive()) {
                 if (action != null && action.equals(MainActivity.BC_STOP)) {
-                    Log.i(TAG, "Received explicit stop broadcast, will stop VPN Tread");
+                    logger.info("Received explicit stop broadcast, will stop VPN Tread");
                     executor.submit(() -> {
-                        Log.d(TAG, "async close thread starting");
+                        logger.fine("async close thread starting");
                         stopVpn();
                     });
                     stopSelf(); // user command is the only event that corresponds to "the work is done"
                 } else if (action != null && action.equals(MainActivity.BC_STATUS_UPDATE)) {
-                    Log.i(TAG, "Someone requested a status report, will have one send");
+                    logger.info("Someone requested a status report, will have one send");
                     thread.reportStatus();
                 }
             } else if (vpnShouldRun) {
-                Log.e(TAG, "IPv6DroidVpnService's thread is broken although it should run");
+                logger.log(Level.WARNING, "IPv6DroidVpnService's thread is broken although it should run");
             }
         }
     }
@@ -453,7 +454,7 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
         @Override
         public void onReceive(Context context, Intent intent) {
             VpnStatusReport statusReport = (VpnStatusReport)intent.getSerializableExtra(VpnStatusReport.EDATA_STATUS_REPORT);
-            Log.i(TAG, "received status update: " + statusReport);
+            logger.info("received status update: " + statusReport);
             if (statusReport != null) {
                 // update persistent notification
                 displayOngoingNotification(statusReport);
@@ -467,7 +468,7 @@ public class IPv6DroidVpnService extends VpnService implements UserNotificationC
                             if (cachedTunnels != null)
                                 tunnelPersisting.writeTunnels(cachedTunnels);
                         } catch (IOException e) {
-                            Log.e(TAG, "Couldn't write tunnels to file", e);
+                            logger.log(Level.WARNING, "Couldn't write tunnels to file", e);
                         }
                     }
                 }

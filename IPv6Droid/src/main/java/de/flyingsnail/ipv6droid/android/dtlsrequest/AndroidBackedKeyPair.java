@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -25,7 +25,6 @@ package de.flyingsnail.ipv6droid.android.dtlsrequest;
 
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 
@@ -64,10 +63,13 @@ import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.logging.Logger;
+
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 
 public class AndroidBackedKeyPair {
 
-    private static final String TAG = AndroidBackedKeyPair.class.getName();
+    private static final Logger logger = AndroidLoggingHandler.getLogger(AndroidBackedKeyPair.class);
 
     private final KeyPair keyPair;
 
@@ -102,7 +104,7 @@ public class AndroidBackedKeyPair {
         }
 
         KeyPair kp = kpg.generateKeyPair();
-        Log.i(TAG, "Created new keypair for alias " + alias);
+        logger.info("Created new keypair for alias " + alias);
         return kp;
     }
 
@@ -131,7 +133,7 @@ public class AndroidBackedKeyPair {
         while (aliases.hasMoreElements()) {
             retval.add(aliases.nextElement());
         }
-        Log.i(TAG, "Found " + retval.size() + " elements in AndroidKeyStore");
+        logger.info("Found " + retval.size() + " elements in AndroidKeyStore");
         return retval;
     }
 
@@ -165,13 +167,13 @@ public class AndroidBackedKeyPair {
         final List<String> aliases = listAliases();
 
         if (newAlias.isEmpty() || aliases.contains(newAlias)) {
-            Log.e(TAG, "Requested alias already existing: " + newAlias);
+            logger.warning("Requested alias already existing: " + newAlias);
             return null;
         }
 
         create(newAlias);
         AndroidBackedKeyPair newKeyPair = new AndroidBackedKeyPair(newAlias);
-        Log.i(TAG, "Convert to key: " + newKeyPair.getPrivateKey());
+        logger.info("Convert to key: " + newKeyPair.getPrivateKey());
         return aliases;
     }
 

@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2021 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -23,11 +23,11 @@
 
 package de.flyingsnail.ipv6droid.android.vpnrun;
 
-import android.util.Log;
-
 import java.io.IOException;
 import java.util.Date;
+import java.util.logging.Logger;
 
+import de.flyingsnail.ipv6droid.android.AndroidLoggingHandler;
 import de.flyingsnail.ipv6droid.transport.ConnectionFailedException;
 import de.flyingsnail.ipv6droid.transport.Transporter;
 import de.flyingsnail.ipv6droid.transport.TunnelBrokenException;
@@ -42,7 +42,7 @@ import de.flyingsnail.ipv6droid.transport.ayiya.TicTunnel;
  *
  */
 class HeartbeatMonitor implements Monitor {
-    private final String TAG = HeartbeatMonitor.class.getName();
+    private final Logger logger = AndroidLoggingHandler.getLogger(HeartbeatMonitor.class);
     /**
      * Time that we must wait before contacting TIC again. This applies to cached tunnels even!
      */
@@ -74,7 +74,7 @@ class HeartbeatMonitor implements Monitor {
         TunnelSpec activeTunnel = transporter.getTunnelSpec();
         long heartbeatInterval = activeTunnel.getHeartbeatInterval() * 1000L;
         if (heartbeatInterval < 300000L && remoteEnd.isNetworkMobile()) {
-            Log.i(TAG, "Lifting heartbeat interval to 300 secs");
+            logger.info("Lifting heartbeat interval to 300 secs");
             heartbeatInterval = 300000L;
         }
         while (remoteEnd.isIntendedToRun() && (inThread != null && inThread.isAlive()) && (outThread != null && outThread.isAlive())) {
@@ -86,17 +86,13 @@ class HeartbeatMonitor implements Monitor {
             inThread.join(heartbeatInterval - lastPacketDelta);
             if (!remoteEnd.isIntendedToRun())
                 break;
-            // re-check cached network information
-            if (!remoteEnd.isCurrentSocketStillValid()) {
-                throw new IOException("IP address changed");
-            }
             // determine last package transmission time
             lastPacketDelta = new Date().getTime() - transporter.getLastPacketSentTime().getTime();
             // if no traffic occurred, send a heartbeat package
             if (inThread.isAlive() && outThread.isAlive() &&
                     lastPacketDelta >= heartbeatInterval - 100) {
                 try {
-                    Log.i(TAG, "Sending heartbeat");
+                    logger.info("Sending heartbeat");
                     transporter.beat();
                     lastPacketDelta = 0L;
                 } catch (TunnelBrokenException e) {
@@ -108,8 +104,7 @@ class HeartbeatMonitor implements Monitor {
                no new packets for more than heartbeat interval? Might be device sleep!
                but if not pingable, probably broken.
                In the latter case we give it another heartbeat interval time to recover. */
-                if (remoteEnd.isCurrentSocketStillValid() &&
-                        !transporter.isValidPacketReceived() && // if the tunnel worked in a session, don't worry if it pauses - it's 100% network problems
+                if (!transporter.isValidPacketReceived() && // if the tunnel worked in a session, don't worry if it pauses - it's 100% network problems
                         VpnThread.checkExpiry(transporter.getLastPacketReceivedTime(),
                                 activeTunnel.getHeartbeatInterval()) ) {
                     if (!timeoutSuspected)
@@ -122,10 +117,10 @@ class HeartbeatMonitor implements Monitor {
                     timeoutSuspected = false;
                 }
 
-                Log.i(TAG, "Sent heartbeat.");
+                logger.info("Sent heartbeat.");
             }
         }
-        Log.i(TAG, "Terminated loop of current transporter object (interrupt or end of a copy thread)");
+        logger.info("Terminated loop of current transporter object (interrupt or end of a copy thread)");
         Throwable deathCause = null;
         final CopyThread myInThread = inThread;
         final CopyThread myOutThread = outThread;

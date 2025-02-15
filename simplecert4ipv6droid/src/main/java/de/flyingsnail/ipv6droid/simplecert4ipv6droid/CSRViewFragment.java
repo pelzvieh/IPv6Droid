@@ -30,7 +30,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -40,11 +39,13 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.fragment.NavHostFragment;
 
+import java.util.logging.Logger;
+
 import de.flyingsnail.ipv6droid.simplecert4ipv6droid.databinding.FragmentCsrViewBinding;
 
 public class CSRViewFragment extends Fragment {
 
-    private static final String TAG = CSRViewFragment.class.getSimpleName();
+    private static final Logger logger = AndroidLoggingHandler.getLogger(CSRViewFragment.class);
     private FragmentCsrViewBinding binding;
 
     private CertSetup certSetup;
@@ -55,7 +56,7 @@ public class CSRViewFragment extends Fragment {
             @NonNull LayoutInflater inflater, ViewGroup container,
             Bundle savedInstanceState
     ) {
-        Log.i(TAG, "CreateView of CSRViewFragment");
+        logger.info("CreateView of CSRViewFragment");
         handler = new Handler(Looper.getMainLooper());
         binding = FragmentCsrViewBinding.inflate(inflater, container, false);
         return binding.getRoot();
@@ -78,11 +79,11 @@ public class CSRViewFragment extends Fragment {
      * Repeats itself as long as no CSR has arrived from our cert service
      */
     private void pollCsr() {
-        Log.i(TAG, "Polling for a CSR");
+        logger.info("Polling for a CSR");
         String csr = certSetup.getCsr();
         binding.showCsr.setText(csr != null ? csr : "");
         if (csr != null) {
-            Log.i(TAG, "CSR is set");
+            logger.info("CSR is set");
             binding.showCsr.setEnabled(true);
             binding.buttonNext.setEnabled(true);
             binding.showCsr.setOnClickListener(this::copyCsrToClipboard);
@@ -96,7 +97,7 @@ public class CSRViewFragment extends Fragment {
     }
 
     public void copyCsrToClipboard(@NonNull View view) {
-        Log.i(TAG, "Copy current CSR to clipboard");
+        logger.info("Copy current CSR to clipboard");
         final CharSequence csr = binding.showCsr.getText();
         final ClipboardManager clipboardManager = (ClipboardManager) (requireActivity().getSystemService(Context.CLIPBOARD_SERVICE));
         final ClipData csrClip = ClipData.newPlainText("CSR", csr);
@@ -107,7 +108,7 @@ public class CSRViewFragment extends Fragment {
 
     @Override
     public void onDestroyView() {
-        Log.i(TAG, "CSRViewFragment view destroyed");
+        logger.info("CSRViewFragment view destroyed");
         super.onDestroyView();
         handler.removeCallbacksAndMessages(null);
         binding = null;
