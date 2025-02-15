@@ -79,7 +79,10 @@ public class NetworksRepositoryTest {
     @Mock
     private NetworkCapabilities networkCapabilities_connected;
 
+    @Mock
     private final LinkProperties linkProperties1 = new LinkProperties();
+
+    @Mock
     private final LinkProperties linkProperties3 = new LinkProperties();
 
     private Event[] emittedTestEvents;
@@ -122,6 +125,8 @@ public class NetworksRepositoryTest {
         when(networkCapabilities_connected.hasCapability(anyInt()))
                 .thenReturn(true);
         when(mockLocalDataSource.getConnectivityEventObservable()).thenReturn(connectivityEvents);
+        when(linkProperties1.toString()).thenReturn("testProperty1");
+        when(linkProperties3.toString()).thenReturn("testProperty3");
 
         repository = new NetworksRepository(mockLocalDataSource);
     }

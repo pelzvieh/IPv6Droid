@@ -51,12 +51,14 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    signingConfigs {
-        release {
-            keyAlias keystoreProperties['keyAlias']
-            keyPassword keystoreProperties['keyPassword']
-            storeFile file(keystoreProperties['storeFile'])
-            storePassword keystoreProperties['storePassword']
+    if (keystoreProperties.containsKey("keyAlias")) {
+        signingConfigs {
+            release {
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+            }
         }
     }
 
@@ -81,8 +83,14 @@ android {
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            defaultConfig
         }
+        if (keystoreProperties.containsKey("keyAlias")) {
+            signed {
+                signingConfig signingConfigs.release
+            }
+        }
+
         debug {
             matchingFallbacks = []
         }
