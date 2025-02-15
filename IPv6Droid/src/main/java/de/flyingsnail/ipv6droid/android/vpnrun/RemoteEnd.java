@@ -43,6 +43,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -209,20 +210,22 @@ public class RemoteEnd {
      * @param networkProperty the NetworkProperty of the currently online network.
      */
     private void onNetworkChanged(@NonNull NetworkProperty networkProperty) {
+        logger.fine("Network changed to " + networkProperty);
         // memorize the Network associated with the previous networkProperty
         Network currentNetwork = (currentNetworkProperty == null)
                 ? null : currentNetworkProperty.getNetwork();
         // act on new NetworkProperty
         currentNetworkProperty = networkProperty;
-        if (currentNetwork == null || currentNetwork.getNetworkHandle() != networkProperty.getNetwork().getNetworkHandle()) {
-            logger.info("transporter object no longer functional after connectivity change - reconnecting");
-            cleanCopyThreads();
-        }
         // check if our routing is still valid, otherwise invalidate vpnFD
         if (isTunnelRoutingRequired(networkProperty) ^ isRouted) {
             logger.info("tunnel routing requirement changed, forcing re-build of local vpn socket");
             endCause = isRouted ? EndCause.INHIBITS_ROUTING : EndCause.REQUIRES_ROUTIING;
             stop();
+        } else if (currentNetwork != null && currentNetwork.getNetworkHandle() != networkProperty.getNetwork().getNetworkHandle()) {
+            logger.info("transporter object no longer functional after connectivity change - reconnecting");
+            cleanCopyThreads();
+        } else synchronized (this) {
+            this.notifyAll();
         }
     }
 
@@ -240,12 +243,13 @@ public class RemoteEnd {
         NetworksRepository networksRepository = IPv6Droid.getInstance().getNetworksRepository();
         @NonNull final Disposable deviceOnlineSubscriptionDisposer = networksRepository
                 .getDeviceOnline()
+                .debounce(100L, TimeUnit.MILLISECONDS) // ignore short disconnects
                 .subscribe(this::onIsOnline);
         @NonNull final Disposable onlineNetworkPropertySubscriptionDisposer = networksRepository
                 .getOnlineNetworkProperty()
+                .debounce(100L, TimeUnit.MILLISECONDS) // ignore fast network changes
                 .subscribe(this::onNetworkChanged, this::onNetworkError);
         try { // try-finally to ensure disposal of disposables (no Autoclosables, unfortunately)
-
             while (intendedToRun && localFD.valid()) {
                 try {
                     // Packets to be sent are queued in this input stream.
@@ -391,7 +395,7 @@ public class RemoteEnd {
      *
      */
     private void waitOnConnectivity() throws InterruptedException {
-        while (!deviceConnected && isIntendedToRun()) {
+        while ((!deviceConnected || currentNetworkProperty == null) && isIntendedToRun()) {
             logger.info("Waiting for device to connect to a network");
             vpnStatus.setProgressPerCent(45);
             vpnStatus.setStatus(VpnStatusReport.Status.NoNetwork);
@@ -400,7 +404,9 @@ public class RemoteEnd {
                 this.wait();
             }
         }
-        logger.info("We're connected to network " + currentNetworkProperty.getNetwork());
+        logger.info(isIntendedToRun()
+                ? "We're connected to network " + currentNetworkProperty.getNetwork()
+                : "Stop command received before being connected");
     }
 
     /**

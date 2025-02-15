@@ -134,11 +134,12 @@ public class TransporterParams implements TunnelSpec, Serializable {
             synchronized (this) {
                 try {
                     ipv4Pop = resolvedIp.get();
-                    resolvedIp = null;
                 } catch (ExecutionException| CancellationException e) {
                     logger.log(Level.INFO, "Async resolver didn't resolve", e);
                 } catch (InterruptedException e) {
                     logger.warning("Interrupted while reading resolved address");
+                } finally {
+                    resolvedIp = null;
                 }
             }
         }

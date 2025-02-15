@@ -1,6 +1,6 @@
 /*
  *
- *  * Copyright (c) 2024 Dr. Andreas Feldner.
+ *  * Copyright (c) 2025 Dr. Andreas Feldner.
  *  *
  *  *     This program is free software; you can redistribute it and/or modify
  *  *     it under the terms of the GNU General Public License as published by
@@ -36,6 +36,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
+import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
@@ -49,7 +50,6 @@ import de.flyingsnail.ipv6droid.simplecert4ipv6droid.databinding.ActivityCertSet
 public class CertSetup extends AppCompatActivity {
 
     private AppBarConfiguration appBarConfiguration;
-    private ActivityCertSetupBinding binding;
 
     /**
      * Instance of bound SimpleCertificationService if bound,
@@ -62,12 +62,13 @@ public class CertSetup extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        binding = ActivityCertSetupBinding.inflate(getLayoutInflater());
+        de.flyingsnail.ipv6droid.simplecert4ipv6droid.databinding.ActivityCertSetupBinding binding = ActivityCertSetupBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
         setSupportActionBar(binding.toolbar);
 
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_cert_setup);
+        NavHostFragment fragment = (NavHostFragment) getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment_content_cert_setup);
+        NavController navController = fragment.getNavController();
         appBarConfiguration = new AppBarConfiguration.Builder(navController.getGraph()).build();
         NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
     }
@@ -146,7 +147,7 @@ public class CertSetup extends AppCompatActivity {
     @Override
     public boolean onSupportNavigateUp() {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_cert_setup);
-        return NavigationUI.navigateUp(navController, appBarConfiguration)
+        return (appBarConfiguration != null && NavigationUI.navigateUp(navController, appBarConfiguration))
                 || super.onSupportNavigateUp();
     }
 }

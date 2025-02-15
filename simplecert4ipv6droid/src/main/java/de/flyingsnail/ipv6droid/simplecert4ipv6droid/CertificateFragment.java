@@ -38,13 +38,12 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import de.flyingsnail.ipv6droid.simplecert4ipv6droid.databinding.FragmentSecondBinding;
+import de.flyingsnail.ipv6droid.simplecert4ipv6droid.databinding.FragmentCertificateEntryBinding;
 
 public class CertificateFragment extends Fragment {
-    // todo make this navigatable to the user
     private static final Logger logger = AndroidLoggingHandler.getLogger(CertificateFragment.class);
 
-    private FragmentSecondBinding binding;
+    private FragmentCertificateEntryBinding binding;
     private CertSetup certSetup;
 
     @Override
@@ -53,7 +52,7 @@ public class CertificateFragment extends Fragment {
             Bundle savedInstanceState
     ) {
         logger.info("View creating");
-        binding = FragmentSecondBinding.inflate(inflater, container, false);
+        binding = FragmentCertificateEntryBinding.inflate(inflater, container, false);
         return binding.getRoot();
     }
 
